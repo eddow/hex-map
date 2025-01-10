@@ -14,7 +14,7 @@ export function cube({ q, r }: Axial) {
 	return { q, r, s: -q - r }
 }
 
-export function distance(a: Axial, b: Axial) {
+export function axialDistance(a: Axial, b: Axial) {
 	const aS = -a.q - a.r
 	const bS = -b.q - b.r
 	return max(abs(a.q - b.q), abs(a.r - b.r), abs(aS - bS))
@@ -70,21 +70,16 @@ export function puzzleTiles(radius: number) {
 	return 3 * radius ** 2
 }
 
-export const axial: Axial[] = []
-export const indexes: Record<number, Record<number, number>> = {}
-
-export function computeAxial(until: number) {
-	while (axial.length < until) {
-		const n = axial.length
-		const h = hexAt(n)
-		axial.push(h)
-		if (!(h.q in indexes)) indexes[h.q] = {}
-		indexes[h.q][h.r] = n
-	}
-}
-
-export function axialIndex({ q, r }: Axial): number {
-	return indexes[q][r]
+export function axialIndex({ q, r }: Axial) {
+	if (q === 0 && r === 0) return 0
+	const s = -q - r
+	const ring = max(abs(q), abs(r), abs(s))
+	const side = [q === ring, r === -ring, s === ring, q === -ring, r === ring, s === -ring].indexOf(
+		true
+	)
+	//const offset = [q, -s, r, -q, s, -r][side]
+	const offset = [-r, s, -q, r, -s, q][side]
+	return 3 * ring * (ring - 1) + side * ring + offset + 1
 }
 
 export function cartesian({ q, r }: Axial, size: number) {

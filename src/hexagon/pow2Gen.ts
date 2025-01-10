@@ -1,6 +1,6 @@
-import { MeshBasicMaterial } from 'three'
+import { BufferAttribute, BufferGeometry, MeshBasicMaterial, NormalBufferAttributes } from 'three'
 import HexPatch, { type Measures } from './patch'
-import { type Axial, axial, axialIndex, cartesian, hexSides, polynomial } from './utils'
+import { type Axial, axialIndex, cartesian, hexAt, hexSides, polynomial } from './utils'
 
 interface BasePoint {
 	z: number
@@ -45,26 +45,37 @@ export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> ex
 	abstract insidePoint(p1: Point, p2: Point, scale: number): Point
 
 	vPosition(ndx: number) {
-		return { ...cartesian(axial[ndx], this.measures.tileSize), z: this.points[ndx].z }
-	}
-	triangleMaterial(...ndx: [number, number, number]) {
-		return new MeshBasicMaterial({ color: Math.random() * 0x1000000 })
+		return { ...cartesian(hexAt(ndx), this.measures.tileSize), z: this.points[ndx].z }
 	}
 }
 
 interface HeightPoint extends BasePoint {
-	color: number
+	c: { r: number; g: number; b: number }
 }
 export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 	initCorners(corners: number[]): void {
-		this.points[0] = { z: 10, color: 0xff }
-		for (const corner of corners) this.points[corner] = { z: -5, color: 0xff0000 }
+		this.points[0] = { z: 10, c: { r: 1, g: 1, b: 0 } }
+		for (const corner of corners) this.points[corner] = { z: -5, c: { r: 0, g: 0, b: 1 } }
 	}
 	insidePoint(p1: HeightPoint, p2: HeightPoint, scale: number): HeightPoint {
 		const randScale = ((1 << scale) * this.measures.tileSize) / 2
 		return {
 			z: (p1.z + p2.z) / 2 + (Math.random() - 0.5) * randScale,
-			color: Math.random() * 0x1000000,
+			c: { r: Math.random(), g: Math.random(), b: 0 },
 		}
+	}
+	triangleGeometry(...ndx: [number, number, number]) {
+		const geometry = super.triangleGeometry(...ndx)
+
+		const colors = new Float32Array(
+			ndx.map((n) => this.points[n].c).reduce<number[]>((p, c) => [...p, c.r, c.g, c.b], [])
+		)
+		geometry.setAttribute('color', new BufferAttribute(colors, 3))
+		return geometry
+	}
+	triangleMaterial(...ndx: [number, number, number]) {
+		return new MeshBasicMaterial({
+			vertexColors: true, // Enable vertex colors
+		})
 	}
 }

@@ -2,35 +2,85 @@ import {
 	BufferAttribute,
 	BufferGeometry,
 	Group,
+	type Intersection,
 	type Material,
 	Mesh,
 	MeshBasicMaterial,
+	type Object3D,
+	type Object3DEventMap,
+	type Scene,
+	SphereGeometry,
 } from 'three'
 import { Cacheable } from '../utils/decorators'
-import { type Hex, axial, cartesian, computeAxial, hexTiles } from './utils'
-const { floor } = Math
+import type { MouseAction, MouseReactive } from '../utils/mouse'
+import { v3distance } from '../utils/utils'
+import { type Hex, cartesian, hexAt, hexTiles } from './utils'
+const { floor, min } = Math
 
 export interface Measures {
 	tileSize: number
 	position: Hex
+	scene: Scene
 }
 
 /**
  * Mostly abstract hex patch, has to be overridden
  */
-export default abstract class HexPatch extends Cacheable {
+export default abstract class HexPatch extends Cacheable implements MouseReactive {
 	constructor(
 		public readonly measures: Measures,
 		public readonly radius: number
 	) {
 		super()
-		const tiles = this.nbrTiles
-		computeAxial(tiles)
+	}
+
+	highlighted?: number
+	highlight?: Mesh
+	mouse(
+		action: MouseAction,
+		intersection: Intersection<Object3D<Object3DEventMap>> | undefined
+	): void {
+		const { scene, tileSize } = this.measures
+		switch (action) {
+			case 'move':
+				if (intersection) {
+					const p = (intersection.object as Mesh).geometry.attributes.position
+					const positions = []
+					for (let i = 0; i < p.count; i++) {
+						positions.push({ x: p.getX(i), y: p.getY(i), z: p.getZ(i) })
+					}
+					const distances = positions.map((p) => v3distance(p, intersection.point))
+					const minD = min(...distances)
+					const hl = intersection.object.userData?.points[distances.indexOf(minD)]
+
+					if (hl !== this.highlighted) {
+						this.highlighted = hl
+						if (!this.highlight) {
+							const sphereGeometry = new SphereGeometry(tileSize, 32, 32)
+							const sphereMaterial = new MeshBasicMaterial({
+								color: 0x8080ff,
+								transparent: true,
+								opacity: 0.5,
+							})
+							this.highlight = new Mesh(sphereGeometry, sphereMaterial)
+							scene.add(this.highlight)
+						}
+						this.highlight?.position.copy(this.vPosition(hl))
+					}
+				} else {
+					this.highlighted = undefined
+					if (this.highlight) {
+						scene.remove(this.highlight)
+						this.highlight = undefined
+					}
+				}
+				break
+		}
 	}
 	abstract vPosition(ndx: number): { x: number; y: number; z: number }
-	abstract triangleMaterial(...ndx: [number, number, number]): Material
+	abstract triangleMaterial(...ndx: [number, number, number]): Material | undefined
 
-	createTriangleMesh(...ndx: [number, number, number]) {
+	triangleGeometry(...ndx: [number, number, number]) {
 		const geometry = new BufferGeometry()
 
 		const positions = new Float32Array(
@@ -39,13 +89,18 @@ export default abstract class HexPatch extends Cacheable {
 
 		geometry.setAttribute('position', new BufferAttribute(positions, 3))
 
-		return new Mesh(geometry, this.triangleMaterial(...ndx))
+		return geometry
 	}
 	get nbrTiles() {
 		return hexTiles(this.radius)
 	}
 	genTriangles(radius: number) {
 		const rv: Mesh[] = []
+		const mesh = (a: number, b: number, c: number) => {
+			const nm = new Mesh(this.triangleGeometry(a, b, c), this.triangleMaterial(a, b, c))
+			nm.userData = { points: [a, b, c], item: this }
+			rv.push(nm)
+		}
 		for (let circle = 1; circle < radius; circle++) {
 			for (let side = 0; side < 6; side++) {
 				for (let offset = 0; offset < circle; offset++) {
@@ -55,11 +110,11 @@ export default abstract class HexPatch extends Cacheable {
 						circle === 1
 							? 0
 							: hexTiles(circle - 1) + ((side * (circle - 1) + offset) % (6 * (circle - 1)))
-					rv.push(this.createTriangleMesh(index1, index3, index2))
+					mesh(index1, index3, index2)
 					if (offset > 0) {
 						const index4 =
 							hexTiles(circle - 1) + ((side * (circle - 1) + offset - 1) % (6 * (circle - 1)))
-						rv.push(this.createTriangleMesh(index1, index4, index3))
+						mesh(index1, index4, index3)
 					}
 				}
 			}
@@ -82,7 +137,7 @@ export default abstract class HexPatch extends Cacheable {
  */
 export class HexClown extends HexPatch {
 	vPosition(ndx: number) {
-		return { ...cartesian(axial[ndx], this.measures.tileSize), z: 0 }
+		return { ...cartesian(hexAt(ndx), this.measures.tileSize), z: 0 }
 	}
 	triangleMaterial(...ndx: [number, number, number]) {
 		return new MeshBasicMaterial({ color: floor(Math.random() * 0x1000000) })
