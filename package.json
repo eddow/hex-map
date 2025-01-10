@@ -1,0 +1,24 @@
+{
+	"name": "hex-board",
+	"version": "1.0.0",
+	"description": "A minimal 3D hexagonal game board using Three.js",
+	"main": "index.js",
+	"scripts": {
+		"vite": "vite",
+		"test": "jest"
+	},
+	"dependencies": {
+		"three": "^0.150.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.4",
+		"@types/jest": "^29.5.14",
+		"@types/three": "^0.172.0",
+		"jest": "^29.7.0",
+		"ts-jest": "^29.2.5",
+		"typescript": "^5.7.3",
+		"vite": "^5.0.0"
+	},
+	"author": "",
+	"license": "MIT"
+}
