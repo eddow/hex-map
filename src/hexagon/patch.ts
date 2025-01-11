@@ -11,38 +11,54 @@ import {
 	type Scene,
 	SphereGeometry,
 } from 'three'
-import type { RandGenerator } from '~/utils/lcg'
-import { Cacheable } from '../utils/decorators'
+import type { RandGenerator } from '~/utils/random'
 import type { MouseAction, MouseReactive } from '../utils/mouse'
-import { type V2, vDistance } from '../utils/vectors'
-import { cartesian, hexAt, hexTiles } from './utils'
+import { type V2, vDiff, vDistance, vProd, vSum } from '../utils/vectors'
+import {
+	type Axial,
+	axialAt,
+	axialIndex,
+	axialPolynomial,
+	cartesian,
+	hexSides,
+	hexTiles,
+} from './utils'
 const { floor, min } = Math
 
 export interface Measures {
 	tileSize: number
 	position: V2
-	scene: Scene
 	gen: RandGenerator
+}
+
+export interface TilePosition {
+	next: number
+	u: number
+	v: number
 }
 
 /**
  * Mostly abstract hex patch, has to be overridden
  */
-export default abstract class HexPatch extends Cacheable implements MouseReactive {
+export default abstract class HexPatch implements MouseReactive {
 	constructor(
 		public readonly measures: Measures,
 		public readonly radius: number
 	) {
-		super()
+		const { x, y } = measures.position
+		this.group.position.set(x, y, 0)
 	}
+	group: Group = new Group()
+	ground?: Group
 
+	// TODO: Highlighting mechanism should go global
 	highlighted?: number
 	highlight?: Mesh
 	mouse(
 		action: MouseAction,
 		intersection: Intersection<Object3D<Object3DEventMap>> | undefined
 	): void {
-		const { scene, tileSize } = this.measures
+		const { tileSize } = this.measures
 		switch (action) {
 			case 'move':
 				if (intersection) {
@@ -65,14 +81,14 @@ export default abstract class HexPatch extends Cacheable implements MouseReactiv
 								opacity: 0.5,
 							})
 							this.highlight = new Mesh(sphereGeometry, sphereMaterial)
-							scene.add(this.highlight)
+							this.group.add(this.highlight)
 						}
 						this.highlight?.position.copy(this.vPosition(hl))
 					}
 				} else {
 					this.highlighted = undefined
 					if (this.highlight) {
-						scene.remove(this.highlight)
+						this.group.remove(this.highlight)
 						this.highlight = undefined
 					}
 				}
@@ -124,13 +140,22 @@ export default abstract class HexPatch extends Cacheable implements MouseReactiv
 		return rv
 	}
 	// @cached // Not supported by Vite
-	get group() {
-		return this.cached('group', () => {
-			const rv = new Group()
-			const { x, y } = this.measures.position
-			rv.add(...this.genTriangles(this.radius)).position.set(x, y, 0)
-			return rv
-		})
+	generate() {
+		if (this.ground) this.group.remove(this.ground)
+		this.ground = new Group()
+		this.group.add(this.ground)
+		this.ground.add(...this.genTriangles(this.radius))
+	}
+
+	positionInTile(tile: number, { next, u, v }: TilePosition) {
+		const axial = axialAt(tile)
+		const next1 = axialIndex(axialPolynomial([1, axial], [1, hexSides[next]]))
+		const next2 = axialIndex(axialPolynomial([1, axial], [1, hexSides[(next + 1) % 6]]))
+		if (next1 > this.nbrTiles || next2 > this.nbrTiles) return null
+		const pos = this.vPosition(tile)
+		const next1Pos = vDiff(this.vPosition(next1), pos)
+		const next2Pos = vDiff(this.vPosition(next2), pos)
+		return vSum(vProd(next1Pos, u / 2), vProd(next2Pos, v / 2))
 	}
 }
 
@@ -139,7 +164,7 @@ export default abstract class HexPatch extends Cacheable implements MouseReactiv
  */
 export class HexClown extends HexPatch {
 	vPosition(ndx: number) {
-		return { ...cartesian(hexAt(ndx), this.measures.tileSize), z: 0 }
+		return { ...cartesian(axialAt(ndx), this.measures.tileSize), z: 0 }
 	}
 	triangleMaterial(...ndx: [number, number, number]) {
 		return new MeshBasicMaterial({ color: floor(this.measures.gen() * 0x1000000) })

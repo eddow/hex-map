@@ -42,7 +42,6 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 	}
 
 	// Pointer lock setup
-	let buttons = 0
 	let hasLock = false
 
 	function onPointerLockChange() {
@@ -59,7 +58,7 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 			const { dx, dy } = { dx: event.movementX, dy: event.movementY } // Relative mouse event
 			let movement: undefined | keyof MouseLockButtons
 			for (const key in mouseConfig.lockButtons)
-				if (mouseConfig.lockButtons[key as keyof MouseLockButtons] === buttons) {
+				if (mouseConfig.lockButtons[key as keyof MouseLockButtons] === event.buttons) {
 					movement = key as keyof MouseLockButtons
 					break
 				}
@@ -95,6 +94,7 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 						.add(xv.multiplyScalar(-dx * displacement))
 						.add(projectedUp.multiplyScalar(dy * displacement))
 				}
+				// TODO case 'lookAt': = look at the same point and turn around
 			}
 		} else {
 			const intersection = mouseIntersect(event)
@@ -109,18 +109,19 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 	function onMouseWheel(event: WheelEvent) {
 		// Normalize the wheel delta for consistent zoom behavior
 		const delta = event.deltaY > 0 ? 1 : -1
-
+		// TODO: better zoom algorithm: use mouse intersection to approach/move away from a point
 		// Adjust the camera's zoom or position
 		const zoomSpeed = 1.2
 		camera.position.z *= zoomSpeed ** delta
 
 		// Optionally, clamp the zoom level to prevent the camera from getting too close or far
 		camera.position.z = Math.max(2, Math.min(500, camera.position.z)) // Example clamp between 2 and 50
+		// TODO: cursor out of mouse pointer after zoom: calling mouseMove is not enough
+		//mouseMove(event)
 	}
 
 	function reLock(event: MouseEvent) {
-		buttons = event.buttons
-		const shouldLock = Object.values(mouseConfig.lockButtons).includes(buttons)
+		const shouldLock = Object.values(mouseConfig.lockButtons).includes(event.buttons)
 		if (!hasLock && shouldLock) canvas.requestPointerLock()
 		else if (hasLock && !shouldLock) document.exitPointerLock()
 	}

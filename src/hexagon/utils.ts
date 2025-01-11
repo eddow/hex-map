@@ -33,7 +33,7 @@ export const hexSides = rotations.map((c) => c({ q: 1, r: 0 }))
  * @param args [coef, axial]
  * @returns Axial
  */
-export function polynomial(...args: [number, Axial][]): Axial {
+export function axialPolynomial(...args: [number, Axial][]): Axial {
 	return args.reduce(
 		(acc, [coef, axial]) => ({ q: acc.q + coef * axial.q, r: acc.r + coef * axial.r }),
 		{ q: 0, r: 0 }
@@ -41,13 +41,13 @@ export function polynomial(...args: [number, Axial][]): Axial {
 }
 
 /** Returns the axial coordinates of the nth hexagonal tile */
-export function hexAt(n: number): Axial {
+export function axialAt(n: number): Axial {
 	if (n === 0) return { q: 0, r: 0 }
 	const radius = floor((3 + sqrt(-3 + 12 * n)) / 6)
 	const previous = 3 * radius * (radius - 1) + 1
 	const sidePos = n - previous
 	const side = floor(sidePos / radius)
-	return polynomial([radius, hexSides[side]], [sidePos % radius, hexSides[(side + 2) % 6]])
+	return axialPolynomial([radius, hexSides[side]], [sidePos % radius, hexSides[(side + 2) % 6]])
 }
 
 /**

@@ -1,57 +1,23 @@
-import { BufferAttribute, BufferGeometry, MeshBasicMaterial, NormalBufferAttributes } from 'three'
-import LCG from '~/utils/lcg'
+import { BufferAttribute, Group, MeshBasicMaterial } from 'three'
+import { type Terrain, terrainType, terrainTypes, wholeScale } from '~/terrains'
+import type { Artefact } from '~/terrains/artifacts'
+import LCG from '~/utils/random'
 import HexPatch, { type Measures } from './patch'
 import {
 	type Axial,
+	axialAt,
 	axialDistance,
 	axialIndex,
+	axialPolynomial,
 	cartesian,
-	hexAt,
 	hexSides,
-	polynomial,
 } from './utils'
 
 const { max, floor } = Math
 
-const wholeScale = 80
-
-const terrainTypes = {
-	sand: {
-		color: { r: 0.8, g: 0.8, b: 0 },
-		minHeight: Number.NEGATIVE_INFINITY,
-	},
-	grass: {
-		color: { r: 0.4, g: 0.8, b: 0.4 },
-		minHeight: 10,
-	},
-	forest: {
-		color: { r: 0, g: 0.9, b: 0 },
-		minHeight: 30,
-	},
-	stone: {
-		color: { r: 0.2, g: 0.2, b: 0.2 },
-		minHeight: 45,
-	},
-	snow: {
-		color: { r: 0.9, g: 0.9, b: 0.9 },
-		minHeight: 60,
-	},
-}
-
-function terrainType(height: number) {
-	let rvH = Number.NEGATIVE_INFINITY
-	let rvT: keyof typeof terrainTypes = 'sand'
-	for (const type in terrainTypes) {
-		const thisH = terrainTypes[type as keyof typeof terrainTypes].minHeight
-		if (height >= thisH && thisH > rvH) {
-			rvH = thisH
-			rvT = type as keyof typeof terrainTypes
-		}
-	}
-	return rvT
-}
 interface BasePoint {
 	z: number
+	group?: Group
 }
 
 interface PointSpec {
@@ -66,16 +32,21 @@ export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> ex
 		public readonly scale: number
 	) {
 		super(measures, 1 + (1 << scale))
-		const corners = hexSides.map((side) => polynomial([1 << scale, side]))
+	}
+	generate() {
+		const corners = hexSides.map((side) => axialPolynomial([1 << this.scale, side]))
 		this.initCorners(corners.map(axialIndex))
-		for (let c = 0; c < 6; c++) {
-			this.divTriangle(scale, corners[c], corners[(c + 1) % 6], { q: 0, r: 0 })
-		}
+		for (let c = 0; c < 6; c++)
+			this.divTriangle(this.scale, corners[c], corners[(c + 1) % 6], { q: 0, r: 0 })
+		// Apply here patches from save games
+		// else
+		for (let t = 0; t < this.nbrTiles; t++) this.populatePoint(this.points[t], axialAt(t), t)
+		super.generate()
 	}
 	divTriangle(scale: number, ...triangle: Axial[]) {
 		if (scale === 0) return
 		const points = triangle.map(axialIndex)
-		const mids = triangle.map((a, i) => polynomial([0.5, a], [0.5, triangle[(i + 1) % 3]]))
+		const mids = triangle.map((a, i) => axialPolynomial([0.5, a], [0.5, triangle[(i + 1) % 3]]))
 		const midPoints = mids.map(axialIndex)
 		for (let i = 0; i < 3; i++)
 			if (!this.points[midPoints[i]])
@@ -96,15 +67,17 @@ export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> ex
 	 */
 	abstract initCorners(corners: number[]): void
 	abstract insidePoint(p1: Point, p2: Point, specs: PointSpec): Point
+	abstract populatePoint(p: Point, position: Axial, index: number): void
 
 	vPosition(ndx: number) {
-		return { ...cartesian(hexAt(ndx), this.measures.tileSize), z: max(this.points[ndx].z, 0) }
+		return { ...cartesian(axialAt(ndx), this.measures.tileSize), z: max(this.points[ndx].z, 0) }
 	}
 }
 
 interface HeightPoint extends BasePoint {
-	type: keyof typeof terrainTypes
+	type: Terrain
 	seed: number
+	artifacts: Artefact[]
 }
 
 function getColor(point: HeightPoint) {
@@ -113,16 +86,22 @@ function getColor(point: HeightPoint) {
 	return z > 0 ? terrainTypes[point.type].color : { r: p / 2, g: p / 2, b: 1 }
 }
 
+// TODO: Use textures instead of colors
+
 export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 	initCorners(corners: number[]): void {
 		const { gen } = this.measures
-		this.points[0] = { z: (wholeScale * 3) / 4, type: 'snow', seed: gen() }
+		this.points[0] = { z: (wholeScale * 3) / 4, type: 'snow', seed: gen(), artifacts: [] }
 		for (const corner of corners)
-			this.points[corner] = { z: -wholeScale / 4, type: 'sand', seed: gen() }
+			this.points[corner] = { z: -wholeScale / 4, type: 'sand', seed: gen(), artifacts: [] }
 	}
 	insidePoint(p1: HeightPoint, p2: HeightPoint, { scale, point }: PointSpec): HeightPoint {
+		const variance = (terrainTypes[p1.type].variance + terrainTypes[p2.type].variance) / 2
 		const randScale =
-			((1 << scale) / this.radius) * wholeScale * (1 - axialDistance(point) / (this.radius - 1))
+			((1 << scale) / this.radius) *
+			wholeScale *
+			variance *
+			(1 - axialDistance(point) / (this.radius - 1))
 		const seed = LCG(p1.seed, p2.seed)()
 		const gen = LCG(seed)
 		const z = (p1.z + p2.z) / 2 + gen(0.5, -0.5) * randScale
@@ -132,6 +111,46 @@ export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 			z: z,
 			type,
 			seed,
+			artifacts: [],
+		}
+	}
+	populatePoint(p: HeightPoint, position: Axial, index: number): void {
+		const gen = LCG(p.seed + 0.2)
+		const add = (a: Artefact) => {
+			p.artifacts.push(a)
+			if (!p.group) {
+				p.group = new Group()
+				p.group.position.copy(this.vPosition(index))
+				this.group.add(p.group)
+			}
+			let [u, v] = [gen(), gen()]
+			if (u + v > 1) [u, v] = [1 - u, 1 - v]
+			const next = floor(gen(6))
+			const pos = this.positionInTile(index, { next, u, v })
+			if (pos) {
+				a.mesh.position.set(pos.x, pos.y, pos.z)
+				p.group.add(a.mesh)
+			}
+		}
+		if (p.z > 0) {
+			p.artifacts = Array.from(terrainTypes[p.type].artifacts(gen))
+			if (p.artifacts.length) {
+				if (!p.group) {
+					p.group = new Group()
+					p.group.position.copy(this.vPosition(index))
+					this.group.add(p.group)
+				}
+				for (const a of p.artifacts) {
+					let [u, v] = [gen(), gen()]
+					if (u + v > 1) [u, v] = [1 - u, 1 - v]
+					const next = floor(gen(6))
+					const pos = this.positionInTile(index, { next, u, v })
+					if (pos) {
+						a.mesh.position.set(pos.x, pos.y, pos.z)
+						p.group.add(a.mesh)
+					}
+				}
+			}
 		}
 	}
 	triangleGeometry(...ndx: [number, number, number]) {

@@ -1,4 +1,4 @@
-https://polyhaven.com/textures/terrain
+https://3djungle.net
 
 for file in *.jpg; do convert "$file" "${file%.jpg}.png"; done
 for file in *.exr; do convert "$file" "${file%.exr}.png"; done

@@ -4,8 +4,7 @@
 	"description": "A minimal 3D hexagonal game board using Three.js",
 	"main": "index.js",
 	"scripts": {
-		"vite": "vite",
-		"test": "jest"
+		"vite": "vite"
 	},
 	"dependencies": {
 		"three": "^0.150.0"

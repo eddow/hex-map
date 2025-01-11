@@ -1,6 +1,6 @@
 import { AmbientLight, DirectionalLight, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
-import LCG from '~/utils/lcg'
 import { mouseControls } from '~/utils/mouse'
+import LCG from '~/utils/random'
 import { HexClown, type Measures } from './hexagon/patch'
 import { HeightPowGen } from './hexagon/pow2Gen'
 
@@ -20,10 +20,11 @@ const ambientLight = new AmbientLight(0x404040)
 scene.add(ambientLight)
 
 const worldSeed = 0.43
-const measures: Measures = { tileSize: 10, position: { x: 0, y: 0 }, scene, gen: LCG(worldSeed) }
+const measures: Measures = { tileSize: 10, position: { x: 0, y: 0 }, gen: LCG(worldSeed) }
 // Create and Add Hexagonal Grid
-const hPatch = new HeightPowGen(measures, 5)
+const hPatch = new HeightPowGen(measures, 6)
 //const hPatch = new HexClown(measures, 5)
+hPatch.generate()
 scene.add(hPatch.group)
 
 // Position the Camera
