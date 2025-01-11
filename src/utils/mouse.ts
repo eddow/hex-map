@@ -10,6 +10,17 @@ import {
 } from 'three'
 
 export const mouse = new Vector2()
+export interface MouseLockButtons {
+	pan?: number
+	turn?: number
+	lookAt?: number
+}
+export interface MouseConfig {
+	lockButtons: MouseLockButtons
+}
+export const mouseConfig: MouseConfig = {
+	lockButtons: { pan: 3, turn: 4 },
+}
 
 export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: Scene) {
 	const rayCaster = new Raycaster()
@@ -21,11 +32,11 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 
 		const intersects = rayCaster.intersectObjects(scene.children)
 
-		const interact = intersects.findIndex((i) => i.object?.userData?.item)
+		const interact = intersects.findIndex((i) => i.object?.userData?.item?.mouse)
 		if (interact > -1) {
 			return {
 				intersect: intersects[interact],
-				item: intersects[interact].object?.userData?.item,
+				item: intersects[interact].object?.userData?.item as MouseReactive,
 			}
 		}
 	}
@@ -39,13 +50,22 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 	}
 
 	let objectHovered: MouseReactive | undefined
+	let lastButtonDown: number | undefined
 
 	function mouseMove(event: MouseEvent) {
+		lastButtonDown = undefined
 		if (hasLock) {
 			// Relative mouse movement
-			const { dx, dy } = { dx: event.movementX, dy: event.movementY } // Relative mouse mevent
-			switch (buttons) {
-				case 4: {
+			const { dx, dy } = { dx: event.movementX, dy: event.movementY } // Relative mouse event
+			let movement: undefined | keyof MouseLockButtons
+			for (const key in mouseConfig.lockButtons)
+				if (mouseConfig.lockButtons[key as keyof MouseLockButtons] === buttons) {
+					movement = key as keyof MouseLockButtons
+					break
+				}
+
+			switch (movement) {
+				case 'turn': {
 					// Rotate camera
 					// x: movement rotates the camera around the word's Z axis
 					camera.rotateOnWorldAxis(new Vector3(0, 0, -1), dx * 0.01)
@@ -54,7 +74,7 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 					camera.rotateX(-dy * 0.01) // Apply tilt rotation
 					break
 				}
-				case 2: {
+				case 'pan': {
 					const displacement = camera.position.z / 1000
 					const xv = new Vector3(1, 0, 0)
 					xv.applyQuaternion(camera.quaternion)
@@ -98,14 +118,29 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 		camera.position.z = Math.max(2, Math.min(500, camera.position.z)) // Example clamp between 2 and 50
 	}
 
-	function mouseDown(event: MouseEvent) {
+	function reLock(event: MouseEvent) {
 		buttons = event.buttons
-		if (buttons & 6 && !hasLock) canvas.requestPointerLock()
+		const shouldLock = Object.values(mouseConfig.lockButtons).includes(buttons)
+		if (!hasLock && shouldLock) canvas.requestPointerLock()
+		else if (hasLock && !shouldLock) document.exitPointerLock()
+	}
+
+	function mouseDown(event: MouseEvent) {
+		lastButtonDown = event.button
+		reLock(event)
+
+		const intersection = mouseIntersect(event)
+		intersection?.item?.mouse('down', intersection.intersect, event.button)
 	}
 
 	function mouseUp(event: MouseEvent) {
-		buttons = event.buttons
-		if (!(buttons & 6) && hasLock) document.exitPointerLock()
+		const intersection = mouseIntersect(event)
+		intersection?.item?.mouse('up', intersection.intersect, event.button)
+		if (event.buttons === 0 && lastButtonDown === event.button) {
+			intersection?.item?.mouse('click', intersection.intersect, event.button)
+		}
+		lastButtonDown = undefined
+		reLock(event)
 	}
 
 	// Attach event listeners
@@ -120,5 +155,9 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 export type MouseAction = 'move' | 'enter' | 'leave' | 'down' | 'up' | 'click'
 
 export interface MouseReactive {
-	mouse(action: MouseAction, intersection?: Intersection<Object3D<Object3DEventMap>>): void
+	mouse(
+		action: MouseAction,
+		intersection?: Intersection<Object3D<Object3DEventMap>>,
+		button?: number
+	): void
 }

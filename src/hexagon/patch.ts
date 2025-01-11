@@ -11,16 +11,18 @@ import {
 	type Scene,
 	SphereGeometry,
 } from 'three'
+import type { RandGenerator } from '~/utils/lcg'
 import { Cacheable } from '../utils/decorators'
 import type { MouseAction, MouseReactive } from '../utils/mouse'
-import { v3distance } from '../utils/utils'
-import { type Hex, cartesian, hexAt, hexTiles } from './utils'
+import { type V2, vDistance } from '../utils/vectors'
+import { cartesian, hexAt, hexTiles } from './utils'
 const { floor, min } = Math
 
 export interface Measures {
 	tileSize: number
-	position: Hex
+	position: V2
 	scene: Scene
+	gen: RandGenerator
 }
 
 /**
@@ -49,7 +51,7 @@ export default abstract class HexPatch extends Cacheable implements MouseReactiv
 					for (let i = 0; i < p.count; i++) {
 						positions.push({ x: p.getX(i), y: p.getY(i), z: p.getZ(i) })
 					}
-					const distances = positions.map((p) => v3distance(p, intersection.point))
+					const distances = positions.map((p) => vDistance(p, intersection.point))
 					const minD = min(...distances)
 					const hl = intersection.object.userData?.points[distances.indexOf(minD)]
 
@@ -140,7 +142,7 @@ export class HexClown extends HexPatch {
 		return { ...cartesian(hexAt(ndx), this.measures.tileSize), z: 0 }
 	}
 	triangleMaterial(...ndx: [number, number, number]) {
-		return new MeshBasicMaterial({ color: floor(Math.random() * 0x1000000) })
+		return new MeshBasicMaterial({ color: floor(this.measures.gen() * 0x1000000) })
 	}
 }
 /**

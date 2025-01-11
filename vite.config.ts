@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import {resolve} from 'path'
 
 export default defineConfig({
 	root: "./",
@@ -8,4 +9,9 @@ export default defineConfig({
 	optimizeDeps: {
 		include: ["three"], // Example for including external dependencies
 	},
+	resolve: {
+		alias: {
+			'~': resolve(__dirname, './src'),
+		},
+	}
 });

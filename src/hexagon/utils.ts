@@ -1,20 +1,14 @@
-const { floor, sqrt, max, abs } = Math
-
-export interface Hex {
-	x: number
-	y: number
-}
-
 export interface Axial {
 	q: number
 	r: number
 }
+const { floor, sqrt, max, abs } = Math
 
 export function cube({ q, r }: Axial) {
 	return { q, r, s: -q - r }
 }
 
-export function axialDistance(a: Axial, b: Axial) {
+export function axialDistance(a: Axial, b: Axial = { q: 0, r: 0 }) {
 	const aS = -a.q - a.r
 	const bS = -b.q - b.r
 	return max(abs(a.q - b.q), abs(a.r - b.r), abs(aS - bS))
