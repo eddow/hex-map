@@ -1,8 +1,8 @@
 import { BufferAttribute, Group, MeshBasicMaterial } from 'three'
-import { type Terrain, terrainType, terrainTypes, wholeScale } from '~/terrains'
-import type { Artefact } from '~/terrains/artifacts'
+import { type Terrain, terrainType, terrainTypes, wholeScale } from '~/terrain'
+import type { Artefact } from '~/terrain/artifacts'
 import LCG from '~/utils/random'
-import HexPatch, { type Measures } from './patch'
+import HexSector, { type Measures } from './section'
 import {
 	type Axial,
 	axialAt,
@@ -25,7 +25,7 @@ interface PointSpec {
 	point: Axial
 }
 
-export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> extends HexPatch {
+export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> extends HexSector {
 	readonly points: Point[] = []
 	constructor(
 		measures: Measures,
@@ -91,17 +91,13 @@ function getColor(point: HeightPoint) {
 export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 	initCorners(corners: number[]): void {
 		const { gen } = this.measures
-		this.points[0] = { z: (wholeScale * 3) / 4, type: 'snow', seed: gen(), artifacts: [] }
+		this.points[0] = { z: wholeScale, type: 'snow', seed: gen(), artifacts: [] }
 		for (const corner of corners)
-			this.points[corner] = { z: -wholeScale / 4, type: 'sand', seed: gen(), artifacts: [] }
+			this.points[corner] = { z: -wholeScale * 0.5, type: 'sand', seed: gen(), artifacts: [] }
 	}
 	insidePoint(p1: HeightPoint, p2: HeightPoint, { scale, point }: PointSpec): HeightPoint {
 		const variance = (terrainTypes[p1.type].variance + terrainTypes[p2.type].variance) / 2
-		const randScale =
-			((1 << scale) / this.radius) *
-			wholeScale *
-			variance *
-			(1 - axialDistance(point) / (this.radius - 1))
+		const randScale = ((1 << scale) / this.radius) * wholeScale * variance
 		const seed = LCG(p1.seed, p2.seed)()
 		const gen = LCG(seed)
 		const z = (p1.z + p2.z) / 2 + gen(0.5, -0.5) * randScale
@@ -116,22 +112,6 @@ export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 	}
 	populatePoint(p: HeightPoint, position: Axial, index: number): void {
 		const gen = LCG(p.seed + 0.2)
-		const add = (a: Artefact) => {
-			p.artifacts.push(a)
-			if (!p.group) {
-				p.group = new Group()
-				p.group.position.copy(this.vPosition(index))
-				this.group.add(p.group)
-			}
-			let [u, v] = [gen(), gen()]
-			if (u + v > 1) [u, v] = [1 - u, 1 - v]
-			const next = floor(gen(6))
-			const pos = this.positionInTile(index, { next, u, v })
-			if (pos) {
-				a.mesh.position.set(pos.x, pos.y, pos.z)
-				p.group.add(a.mesh)
-			}
-		}
 		if (p.z > 0) {
 			p.artifacts = Array.from(terrainTypes[p.type].artifacts(gen))
 			if (p.artifacts.length) {

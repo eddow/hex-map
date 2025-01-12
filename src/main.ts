@@ -1,8 +1,12 @@
 import { AmbientLight, DirectionalLight, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
 import { mouseControls } from '~/utils/mouse'
 import LCG from '~/utils/random'
-import { HexClown, type Measures } from './hexagon/patch'
+import { Character } from './character'
+import { HexClown } from './hexagon/examples/clown'
 import { HeightPowGen } from './hexagon/pow2Gen'
+import type { Measures } from './hexagon/section'
+import { hoveredSpecs } from './utils/interact'
+import { sphere } from './utils/meshes'
 
 // Initialize Scene, Camera, and Renderer
 const scene = new Scene()
@@ -20,12 +24,15 @@ const ambientLight = new AmbientLight(0x404040)
 scene.add(ambientLight)
 
 const worldSeed = 0.43
-const measures: Measures = { tileSize: 10, position: { x: 0, y: 0 }, gen: LCG(worldSeed) }
+const measures: Measures = { tileSize: 10, position: { x: 0, y: 0, z: 0 }, gen: LCG(worldSeed) }
 // Create and Add Hexagonal Grid
-const hPatch = new HeightPowGen(measures, 6)
-//const hPatch = new HexClown(measures, 5)
-hPatch.generate()
-scene.add(hPatch.group)
+const sector = new HeightPowGen(measures, 6)
+//const sector = new HexClown(measures, 5)
+sector.generate()
+scene.add(sector.group)
+
+const pawn = new Character(sector, { q: 0, r: 0 }, sphere(2, { color: 0xff0000 }))
+scene.add(pawn.mesh)
 
 // Position the Camera
 camera.position.set(0, 0, 500)
@@ -39,11 +46,14 @@ window.addEventListener('resize', () => {
 	camera.updateProjectionMatrix()
 	renderer.setSize(window.innerWidth, window.innerHeight)
 })
+let lastTime = 0
 // Animate
-function animate() {
+function animate(time: DOMHighResTimeStamp) {
+	const dt = (time - lastTime) / 1000
+	lastTime = time
 	requestAnimationFrame(animate)
-
+	hoveredSpecs.interaction?.animate?.(dt)
 	renderer.render(scene, camera)
 }
 
-animate()
+animate(0)

@@ -5,29 +5,19 @@ import {
 	type Intersection,
 	type Material,
 	Mesh,
-	MeshBasicMaterial,
 	type Object3D,
 	type Object3DEventMap,
-	type Scene,
-	SphereGeometry,
 } from 'three'
+import { type MouseReactive, type TileHandle, tileInteraction } from '~/utils/interact'
+import { sphere } from '~/utils/meshes'
 import type { RandGenerator } from '~/utils/random'
-import type { MouseAction, MouseReactive } from '../utils/mouse'
-import { type V2, vDiff, vDistance, vProd, vSum } from '../utils/vectors'
-import {
-	type Axial,
-	axialAt,
-	axialIndex,
-	axialPolynomial,
-	cartesian,
-	hexSides,
-	hexTiles,
-} from './utils'
-const { floor, min } = Math
+import { type V3, vDiff, vDistance, vProd, vSum } from '../utils/vectors'
+import { axialAt, axialIndex, axialPolynomial, hexSides, hexTiles } from './utils'
+const { min } = Math
 
 export interface Measures {
 	tileSize: number
-	position: V2
+	position: V3
 	gen: RandGenerator
 }
 
@@ -38,9 +28,9 @@ export interface TilePosition {
 }
 
 /**
- * Mostly abstract hex patch, has to be overridden
+ * Mostly abstract hex sector, has to be overridden
  */
-export default abstract class HexPatch implements MouseReactive {
+export default abstract class HexSector implements MouseReactive {
 	constructor(
 		public readonly measures: Measures,
 		public readonly radius: number
@@ -54,46 +44,18 @@ export default abstract class HexPatch implements MouseReactive {
 	// TODO: Highlighting mechanism should go global
 	highlighted?: number
 	highlight?: Mesh
-	mouse(
-		action: MouseAction,
-		intersection: Intersection<Object3D<Object3DEventMap>> | undefined
-	): void {
-		const { tileSize } = this.measures
-		switch (action) {
-			case 'move':
-				if (intersection) {
-					const p = (intersection.object as Mesh).geometry.attributes.position
-					const positions = []
-					for (let i = 0; i < p.count; i++) {
-						positions.push({ x: p.getX(i), y: p.getY(i), z: p.getZ(i) })
-					}
-					const distances = positions.map((p) => vDistance(p, intersection.point))
-					const minD = min(...distances)
-					const hl = intersection.object.userData?.points[distances.indexOf(minD)]
 
-					if (hl !== this.highlighted) {
-						this.highlighted = hl
-						if (!this.highlight) {
-							const sphereGeometry = new SphereGeometry(tileSize, 32, 32)
-							const sphereMaterial = new MeshBasicMaterial({
-								color: 0x8080ff,
-								transparent: true,
-								opacity: 0.5,
-							})
-							this.highlight = new Mesh(sphereGeometry, sphereMaterial)
-							this.group.add(this.highlight)
-						}
-						this.highlight?.position.copy(this.vPosition(hl))
-					}
-				} else {
-					this.highlighted = undefined
-					if (this.highlight) {
-						this.group.remove(this.highlight)
-						this.highlight = undefined
-					}
-				}
-				break
+	mouseInteraction = tileInteraction
+	mouseHandle(intersection: Intersection<Object3D<Object3DEventMap>>): TileHandle {
+		const p = (intersection.object as Mesh).geometry.attributes.position
+		const positions = []
+		for (let i = 0; i < p.count; i++) {
+			positions.push({ x: p.getX(i), y: p.getY(i), z: p.getZ(i) })
 		}
+		const distances = positions.map((p) => vDistance(p, intersection.point))
+		const minD = min(...distances)
+
+		return { target: this, point: intersection.object.userData?.points[distances.indexOf(minD)] }
 	}
 	abstract vPosition(ndx: number): { x: number; y: number; z: number }
 	abstract triangleMaterial(...ndx: [number, number, number]): Material | undefined
@@ -116,7 +78,7 @@ export default abstract class HexPatch implements MouseReactive {
 		const rv: Mesh[] = []
 		const mesh = (a: number, b: number, c: number) => {
 			const nm = new Mesh(this.triangleGeometry(a, b, c), this.triangleMaterial(a, b, c))
-			nm.userData = { points: [a, b, c], item: this }
+			nm.userData = { points: [a, b, c], mouseTarget: this }
 			rv.push(nm)
 		}
 		for (let circle = 1; circle < radius; circle++) {
@@ -158,18 +120,6 @@ export default abstract class HexPatch implements MouseReactive {
 		return vSum(vProd(next1Pos, u / 2), vProd(next2Pos, v / 2))
 	}
 }
-
 /**
- * A simple hexagonal patch with random colors
- */
-export class HexClown extends HexPatch {
-	vPosition(ndx: number) {
-		return { ...cartesian(axialAt(ndx), this.measures.tileSize), z: 0 }
-	}
-	triangleMaterial(...ndx: [number, number, number]) {
-		return new MeshBasicMaterial({ color: floor(this.measures.gen() * 0x1000000) })
-	}
-}
-/**
- * We can construct a patch with 2 more sides (`puzzleTiles` tiles) so that they can nest into each another in an infinite board
+ * We can construct a sector with 2 more sides (`puzzleTiles` tiles) so that they can nest into each another in an infinite board
  */

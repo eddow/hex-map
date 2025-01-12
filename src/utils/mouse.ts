@@ -1,13 +1,5 @@
-import {
-	type Camera,
-	type Intersection,
-	type Object3D,
-	type Object3DEventMap,
-	Raycaster,
-	type Scene,
-	Vector2,
-	Vector3,
-} from 'three'
+import { type Camera, Raycaster, type Scene, Vector2, Vector3 } from 'three'
+import { type InteractionSpecs, type MouseReactive, hoveredSpecs } from './interact'
 
 export const mouse = new Vector2()
 export interface MouseLockButtons {
@@ -25,18 +17,19 @@ export const mouseConfig: MouseConfig = {
 export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: Scene) {
 	const rayCaster = new Raycaster()
 
-	function mouseIntersect(event: MouseEvent) {
+	function mouseInteract(event: MouseEvent): InteractionSpecs | undefined {
 		mouse.x = (event.clientX / window.innerWidth) * 2 - 1
 		mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
 		rayCaster.setFromCamera(mouse, camera)
 
 		const intersects = rayCaster.intersectObjects(scene.children)
 
-		const interact = intersects.findIndex((i) => i.object?.userData?.item?.mouse)
+		const interact = intersects.findIndex((i) => i.object?.userData?.mouseTarget?.mouseInteraction)
 		if (interact > -1) {
+			const mouseTarget = intersects[interact].object?.userData?.mouseTarget as MouseReactive
 			return {
-				intersect: intersects[interact],
-				item: intersects[interact].object?.userData?.item as MouseReactive,
+				interaction: mouseTarget.mouseInteraction,
+				handle: mouseTarget.mouseHandle?.(intersects[interact]) || { target: mouseTarget },
 			}
 		}
 	}
@@ -48,7 +41,6 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 		hasLock = document.pointerLockElement === canvas
 	}
 
-	let objectHovered: MouseReactive | undefined
 	let lastButtonDown: number | undefined
 
 	function mouseMove(event: MouseEvent) {
@@ -97,12 +89,21 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 				// TODO case 'lookAt': = look at the same point and turn around
 			}
 		} else {
-			const intersection = mouseIntersect(event)
-			if (objectHovered !== intersection?.item) {
-				objectHovered?.mouse('move')
-				objectHovered = intersection?.item
-			}
-			intersection?.item?.mouse('move', intersection.intersect)
+			const interactionSpecs = mouseInteract(event)
+			if (
+				hoveredSpecs.interaction &&
+				hoveredSpecs.handle!.target !== interactionSpecs?.handle.target
+			)
+				hoveredSpecs.interaction.leave?.(hoveredSpecs.handle!)
+			if (!hoveredSpecs.interaction && interactionSpecs)
+				interactionSpecs.interaction.enter?.(interactionSpecs.handle)
+			if (interactionSpecs)
+				interactionSpecs.interaction.move?.(interactionSpecs.handle, hoveredSpecs?.handle)
+
+			if (interactionSpecs) Object.assign(hoveredSpecs, interactionSpecs)
+			else
+				for (const key of Object.keys(hoveredSpecs) as Array<keyof InteractionSpecs>)
+					delete hoveredSpecs[key]
 		}
 	}
 
@@ -130,15 +131,16 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 		lastButtonDown = event.button
 		reLock(event)
 
-		const intersection = mouseIntersect(event)
-		intersection?.item?.mouse('down', intersection.intersect, event.button)
+		const interactionSpecs = mouseInteract(event)
+		interactionSpecs?.interaction?.down?.(interactionSpecs.handle, event.button)
 	}
 
 	function mouseUp(event: MouseEvent) {
-		const intersection = mouseIntersect(event)
-		intersection?.item?.mouse('up', intersection.intersect, event.button)
-		if (event.buttons === 0 && lastButtonDown === event.button) {
-			intersection?.item?.mouse('click', intersection.intersect, event.button)
+		const interactionSpecs = mouseInteract(event)
+		if (interactionSpecs) {
+			interactionSpecs.interaction.up?.(interactionSpecs.handle, event.button)
+			if (event.buttons === 0 && lastButtonDown === event.button)
+				interactionSpecs.interaction.click?.(interactionSpecs.handle, event.button)
 		}
 		lastButtonDown = undefined
 		reLock(event)
@@ -151,14 +153,4 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 	canvas.addEventListener('mouseup', mouseUp)
 	canvas.addEventListener('contextmenu', (e) => e.preventDefault())
 	canvas.addEventListener('wheel', onMouseWheel)
-}
-
-export type MouseAction = 'move' | 'enter' | 'leave' | 'down' | 'up' | 'click'
-
-export interface MouseReactive {
-	mouse(
-		action: MouseAction,
-		intersection?: Intersection<Object3D<Object3DEventMap>>,
-		button?: number
-	): void
 }
