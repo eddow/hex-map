@@ -2,7 +2,6 @@ export interface Axial {
 	q: number
 	r: number
 }
-const { floor, sqrt, max, abs } = Math
 
 export function cube({ q, r }: Axial) {
 	return { q, r, s: -q - r }
@@ -11,7 +10,7 @@ export function cube({ q, r }: Axial) {
 export function axialDistance(a: Axial, b: Axial = { q: 0, r: 0 }) {
 	const aS = -a.q - a.r
 	const bS = -b.q - b.r
-	return max(abs(a.q - b.q), abs(a.r - b.r), abs(aS - bS))
+	return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(aS - bS))
 }
 
 export type Rotation = (c: Axial) => Axial
@@ -43,10 +42,10 @@ export function axialPolynomial(...args: [number, Axial][]): Axial {
 /** Returns the axial coordinates of the nth hexagonal tile */
 export function axialAt(n: number): Axial {
 	if (n === 0) return { q: 0, r: 0 }
-	const radius = floor((3 + sqrt(-3 + 12 * n)) / 6)
+	const radius = Math.floor((3 + Math.sqrt(-3 + 12 * n)) / 6)
 	const previous = 3 * radius * (radius - 1) + 1
 	const sidePos = n - previous
-	const side = floor(sidePos / radius)
+	const side = Math.floor(sidePos / radius)
 	return axialPolynomial([radius, hexSides[side]], [sidePos % radius, hexSides[(side + 2) % 6]])
 }
 
@@ -67,7 +66,7 @@ export function puzzleTiles(radius: number) {
 export function axialIndex({ q, r }: Axial) {
 	if (q === 0 && r === 0) return 0
 	const s = -q - r
-	const ring = max(abs(q), abs(r), abs(s))
+	const ring = Math.max(Math.abs(q), Math.abs(r), Math.abs(s))
 	const side = [q === ring, r === -ring, s === ring, q === -ring, r === ring, s === -ring].indexOf(
 		true
 	)
@@ -82,4 +81,36 @@ export function cartesian({ q, r }: Axial, size: number) {
 	const C = (3 / 2) * size
 
 	return { x: A * q + B * r, y: C * r }
+}
+
+export function fromCartesian({ x, y }: { x: number; y: number }, size: number) {
+	const A = Math.sqrt(3) * size
+	const B = (Math.sqrt(3) / 2) * size
+	const C = (3 / 2) * size
+
+	const r = y / C
+	const q = (x - B * r) / A
+	return { q, r }
+}
+
+function lerp(a: number, b: number, t: number) {
+	return a + (b - a) * t
+}
+
+export function axialLerp(a: Axial, b: Axial, t: number) {
+	// epsilon to avoid straight mid-points (point exactly on the line between 2 hexagons)
+	return { q: lerp(a.q + 1e-6, b.q + 2e-6, t), r: lerp(a.r, b.r, t) }
+}
+
+export function axialRound({ q, r }: Axial) {
+	const v = [q, r, -q - r]
+	const round = v.map(Math.round)
+	const diff = v.map((v, i) => Math.abs(round[i] - v))
+	const [rq, rr, rs] = round
+
+	return [
+		{ q: -rr - rs, r: rr },
+		{ q: rq, r: -rq - rs },
+		{ q: rq, r: rr },
+	][diff.indexOf(Math.max(...diff))]
 }

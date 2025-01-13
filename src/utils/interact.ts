@@ -1,6 +1,10 @@
 import type { Intersection, Mesh, Object3D, Object3DEventMap } from 'three'
-import type HexSector from '~/hexagon/section'
+import type { Character } from '~/character'
+import type HexSector from '~/hexagon/sector'
 import { icosahedron } from './meshes'
+
+// Used when giving an order, when the interaction is not only "select"
+export const interactionContext: { pawn?: Character } = {}
 
 export interface InteractionSpecs {
 	interaction: MouseInteraction
@@ -41,7 +45,7 @@ export const tileInteraction: MouseInteraction = {
 	},
 	enter({ target }: TileHandle) {
 		if (!highlight) {
-			highlight = icosahedron(target.measures.tileSize, {
+			highlight = icosahedron(target.tileSize, {
 				color: 0xffffff,
 				wireframe: true,
 			})
@@ -53,7 +57,9 @@ export const tileInteraction: MouseInteraction = {
 			highlight!.position.copy(target.vPosition(point))
 		}
 	},
-	// click(handle, button) {},
+	click({ target, point }: TileHandle, button) {
+		interactionContext.pawn!.goTo(target, point)
+	},
 	// down(handle, button) {},
 	// up(handle, button) {},
 	animate(dt: DOMHighResTimeStamp) {

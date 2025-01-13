@@ -1,8 +1,8 @@
-import { BufferAttribute, Group, MeshBasicMaterial } from 'three'
+import { BufferAttribute, Group, MeshBasicMaterial, Vector3 } from 'three'
 import { type Terrain, terrainType, terrainTypes, wholeScale } from '~/terrain'
 import type { Artefact } from '~/terrain/artifacts'
-import LCG from '~/utils/random'
-import HexSector, { type Measures } from './section'
+import LCG, { type RandGenerator } from '~/utils/random'
+import HexSector from './sector'
 import {
 	type Axial,
 	axialAt,
@@ -12,8 +12,6 @@ import {
 	cartesian,
 	hexSides,
 } from './utils'
-
-const { max, floor } = Math
 
 interface BasePoint {
 	z: number
@@ -28,20 +26,21 @@ interface PointSpec {
 export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> extends HexSector {
 	readonly points: Point[] = []
 	constructor(
-		measures: Measures,
+		position: Vector3,
+		tileSize: number,
 		public readonly scale: number
 	) {
-		super(measures, 1 + (1 << scale))
+		super(position, tileSize, 1 + (1 << scale))
 	}
-	generate() {
+	generate(gen: RandGenerator) {
 		const corners = hexSides.map((side) => axialPolynomial([1 << this.scale, side]))
-		this.initCorners(corners.map(axialIndex))
+		this.initCorners(corners.map(axialIndex), gen)
 		for (let c = 0; c < 6; c++)
 			this.divTriangle(this.scale, corners[c], corners[(c + 1) % 6], { q: 0, r: 0 })
 		// Apply here patches from save games
 		// else
 		for (let t = 0; t < this.nbrTiles; t++) this.populatePoint(this.points[t], axialAt(t), t)
-		super.generate()
+		super.generate(gen)
 	}
 	divTriangle(scale: number, ...triangle: Axial[]) {
 		if (scale === 0) return
@@ -65,12 +64,15 @@ export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> ex
 	 * Initiate the custom data of the center (index 0) and corners (given 6 indices) points
 	 * @param corners Indices of the corners
 	 */
-	abstract initCorners(corners: number[]): void
+	abstract initCorners(corners: number[], gen: RandGenerator): void
 	abstract insidePoint(p1: Point, p2: Point, specs: PointSpec): Point
 	abstract populatePoint(p: Point, position: Axial, index: number): void
 
 	vPosition(ndx: number) {
-		return { ...cartesian(axialAt(ndx), this.measures.tileSize), z: max(this.points[ndx].z, 0) }
+		return new Vector3().copy({
+			...cartesian(axialAt(ndx), this.tileSize),
+			z: Math.max(this.points[ndx].z, 0),
+		})
 	}
 }
 
@@ -89,20 +91,19 @@ function getColor(point: HeightPoint) {
 // TODO: Use textures instead of colors
 
 export class HeightPowGen extends HexPow2Gen<HeightPoint> {
-	initCorners(corners: number[]): void {
-		const { gen } = this.measures
+	initCorners(corners: number[], gen: RandGenerator): void {
 		this.points[0] = { z: wholeScale, type: 'snow', seed: gen(), artifacts: [] }
 		for (const corner of corners)
 			this.points[corner] = { z: -wholeScale * 0.5, type: 'sand', seed: gen(), artifacts: [] }
 	}
-	insidePoint(p1: HeightPoint, p2: HeightPoint, { scale, point }: PointSpec): HeightPoint {
+	insidePoint(p1: HeightPoint, p2: HeightPoint, { scale }: PointSpec): HeightPoint {
 		const variance = (terrainTypes[p1.type].variance + terrainTypes[p2.type].variance) / 2
 		const randScale = ((1 << scale) / this.radius) * wholeScale * variance
 		const seed = LCG(p1.seed, p2.seed)()
 		const gen = LCG(seed)
 		const z = (p1.z + p2.z) / 2 + gen(0.5, -0.5) * randScale
 		const changeType = gen() < scale / this.scale
-		const type = changeType ? terrainType(z) : [p1, p2][floor(gen(2))].type
+		const type = changeType ? terrainType(z) : [p1, p2][Math.floor(gen(2))].type
 		return {
 			z: z,
 			type,
@@ -123,7 +124,7 @@ export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 				for (const a of p.artifacts) {
 					let [u, v] = [gen(), gen()]
 					if (u + v > 1) [u, v] = [1 - u, 1 - v]
-					const next = floor(gen(6))
+					const next = Math.floor(gen(6))
 					const pos = this.positionInTile(index, { next, u, v })
 					if (pos) {
 						a.mesh.position.set(pos.x, pos.y, pos.z)
@@ -145,7 +146,7 @@ export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 		geometry.setAttribute('color', new BufferAttribute(colors, 3))
 		return geometry
 	}
-	triangleMaterial(...ndx: [number, number, number]) {
+	triangleMaterial(gen: RandGenerator, ...ndx: [number, number, number]) {
 		return new MeshBasicMaterial({
 			vertexColors: true, // Enable vertex colors
 		})

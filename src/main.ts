@@ -1,11 +1,16 @@
-import { AmbientLight, DirectionalLight, PerspectiveCamera, Scene, WebGLRenderer } from 'three'
+import {
+	AmbientLight,
+	DirectionalLight,
+	PerspectiveCamera,
+	Scene,
+	Vector3,
+	WebGLRenderer,
+} from 'three'
 import { mouseControls } from '~/utils/mouse'
 import LCG from '~/utils/random'
 import { Character } from './character'
-import { HexClown } from './hexagon/examples/clown'
 import { HeightPowGen } from './hexagon/pow2Gen'
-import type { Measures } from './hexagon/section'
-import { hoveredSpecs } from './utils/interact'
+import { hoveredSpecs, interactionContext } from './utils/interact'
 import { sphere } from './utils/meshes'
 
 // Initialize Scene, Camera, and Renderer
@@ -24,15 +29,17 @@ const ambientLight = new AmbientLight(0x404040)
 scene.add(ambientLight)
 
 const worldSeed = 0.43
-const measures: Measures = { tileSize: 10, position: { x: 0, y: 0, z: 0 }, gen: LCG(worldSeed) }
 // Create and Add Hexagonal Grid
-const sector = new HeightPowGen(measures, 6)
-//const sector = new HexClown(measures, 5)
-sector.generate()
+const sector = new HeightPowGen(new Vector3(0, 0, 0), 10, 6)
+//const sector = new HexClown(new Vector3(0, 0, 0), 10, 5)
+sector.generate(LCG(worldSeed))
 scene.add(sector.group)
 
-const pawn = new Character(sector, { q: 0, r: 0 }, sphere(2, { color: 0xff0000 }))
+const pawn = new Character(sector, 0, sphere(2, { color: 0xff0000 }))
 scene.add(pawn.mesh)
+interactionContext.pawn = pawn
+
+const characters: Character[] = [pawn]
 
 // Position the Camera
 camera.position.set(0, 0, 500)
@@ -53,6 +60,7 @@ function animate(time: DOMHighResTimeStamp) {
 	lastTime = time
 	requestAnimationFrame(animate)
 	hoveredSpecs.interaction?.animate?.(dt)
+	for (const character of characters) character.progress(dt)
 	renderer.render(scene, camera)
 }
 
