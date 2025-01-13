@@ -1,3 +1,5 @@
+import type { RandGenerator } from '~/utils/random'
+
 export interface Axial {
 	q: number
 	r: number
@@ -113,4 +115,28 @@ export function axialRound({ q, r }: Axial) {
 		{ q: rq, r: -rq - rs },
 		{ q: rq, r: rr },
 	][diff.indexOf(Math.max(...diff))]
+}
+
+export function genTilePosition(gen: RandGenerator) {
+	let [u, v] = [gen(), gen()]
+	const s = Math.floor(gen(6))
+	if (u + v > 1) [u, v] = [1 - u, 1 - v]
+	return { s, u, v }
+}
+
+export function posInTile(hexIndex: number, radius: number) {
+	if (hexIndex === 0) return { s: 0, u: 0, v: 0 }
+	const axial = axialAt(hexIndex)
+	const outerRadius = radius + 0.5
+	const { q, r } = { q: axial.q * outerRadius, r: axial.r * outerRadius }
+	const s = -q - r
+	const signs = (q >= 0 ? 'Q' : 'q') + (r >= 0 ? 'R' : 'r') + (s >= 0 ? 'S' : 's')
+	return {
+		Qrs: { s: 0, u: -r, v: -s },
+		QrS: { s: 1, u: s, v: q },
+		qrS: { s: 2, u: -q, v: -r },
+		qRS: { s: 3, u: r, v: s },
+		qRs: { s: 4, u: -s, v: -q },
+		QRs: { s: 5, u: q, v: r },
+	}[signs]!
 }

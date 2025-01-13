@@ -14,7 +14,7 @@ import { meshVectors3, sphere } from '~/utils/meshes'
 import type { RandGenerator } from '~/utils/random'
 import { axialAt, axialIndex, axialPolynomial, hexSides, hexTiles } from './utils'
 export interface TilePosition {
-	next: number
+	s: number
 	u: number
 	v: number
 }
@@ -42,10 +42,7 @@ export default abstract class HexSector implements MouseReactive {
 		return { target: this, point: intersection.object.userData?.points[distances.indexOf(minD)] }
 	}
 	abstract vPosition(ndx: number): Vector3
-	abstract triangleMaterial(
-		gen: RandGenerator,
-		...ndx: [number, number, number]
-	): Material | undefined
+	abstract triangleMaterial(ndx: [number, number, number], side: number): Material | undefined
 
 	triangleGeometry(...ndx: [number, number, number]) {
 		const geometry = new BufferGeometry()
@@ -61,10 +58,10 @@ export default abstract class HexSector implements MouseReactive {
 	get nbrTiles() {
 		return hexTiles(this.radius)
 	}
-	genTriangles(gen: RandGenerator, radius: number) {
+	genTriangles(radius: number) {
 		const rv: Mesh[] = []
-		const mesh = (a: number, b: number, c: number) => {
-			const nm = new Mesh(this.triangleGeometry(a, b, c), this.triangleMaterial(gen, a, b, c))
+		const mesh = (a: number, b: number, c: number, side: number) => {
+			const nm = new Mesh(this.triangleGeometry(a, b, c), this.triangleMaterial([a, b, c], side))
 			nm.userData = { points: [a, b, c], mouseTarget: this }
 			rv.push(nm)
 		}
@@ -77,30 +74,31 @@ export default abstract class HexSector implements MouseReactive {
 						circle === 1
 							? 0
 							: hexTiles(circle - 1) + ((side * (circle - 1) + offset) % (6 * (circle - 1)))
-					mesh(index1, index3, index2)
+					mesh(index1, index3, index2, side)
 					if (offset > 0) {
 						const index4 =
 							hexTiles(circle - 1) + ((side * (circle - 1) + offset - 1) % (6 * (circle - 1)))
-						mesh(index1, index4, index3)
+						mesh(index1, index4, index3, (side + 1) % 6)
 					}
 				}
 			}
 		}
 		return rv
 	}
-	// @cached // Not supported by Vite
-	generate(gen: RandGenerator) {
+	// To be overridden
+	generate(gen: RandGenerator) {}
+	meshTerrain() {
 		if (this.ground) this.group.remove(this.ground)
 		this.ground = new Group()
 		this.group.add(this.ground)
-		this.ground.add(...this.genTriangles(gen, this.radius))
+		this.ground.add(...this.genTriangles(this.radius))
 	}
 
-	positionInTile(tile: number, { next, u, v }: TilePosition) {
+	cartesian(tile: number, { s, u, v }: TilePosition) {
 		const axial = axialAt(tile)
-		const next1 = axialIndex(axialPolynomial([1, axial], [1, hexSides[next]]))
-		const next2 = axialIndex(axialPolynomial([1, axial], [1, hexSides[(next + 1) % 6]]))
-		if (next1 > this.nbrTiles || next2 > this.nbrTiles) return null
+		const next1 = axialIndex(axialPolynomial([1, axial], [1, hexSides[s]]))
+		const next2 = axialIndex(axialPolynomial([1, axial], [1, hexSides[(s + 1) % 6]]))
+		if (next1 >= this.nbrTiles || next2 >= this.nbrTiles) return null
 		const pos = this.vPosition(tile)
 		const next1Pos = this.vPosition(next1).sub(pos)
 		const next2Pos = this.vPosition(next2).sub(pos)

@@ -1,17 +1,24 @@
 import { BufferAttribute, Group, MeshBasicMaterial, Vector3 } from 'three'
-import { type Terrain, terrainType, terrainTypes, wholeScale } from '~/terrain'
-import type { Artefact } from '~/terrain/artifacts'
+import { type Handelable, generateResources } from '~/game/handelable'
+import { type Terrain, terrainType, terrainTypes, wholeScale } from '~/game/terrain'
+import { type TerrainTexture, genTexture } from '~/game/texture'
 import LCG, { type RandGenerator } from '~/utils/random'
 import HexSector from './sector'
 import {
 	type Axial,
 	axialAt,
-	axialDistance,
 	axialIndex,
 	axialPolynomial,
 	cartesian,
 	hexSides,
+	hexTiles,
+	posInTile,
 } from './utils'
+
+/**
+ * Number of hexagonal "circles" around the center of sub-tiles that can contain something
+ */
+const terrainContentRadius = 1
 
 interface BasePoint {
 	z: number
@@ -37,10 +44,13 @@ export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> ex
 		this.initCorners(corners.map(axialIndex), gen)
 		for (let c = 0; c < 6; c++)
 			this.divTriangle(this.scale, corners[c], corners[(c + 1) % 6], { q: 0, r: 0 })
-		// Apply here patches from save games
-		// else
-		for (let t = 0; t < this.nbrTiles; t++) this.populatePoint(this.points[t], axialAt(t), t)
 		super.generate(gen)
+	}
+	/**
+	 * Initialize the points from a virgin sector (generate random resources and artifacts)
+	 */
+	virgin() {
+		for (let t = 0; t < this.nbrTiles; t++) this.populatePoint(this.points[t], axialAt(t), t)
 	}
 	divTriangle(scale: number, ...triangle: Axial[]) {
 		if (scale === 0) return
@@ -66,7 +76,7 @@ export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> ex
 	 */
 	abstract initCorners(corners: number[], gen: RandGenerator): void
 	abstract insidePoint(p1: Point, p2: Point, specs: PointSpec): Point
-	abstract populatePoint(p: Point, position: Axial, index: number): void
+	abstract populatePoint(p: Point, position: Axial, hexIndex: number): void
 
 	vPosition(ndx: number) {
 		return new Vector3().copy({
@@ -79,7 +89,12 @@ export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> ex
 interface HeightPoint extends BasePoint {
 	type: Terrain
 	seed: number
-	artifacts: Artefact[]
+	content: (Handelable | undefined)[]
+	texture: TerrainTexture
+}
+
+function newPoint(z: number, type: Terrain, gen: RandGenerator, seed?: number): HeightPoint {
+	return { z, type, seed: seed ?? gen(), content: [], texture: genTexture(gen) }
 }
 
 function getColor(point: HeightPoint) {
@@ -92,9 +107,11 @@ function getColor(point: HeightPoint) {
 
 export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 	initCorners(corners: number[], gen: RandGenerator): void {
-		this.points[0] = { z: wholeScale, type: 'snow', seed: gen(), artifacts: [] }
+		this.points[0] = newPoint(wholeScale, 'snow', gen)
 		for (const corner of corners)
-			this.points[corner] = { z: -wholeScale * 0.5, type: 'sand', seed: gen(), artifacts: [] }
+			this.points[corner] =
+				//{ z: -wholeScale * 0.5, type: 'sand', seed: gen(), artifacts: [] }
+				newPoint(-wholeScale * 0.5, 'sand', gen)
 	}
 	insidePoint(p1: HeightPoint, p2: HeightPoint, { scale }: PointSpec): HeightPoint {
 		const variance = (terrainTypes[p1.type].variance + terrainTypes[p2.type].variance) / 2
@@ -104,35 +121,41 @@ export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 		const z = (p1.z + p2.z) / 2 + gen(0.5, -0.5) * randScale
 		const changeType = gen() < scale / this.scale
 		const type = changeType ? terrainType(z) : [p1, p2][Math.floor(gen(2))].type
-		return {
-			z: z,
-			type,
-			seed,
-			artifacts: [],
-		}
+		return newPoint(z, type, gen, seed)
 	}
-	populatePoint(p: HeightPoint, position: Axial, index: number): void {
-		const gen = LCG(p.seed + 0.2)
-		if (p.z > 0) {
-			p.artifacts = Array.from(terrainTypes[p.type].artifacts(gen))
-			if (p.artifacts.length) {
+	meshAllArtifacts() {}
+
+	meshResources() {
+		for (let hexIndex = 0; hexIndex < this.nbrTiles; hexIndex++) {
+			const p = this.points[hexIndex]
+			if (p.content.length) {
 				if (!p.group) {
 					p.group = new Group()
-					p.group.position.copy(this.vPosition(index))
+					p.group.position.copy(this.vPosition(hexIndex))
 					this.group.add(p.group)
 				}
-				for (const a of p.artifacts) {
-					let [u, v] = [gen(), gen()]
-					if (u + v > 1) [u, v] = [1 - u, 1 - v]
-					const next = Math.floor(gen(6))
-					const pos = this.positionInTile(index, { next, u, v })
-					if (pos) {
-						a.mesh.position.set(pos.x, pos.y, pos.z)
-						p.group.add(a.mesh)
+				for (let i = 0; i < p.content.length; i++)
+					if (p.content[i]) {
+						const pos = this.cartesian(hexIndex, posInTile(i, terrainContentRadius))
+						// Pos is null when no neighbor sector is present and the resource is out of rendering zone on the border
+						if (pos) {
+							const rsc = p.content[i]!
+							if (!rsc.builtMesh) {
+								const mesh = rsc.createMesh()
+								mesh.position.copy(pos)
+								p.group.add(mesh)
+							}
+						}
 					}
-				}
 			}
 		}
+	}
+	populatePoint(p: HeightPoint, position: Axial, hexIndex: number): void {
+		const gen = LCG(p.seed + 0.2)
+		if (p.z > 0)
+			p.content = Array.from(
+				generateResources(gen, terrainTypes[p.type], hexTiles(terrainContentRadius + 1))
+			)
 	}
 	triangleGeometry(...ndx: [number, number, number]) {
 		const geometry = super.triangleGeometry(...ndx)
@@ -146,7 +169,7 @@ export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 		geometry.setAttribute('color', new BufferAttribute(colors, 3))
 		return geometry
 	}
-	triangleMaterial(gen: RandGenerator, ...ndx: [number, number, number]) {
+	triangleMaterial(ndx: [number, number, number], side: number) {
 		return new MeshBasicMaterial({
 			vertexColors: true, // Enable vertex colors
 		})

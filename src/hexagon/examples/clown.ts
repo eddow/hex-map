@@ -10,7 +10,7 @@ export class HexClown extends HexSector {
 	vPosition(ndx: number) {
 		return new Vector3().copy({ ...cartesian(axialAt(ndx), this.tileSize), z: 0 })
 	}
-	triangleMaterial(gen: RandGenerator, ...ndx: [number, number, number]) {
-		return new MeshBasicMaterial({ color: Math.floor(gen() * 0x1000000) })
+	triangleMaterial() {
+		return new MeshBasicMaterial({ color: Math.floor(Math.random() * 0x1000000) })
 	}
 }

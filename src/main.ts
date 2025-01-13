@@ -33,6 +33,9 @@ const worldSeed = 0.43
 const sector = new HeightPowGen(new Vector3(0, 0, 0), 10, 6)
 //const sector = new HexClown(new Vector3(0, 0, 0), 10, 5)
 sector.generate(LCG(worldSeed))
+sector.virgin()
+sector.meshTerrain()
+sector.meshResources()
 scene.add(sector.group)
 
 const pawn = new Character(sector, 0, sphere(2, { color: 0xff0000 }))

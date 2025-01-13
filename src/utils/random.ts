@@ -13,9 +13,3 @@ export default function LCG(...seeds: number[]): RandGenerator {
 		return (state / m) * (max - min) + min
 	}
 }
-
-export function trianglePoint(gen: RandGenerator) {
-	const u = gen()
-	const v = gen()
-	return u + v > 1 ? [1 - u, 1 - v, u + v - 1] : [u, v, 1 - u - v]
-}

@@ -1,5 +1,12 @@
 import { type Camera, Raycaster, type Scene, Vector2, Vector3 } from 'three'
-import { type InteractionSpecs, type MouseReactive, hoveredSpecs } from './interact'
+import { wholeScale } from '~/game/terrain'
+import {
+	type InteractionSpecs,
+	type MouseInteraction,
+	type MouseReactive,
+	hoveredSpecs,
+	tileInteraction,
+} from './interact'
 
 export const mouse = new Vector2()
 export interface MouseLockButtons {
@@ -17,19 +24,30 @@ export const mouseConfig: MouseConfig = {
 export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: Scene) {
 	const rayCaster = new Raycaster()
 
-	function mouseInteract(event: MouseEvent): InteractionSpecs | undefined {
+	function mouseIntersection(event: MouseEvent, interactions?: MouseInteraction[]) {
 		mouse.x = (event.clientX / window.innerWidth) * 2 - 1
 		mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
 		rayCaster.setFromCamera(mouse, camera)
 
 		const intersects = rayCaster.intersectObjects(scene.children)
 
-		const interact = intersects.findIndex((i) => i.object?.userData?.mouseTarget?.mouseInteraction)
-		if (interact > -1) {
-			const mouseTarget = intersects[interact].object?.userData?.mouseTarget as MouseReactive
+		const interact = intersects.findIndex(
+			interactions
+				? (i) => interactions.includes(i.object?.userData?.mouseTarget?.mouseInteraction)
+				: (i) => i.object?.userData?.mouseTarget?.mouseInteraction
+		)
+		if (interact > -1) return intersects[interact]
+	}
+	function mouseInteract(
+		event: MouseEvent,
+		interactions?: MouseInteraction[]
+	): InteractionSpecs | undefined {
+		const intersection = mouseIntersection(event, interactions)
+		if (intersection) {
+			const target = intersection.object?.userData?.mouseTarget as MouseReactive
 			return {
-				interaction: mouseTarget.mouseInteraction,
-				handle: mouseTarget.mouseHandle?.(intersects[interact]) || { target: mouseTarget },
+				interaction: target.mouseInteraction,
+				handle: target.mouseHandle?.(intersection) || { target },
 			}
 		}
 	}
@@ -61,8 +79,12 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 					// x: movement rotates the camera around the word's Z axis
 					camera.rotateOnWorldAxis(new Vector3(0, 0, -1), dx * 0.01)
 					// y: camera tilts between horizontal (plan: z=0) and vertical (look along Z axis) positions
-					// todo: clamp
 					camera.rotateX(-dy * 0.01) // Apply tilt rotation
+					// clamp down/horizon
+					const upVector = new Vector3(0, 1, 0).applyQuaternion(camera.quaternion)
+					if (upVector.z < 0) camera.rotateX(-Math.asin(upVector.z))
+					const frontVector = new Vector3(0, 0, 1).applyQuaternion(camera.quaternion)
+					if (frontVector.z < 0) camera.rotateX(Math.asin(frontVector.z))
 					break
 				}
 				case 'pan': {
@@ -107,24 +129,42 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 		}
 	}
 
+	const zoomSpeed = 1.2
+	const clampZ = { min: wholeScale, max: 500 }
+
 	function onMouseWheel(event: WheelEvent) {
 		// Normalize the wheel delta for consistent zoom behavior
-		const delta = event.deltaY > 0 ? 1 : -1
+		const delta = event.deltaY / 120
+
+		const center = mouseIntersection(event, [tileInteraction])
+		if (center) {
+			const dist = camera.position.clone().sub(center.point)
+			dist.multiplyScalar(zoomSpeed ** delta)
+			camera.position.copy(center.point).add(dist)
+			if (camera.position.z > clampZ.max) camera.position.z = clampZ.max
+			else if (camera.position.z < clampZ.min) camera.position.z = clampZ.min
+		}
+		/*
 		// TODO: better zoom algorithm: use mouse intersection to approach/move away from a point
 		// Adjust the camera's zoom or position
-		const zoomSpeed = 1.2
-		camera.position.z *= zoomSpeed ** delta
+		camera.position.z *= zoomSpeed ** delta*/
 
 		// Optionally, clamp the zoom level to prevent the camera from getting too close or far
-		camera.position.z = Math.max(2, Math.min(500, camera.position.z)) // Example clamp between 2 and 50
+		//camera.position.z = Math.max(2, Math.min(500, camera.position.z)) // Example clamp between 2 and 50
 		// TODO: cursor out of mouse pointer after zoom: calling mouseMove is not enough
 		//mouseMove(event)
 	}
-
+	let reLockTimeout: ReturnType<typeof setTimeout> | undefined
 	function reLock(event: MouseEvent) {
 		const shouldLock = Object.values(mouseConfig.lockButtons).includes(event.buttons)
-		if (!hasLock && shouldLock) canvas.requestPointerLock()
-		else if (hasLock && !shouldLock) document.exitPointerLock()
+		if (reLockTimeout !== undefined) clearTimeout(reLockTimeout)
+		if (hasLock !== shouldLock) {
+			reLockTimeout = setTimeout(() => {
+				if (shouldLock) canvas.requestPointerLock()
+				else document.exitPointerLock()
+				reLockTimeout = undefined
+			})
+		}
 	}
 
 	function mouseDown(event: MouseEvent) {
