@@ -57,10 +57,27 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 
 	function onPointerLockChange() {
 		hasLock = document.pointerLockElement === canvas
+		if (!hasLock) selectFromMouse()
 	}
 
 	let lastButtonDown: number | undefined
+	let mouseMoveDebounce: ReturnType<typeof setTimeout> | undefined = undefined
+	let mouseMoveEvent: MouseEvent | undefined
+	function selectFromMouse() {
+		const interactionSpecs = mouseInteract(mouseMoveEvent!)
+		if (hoveredSpecs.interaction && hoveredSpecs.handle!.target !== interactionSpecs?.handle.target)
+			hoveredSpecs.interaction.leave?.(hoveredSpecs.handle!)
+		if (!hoveredSpecs.interaction && interactionSpecs)
+			interactionSpecs.interaction.enter?.(interactionSpecs.handle)
+		if (interactionSpecs)
+			interactionSpecs.interaction.move?.(interactionSpecs.handle, hoveredSpecs?.handle)
 
+		if (interactionSpecs) Object.assign(hoveredSpecs, interactionSpecs)
+		else
+			for (const key of Object.keys(hoveredSpecs) as Array<keyof InteractionSpecs>)
+				delete hoveredSpecs[key]
+		mouseMoveDebounce = undefined
+	}
 	function mouseMove(event: MouseEvent) {
 		lastButtonDown = undefined
 		if (hasLock) {
@@ -111,21 +128,9 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 				// TODO case 'lookAt': = look at the same point and turn around
 			}
 		} else {
-			const interactionSpecs = mouseInteract(event)
-			if (
-				hoveredSpecs.interaction &&
-				hoveredSpecs.handle!.target !== interactionSpecs?.handle.target
-			)
-				hoveredSpecs.interaction.leave?.(hoveredSpecs.handle!)
-			if (!hoveredSpecs.interaction && interactionSpecs)
-				interactionSpecs.interaction.enter?.(interactionSpecs.handle)
-			if (interactionSpecs)
-				interactionSpecs.interaction.move?.(interactionSpecs.handle, hoveredSpecs?.handle)
-
-			if (interactionSpecs) Object.assign(hoveredSpecs, interactionSpecs)
-			else
-				for (const key of Object.keys(hoveredSpecs) as Array<keyof InteractionSpecs>)
-					delete hoveredSpecs[key]
+			mouseMoveEvent = event
+			// setTimeout in order not to spam ray tracing
+			if (!mouseMoveDebounce) mouseMoveDebounce = setTimeout(selectFromMouse, 0)
 		}
 	}
 

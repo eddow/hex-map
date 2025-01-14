@@ -38,6 +38,7 @@ sector.meshResources()
 scene.add(sector.group)
 
 const pawn = new Character(sector, 0, sphere(2, { color: 0xff0000 }))
+//const pawn = new Character(sector, 0, meshAsset('/assets/man.glb'))
 scene.add(pawn.mesh)
 interactionContext.pawn = pawn
 
