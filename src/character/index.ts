@@ -1,4 +1,4 @@
-import type { Mesh, Vector3 } from 'three'
+import type { Mesh, Object3D, Vector3 } from 'three'
 import type HexSector from '~/hexagon/sector'
 import { axialIndex, axialRound, fromCartesian } from '~/hexagon/utils'
 import { nextInPath } from './path'
@@ -61,7 +61,7 @@ export class Character {
 	constructor(
 		public sector: HexSector,
 		public tile: number,
-		public mesh: Mesh
+		public mesh: Object3D
 	) {
 		mesh.position.copy(sector.vPosition(tile).add(sector.group.position))
 	}

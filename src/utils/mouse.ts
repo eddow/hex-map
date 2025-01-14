@@ -151,7 +151,7 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 
 		// Optionally, clamp the zoom level to prevent the camera from getting too close or far
 		//camera.position.z = Math.max(2, Math.min(500, camera.position.z)) // Example clamp between 2 and 50
-		// TODO: cursor out of mouse pointer after zoom: calling mouseMove is not enough
+		// TODO: cursor out of mouse pointer after zoom: calling mouseMove is not enough (use `onPointerLockChange` ? )
 		//mouseMove(event)
 	}
 	let reLockTimeout: ReturnType<typeof setTimeout> | undefined

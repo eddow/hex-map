@@ -1,5 +1,4 @@
 import { RepeatWrapping, type Texture, TextureLoader } from 'three'
-import type { RandGenerator } from '~/utils/random'
 import { type ResourceDistribution, Rock, Tree } from './handelable'
 
 const textureLoader = new TextureLoader()
@@ -25,7 +24,7 @@ export const terrainTypes: Record<string, TerrainType> = {
 		texture: terrainTexture('sand'),
 		appearHeight: Number.NEGATIVE_INFINITY,
 		variance: 0.1,
-		resourceDistribution: [[Rock, 0.05]],
+		resourceDistribution: [[Rock, 0.2]],
 	},
 	grass: {
 		color: { r: 0.4, g: 0.8, b: 0.4 },
@@ -33,8 +32,8 @@ export const terrainTypes: Record<string, TerrainType> = {
 		appearHeight: 0.2,
 		variance: 0.7,
 		resourceDistribution: [
-			[Rock, 0.05],
-			[Tree, 0.05],
+			[Rock, 0.2],
+			[Tree, 0.2],
 		],
 	},
 	forest: {
@@ -43,8 +42,8 @@ export const terrainTypes: Record<string, TerrainType> = {
 		appearHeight: 0.5,
 		variance: 2,
 		resourceDistribution: [
-			[Rock, 0.05],
-			[Tree, 0.2],
+			[Rock, 0.1],
+			[Tree, 1.5],
 		],
 	},
 	stone: {
@@ -53,8 +52,8 @@ export const terrainTypes: Record<string, TerrainType> = {
 		appearHeight: 0.7,
 		variance: 3,
 		resourceDistribution: [
-			[Rock, 0.2],
-			[Tree, 0.05],
+			[Rock, 1.5],
+			[Tree, 0.2],
 		],
 	},
 	snow: {
@@ -62,7 +61,7 @@ export const terrainTypes: Record<string, TerrainType> = {
 		texture: terrainTexture('snow'),
 		appearHeight: 0.9,
 		variance: 1.5,
-		resourceDistribution: [[Rock, 0.05]],
+		resourceDistribution: [[Rock, 0.2]],
 	},
 }
 

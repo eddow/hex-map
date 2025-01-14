@@ -1,13 +1,5 @@
-import {
-	BufferAttribute,
-	Group,
-	Mesh,
-	RepeatWrapping,
-	ShaderMaterial,
-	TextureLoader,
-	Vector3,
-} from 'three'
-import { type Handelable, generateResources } from '~/game/handelable'
+import { BufferAttribute, Group, Mesh, ShaderMaterial, Vector3 } from 'three'
+import { type Handelable, generateResources, terrainContentRadius } from '~/game/handelable'
 import {
 	type TerrainType,
 	terrainType,
@@ -28,11 +20,6 @@ import {
 	hexTiles,
 	posInTile,
 } from './utils'
-
-/**
- * Number of hexagonal "circles" around the center of sub-tiles that can contain something
- */
-const terrainContentRadius = 1
 
 interface BasePoint {
 	z: number
@@ -123,6 +110,7 @@ export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 		for (const corner of corners)
 			this.points[corner] = newPoint(-wholeScale * 0.5, terrainTypes.sand, gen)
 	}
+	// TODO: fix Z in the see in function of the distance
 	insidePoint(p1: HeightPoint, p2: HeightPoint, scale: number): HeightPoint {
 		const variance = (p1.type.variance + p2.type.variance) / 2
 		const randScale = ((1 << scale) / this.radius) * wholeScale * variance
@@ -168,14 +156,6 @@ export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 	triangle(ndx: [number, number, number], side: number): Mesh {
 		const points = ndx.map((n) => this.points[n])
 		const geometry = super.triangleGeometry(ndx)
-
-		/*const colors = new Float32Array(
-			ndx
-				.map((n) => this.points[n])
-				.map(getColor)
-				.reduce<number[]>((p, c) => [...p, c.r, c.g, c.b], [])
-		)*/
-		//const triangleUVs = [new Vector2(100, 100), new Vector2(200, 100), new Vector2(200, 200)]
 		geometry.setAttribute('uvA', textureUVs(points[0].texture, side, 0))
 		geometry.setAttribute('uvB', textureUVs(points[1].texture, side, 4))
 		geometry.setAttribute('uvC', textureUVs(points[2].texture, side, 2))
@@ -191,17 +171,10 @@ export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 			1, // corresponds to vertex 3
 		])
 		geometry.setAttribute('barycentric', new BufferAttribute(barycentric, 3))
-		const textureLoader = new TextureLoader()
-		const face = textureLoader.load('/assets/terrain/snow.png')
-		const black = textureLoader.load('/assets/terrain/black.png')
-		face.wrapS = face.wrapT = RepeatWrapping
-
 		// Shader Material
 		const material = new ShaderMaterial({
 			uniforms: {
-				texture1: { value: points[0].texture.texture },
-				texture2: { value: points[1].texture.texture },
-				texture3: { value: points[2].texture.texture },
+				textures: { value: points.map((p) => p.texture.texture) },
 			},
 			vertexShader: `
 varying vec2 vUv[3];
@@ -219,9 +192,9 @@ void main() {
 }
 			`,
 			fragmentShader: `
-uniform sampler2D texture1;
-uniform sampler2D texture2;
-uniform sampler2D texture3;
+uniform sampler2D textures[3];
+uniform sampler2D textureB;
+uniform sampler2D textureC;
 varying vec2 vUv[3];
 varying vec3 bary;
 
@@ -230,9 +203,9 @@ float quadraticInfluence(float coord) {
 }
 
 void main() {
-	vec4 color1 = texture2D(texture1, vUv[0]);
-	vec4 color2 = texture2D(texture2, vUv[1]);
-	vec4 color3 = texture2D(texture3, vUv[2]);
+	vec4 color1 = texture2D(textures[0], vUv[0]);
+	vec4 color2 = texture2D(textures[1], vUv[1]);
+	vec4 color3 = texture2D(textures[2], vUv[2]);
 	
 	// Compute weights
 	float weight1 = quadraticInfluence(bary.x);
@@ -251,6 +224,11 @@ void main() {
 			`,
 			transparent: true,
 		})
+		/*Promise.all(points.map((p) => p.texture.texture)).then((textures) => {
+			material.uniforms = {
+				textures: { value: textures },
+			}
+		})*/
 		return new Mesh(geometry, material)
 	}
 }

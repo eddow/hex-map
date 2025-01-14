@@ -11,7 +11,7 @@ import LCG from '~/utils/random'
 import { Character } from './character'
 import { HeightPowGen } from './hexagon/pow2Gen'
 import { hoveredSpecs, interactionContext } from './utils/interact'
-import { sphere } from './utils/meshes'
+import { meshAsset, sphere } from './utils/meshes'
 
 // Initialize Scene, Camera, and Renderer
 const scene = new Scene()
@@ -44,7 +44,7 @@ interactionContext.pawn = pawn
 const characters: Character[] = [pawn]
 
 // Position the Camera
-camera.position.set(0, 0, 150)
+camera.position.set(0, 0, 100)
 camera.lookAt(0, 0, 0)
 
 mouseControls(renderer.domElement, camera, scene)

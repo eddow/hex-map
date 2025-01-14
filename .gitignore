@@ -1,2 +1,5 @@
+assets/resource
+*.zip
+*.rar
 node_modules
 dist

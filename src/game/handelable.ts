@@ -1,57 +1,20 @@
-import type { Mesh } from 'three'
-import { genTilePosition } from '~/hexagon/utils'
-import { sphere } from '~/utils/meshes'
+import type { Mesh, Object3D } from 'three'
+import { hexTiles } from '~/hexagon/utils'
+import { meshAsset, sphere } from '~/utils/meshes'
 import type { RandGenerator } from '~/utils/random'
-import { type TerrainType, terrainType } from './terrain'
-/*
-export interface ArtefactType {
-	generate(gen: RandGenerator, terrain: TerrainType): Partial<Artefact>
-	mesh(artefact: Artefact): Mesh
-}
+import type { TerrainType } from './terrain'
 
-export interface Artefact {
-	type: () => ArtefactType
-	pos: { u: number; v: number; s: number }
-	mesh?: Mesh
-}
+/**
+ * Number of hexagonal "circles" around the center of sub-tiles that can contain something
+ */
+export const terrainContentRadius = 1
 
-export interface SizedArtefact extends Artefact {
-	size: number
-}
-
-export function* generateArtifacts(
-	n: number,
-	type: ArtefactType,
-	gen: RandGenerator,
-	terrain: TerrainType
-) {
-	for (let i = 0; i < n; i++) yield generateArtefact(type, gen, terrain)
-}
-
-function generateArtefact(type: ArtefactType, gen: RandGenerator, terrain: TerrainType) {
-	return {
-		type,
-		pos: genTilePosition(gen),
-		...type.generate(gen, terrain),
-	}
-}
-
-export const tree = {
-	generate: (gen: RandGenerator) => ({ size: gen(3, 1) }),
-	mesh: (artefact: SizedArtefact) => sphere(artefact.size, { color: 0x00f000 }),
-}
-export const rock = {
-	generate: (gen: RandGenerator) => ({ size: gen(2, 0.5) }),
-	mesh: (artefact: SizedArtefact) => sphere(artefact.size, { color: 0x808080 }),
-}
-
-*/
 /**
  * Any thing that can be placed on the map and interacted with by the characters (resources, trees, rocks, artifacts, etc.)
  */
 export abstract class Handelable {
-	protected cachedMesh?: Mesh
-	abstract createMesh(): Mesh
+	protected cachedMesh?: Object3D
+	abstract createMesh(): Object3D
 	protected invalidateMesh() {
 		this.cachedMesh = undefined
 	}
@@ -65,7 +28,8 @@ export abstract class Handelable {
 }
 
 interface Characteristics {
-	size: number
+	model: number
+	rotation: number
 }
 export abstract class Resource extends Handelable {
 	characteristics: Characteristics
@@ -78,28 +42,35 @@ export abstract class Resource extends Handelable {
 				? this.generate(characteristics as RandGenerator, terrainType!)
 				: characteristics
 	}
-	abstract generate(gen: RandGenerator, terrain: TerrainType): Characteristics
-	abstract get color(): number
+	generate(gen: RandGenerator, terrain: TerrainType): Characteristics {
+		return { model: Math.floor(gen(this.models)) + 1, rotation: gen(Math.PI * 2) }
+	}
+	abstract get path(): string
+	abstract get models(): number
 	createMesh() {
-		return sphere(this.characteristics.size, { color: this.color })
+		const mesh = meshAsset(
+			this.path.replace('#', this.characteristics.model.toString())
+		) as Object3D
+		mesh.rotateZ(this.characteristics.rotation)
+		return mesh
 	}
 }
 
 export class Tree extends Resource {
-	get color() {
-		return 0x00f000
+	get models() {
+		return 3
 	}
-	generate(gen: RandGenerator) {
-		return { size: gen(3, 1) }
+	get path() {
+		return '/assets/resource/tree#.glb'
 	}
 }
 
 export class Rock extends Resource {
-	get color() {
-		return 0x808080
+	get models() {
+		return 3
 	}
-	generate(gen: RandGenerator) {
-		return { size: gen(2, 0.5) }
+	get path() {
+		return '/assets/resource/rock#.glb'
 	}
 }
 
@@ -107,9 +78,11 @@ export type ResourceGenerator = new (gen: RandGenerator, terrain: TerrainType) =
 export type ResourceDistribution = [ResourceGenerator, number][]
 export function generateResource(gen: RandGenerator, terrain: TerrainType) {
 	const resources = terrain.resourceDistribution
+	const repeat = hexTiles(terrainContentRadius + 1)
 	if (!resources.length) return
 	let choice = gen()
-	for (const [resource, chance] of resources) {
+	for (let [resource, chance] of resources) {
+		chance /= repeat
 		if (choice < chance) return new resource(gen, terrain)
 		choice -= chance
 	}
