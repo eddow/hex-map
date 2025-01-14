@@ -31,7 +31,6 @@ scene.add(ambientLight)
 const worldSeed = 0.43
 // Create and Add Hexagonal Grid
 const sector = new HeightPowGen(new Vector3(0, 0, 0), 10, 6)
-//const sector = new HexClown(new Vector3(0, 0, 0), 10, 5)
 sector.generate(LCG(worldSeed))
 sector.virgin()
 sector.meshTerrain()
@@ -45,7 +44,7 @@ interactionContext.pawn = pawn
 const characters: Character[] = [pawn]
 
 // Position the Camera
-camera.position.set(0, 0, 500)
+camera.position.set(0, 0, 150)
 camera.lookAt(0, 0, 0)
 
 mouseControls(renderer.domElement, camera, scene)

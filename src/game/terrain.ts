@@ -1,6 +1,13 @@
+import { RepeatWrapping, type Texture, TextureLoader } from 'three'
 import type { RandGenerator } from '~/utils/random'
 import { type ResourceDistribution, Rock, Tree } from './handelable'
 
+const textureLoader = new TextureLoader()
+function terrainTexture(type: string) {
+	const texture = textureLoader.load(`/assets/terrain/${type}.png`)
+	texture.wrapS = texture.wrapT = RepeatWrapping
+	return texture
+}
 export const wholeScale = 80
 export type Terrain = keyof typeof terrainTypes
 export interface TerrainType {
@@ -8,19 +15,21 @@ export interface TerrainType {
 	appearHeight: number
 	variance: number
 	resourceDistribution: ResourceDistribution
+	texture: Texture
 }
-const many = (gen: RandGenerator) => gen(4, 1)
-const few = (gen: RandGenerator) => gen() * 2 - 1
+export const waterTexture = terrainTexture('water')
 
 export const terrainTypes: Record<string, TerrainType> = {
 	sand: {
 		color: { r: 0.8, g: 0.8, b: 0 },
+		texture: terrainTexture('sand'),
 		appearHeight: Number.NEGATIVE_INFINITY,
 		variance: 0.1,
 		resourceDistribution: [[Rock, 0.05]],
 	},
 	grass: {
 		color: { r: 0.4, g: 0.8, b: 0.4 },
+		texture: terrainTexture('grass'),
 		appearHeight: 0.2,
 		variance: 0.7,
 		resourceDistribution: [
@@ -30,6 +39,7 @@ export const terrainTypes: Record<string, TerrainType> = {
 	},
 	forest: {
 		color: { r: 0, g: 0.9, b: 0 },
+		texture: terrainTexture('forest'),
 		appearHeight: 0.5,
 		variance: 2,
 		resourceDistribution: [
@@ -39,6 +49,7 @@ export const terrainTypes: Record<string, TerrainType> = {
 	},
 	stone: {
 		color: { r: 0.6, g: 0.4, b: 0.1 },
+		texture: terrainTexture('stone'),
 		appearHeight: 0.7,
 		variance: 3,
 		resourceDistribution: [
@@ -48,20 +59,22 @@ export const terrainTypes: Record<string, TerrainType> = {
 	},
 	snow: {
 		color: { r: 0.9, g: 0.9, b: 0.9 },
+		texture: terrainTexture('snow'),
 		appearHeight: 0.9,
 		variance: 1.5,
 		resourceDistribution: [[Rock, 0.05]],
 	},
 }
 
-export function terrainType(height: number): Terrain {
+export function terrainType(height: number): TerrainType {
 	let rvH: number | undefined
-	let rvT: undefined | Terrain
+	let rvT: undefined | TerrainType
 	for (const type in terrainTypes) {
-		const thisH = terrainTypes[type as Terrain].appearHeight
+		const tType = terrainTypes[type as Terrain]
+		const thisH = tType.appearHeight
 		if (height / wholeScale >= thisH && (rvH === undefined || thisH > rvH)) {
 			rvH = thisH
-			rvT = type as Terrain
+			rvT = tType
 		}
 	}
 	return rvT!

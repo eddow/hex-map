@@ -1,7 +1,21 @@
-import { BufferAttribute, Group, MeshBasicMaterial, Vector3 } from 'three'
+import {
+	BufferAttribute,
+	Group,
+	Mesh,
+	RepeatWrapping,
+	ShaderMaterial,
+	TextureLoader,
+	Vector3,
+} from 'three'
 import { type Handelable, generateResources } from '~/game/handelable'
-import { type Terrain, terrainType, terrainTypes, wholeScale } from '~/game/terrain'
-import { type TerrainTexture, genTexture } from '~/game/texture'
+import {
+	type TerrainType,
+	terrainType,
+	terrainTypes,
+	waterTexture,
+	wholeScale,
+} from '~/game/terrain'
+import { type TerrainTexture, genTexture, textureUVs } from '~/game/texture'
 import LCG, { type RandGenerator } from '~/utils/random'
 import HexSector from './sector'
 import {
@@ -23,11 +37,6 @@ const terrainContentRadius = 1
 interface BasePoint {
 	z: number
 	group?: Group
-}
-
-interface PointSpec {
-	scale: number
-	point: Axial
 }
 
 export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> extends HexSector {
@@ -62,7 +71,7 @@ export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> ex
 				this.points[midPoints[i]] = this.insidePoint(
 					this.points[points[i]],
 					this.points[points[(i + 1) % 3]],
-					{ scale, point: mids[i] }
+					scale
 				)
 		if (scale > 0) {
 			this.divTriangle(scale - 1, ...mids)
@@ -75,7 +84,7 @@ export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> ex
 	 * @param corners Indices of the corners
 	 */
 	abstract initCorners(corners: number[], gen: RandGenerator): void
-	abstract insidePoint(p1: Point, p2: Point, specs: PointSpec): Point
+	abstract insidePoint(p1: Point, p2: Point, scale: number): Point
 	abstract populatePoint(p: Point, position: Axial, hexIndex: number): void
 
 	vPosition(ndx: number) {
@@ -87,34 +96,35 @@ export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> ex
 }
 
 interface HeightPoint extends BasePoint {
-	type: Terrain
+	type: TerrainType
 	seed: number
 	content: (Handelable | undefined)[]
 	texture: TerrainTexture
 }
 
-function newPoint(z: number, type: Terrain, gen: RandGenerator, seed?: number): HeightPoint {
-	return { z, type, seed: seed ?? gen(), content: [], texture: genTexture(gen) }
+function newPoint(z: number, type: TerrainType, gen: RandGenerator, seed?: number): HeightPoint {
+	const texture =
+		z < 0
+			? {
+					texture: waterTexture,
+					center: { u: 0, v: 0 },
+					alpha: 0,
+				}
+			: {
+					texture: type.texture,
+					...genTexture(gen),
+				}
+	return { z, type, seed: seed ?? gen(), content: [], texture }
 }
-
-function getColor(point: HeightPoint) {
-	const { z } = point
-	const p = 1.1 ** z
-	return z > 0 ? terrainTypes[point.type].color : { r: p / 2, g: p / 2, b: 1 }
-}
-
-// TODO: Use textures instead of colors
 
 export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 	initCorners(corners: number[], gen: RandGenerator): void {
-		this.points[0] = newPoint(wholeScale, 'snow', gen)
+		this.points[0] = newPoint(wholeScale, terrainTypes.snow, gen)
 		for (const corner of corners)
-			this.points[corner] =
-				//{ z: -wholeScale * 0.5, type: 'sand', seed: gen(), artifacts: [] }
-				newPoint(-wholeScale * 0.5, 'sand', gen)
+			this.points[corner] = newPoint(-wholeScale * 0.5, terrainTypes.sand, gen)
 	}
-	insidePoint(p1: HeightPoint, p2: HeightPoint, { scale }: PointSpec): HeightPoint {
-		const variance = (terrainTypes[p1.type].variance + terrainTypes[p2.type].variance) / 2
+	insidePoint(p1: HeightPoint, p2: HeightPoint, scale: number): HeightPoint {
+		const variance = (p1.type.variance + p2.type.variance) / 2
 		const randScale = ((1 << scale) / this.radius) * wholeScale * variance
 		const seed = LCG(p1.seed, p2.seed)()
 		const gen = LCG(seed)
@@ -153,25 +163,94 @@ export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 	populatePoint(p: HeightPoint, position: Axial, hexIndex: number): void {
 		const gen = LCG(p.seed + 0.2)
 		if (p.z > 0)
-			p.content = Array.from(
-				generateResources(gen, terrainTypes[p.type], hexTiles(terrainContentRadius + 1))
-			)
+			p.content = Array.from(generateResources(gen, p.type, hexTiles(terrainContentRadius + 1)))
 	}
-	triangleGeometry(...ndx: [number, number, number]) {
-		const geometry = super.triangleGeometry(...ndx)
+	triangle(ndx: [number, number, number], side: number): Mesh {
+		const points = ndx.map((n) => this.points[n])
+		const geometry = super.triangleGeometry(ndx)
 
-		const colors = new Float32Array(
+		/*const colors = new Float32Array(
 			ndx
 				.map((n) => this.points[n])
 				.map(getColor)
 				.reduce<number[]>((p, c) => [...p, c.r, c.g, c.b], [])
-		)
-		geometry.setAttribute('color', new BufferAttribute(colors, 3))
-		return geometry
-	}
-	triangleMaterial(ndx: [number, number, number], side: number) {
-		return new MeshBasicMaterial({
-			vertexColors: true, // Enable vertex colors
+		)*/
+		//const triangleUVs = [new Vector2(100, 100), new Vector2(200, 100), new Vector2(200, 200)]
+		geometry.setAttribute('uvA', textureUVs(points[0].texture, side, 0))
+		geometry.setAttribute('uvB', textureUVs(points[1].texture, side, 4))
+		geometry.setAttribute('uvC', textureUVs(points[2].texture, side, 2))
+		const barycentric = new Float32Array([
+			1,
+			0,
+			0, // corresponds to vertex 1
+			0,
+			1,
+			0, // corresponds to vertex 2
+			0,
+			0,
+			1, // corresponds to vertex 3
+		])
+		geometry.setAttribute('barycentric', new BufferAttribute(barycentric, 3))
+		const textureLoader = new TextureLoader()
+		const face = textureLoader.load('/assets/terrain/snow.png')
+		const black = textureLoader.load('/assets/terrain/black.png')
+		face.wrapS = face.wrapT = RepeatWrapping
+
+		// Shader Material
+		const material = new ShaderMaterial({
+			uniforms: {
+				texture1: { value: points[0].texture.texture },
+				texture2: { value: points[1].texture.texture },
+				texture3: { value: points[2].texture.texture },
+			},
+			vertexShader: `
+varying vec2 vUv[3];
+varying vec3 bary;
+attribute vec3 barycentric;
+attribute vec2 uvA;
+attribute vec2 uvB;
+attribute vec2 uvC;
+void main() {
+	vUv[0] = uvA;
+	vUv[1] = uvB;
+	vUv[2] = uvC;
+	bary = barycentric;
+	gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+			`,
+			fragmentShader: `
+uniform sampler2D texture1;
+uniform sampler2D texture2;
+uniform sampler2D texture3;
+varying vec2 vUv[3];
+varying vec3 bary;
+
+float quadraticInfluence(float coord) {
+    return 4.0 * coord * coord; // Quadratic function scaled to reach 1 at coord = 0.5
+}
+
+void main() {
+	vec4 color1 = texture2D(texture1, vUv[0]);
+	vec4 color2 = texture2D(texture2, vUv[1]);
+	vec4 color3 = texture2D(texture3, vUv[2]);
+	
+	// Compute weights
+	float weight1 = quadraticInfluence(bary.x);
+	float weight2 = quadraticInfluence(bary.y);
+	float weight3 = quadraticInfluence(bary.z);
+
+	// Normalize weights to ensure they sum to 1
+	float sum = weight1 + weight2 + weight3;
+	weight1 /= sum;
+	weight2 /= sum;
+	weight3 /= sum;
+
+	// Apply the weights to the colors
+	gl_FragColor = color1 * weight1 + color2 * weight2 + color3 * weight3;
+}
+			`,
+			transparent: true,
 		})
+		return new Mesh(geometry, material)
 	}
 }

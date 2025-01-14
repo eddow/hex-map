@@ -117,3 +117,5 @@ export function generateResource(gen: RandGenerator, terrain: TerrainType) {
 export function* generateResources(gen: RandGenerator, terrain: TerrainType, n: number) {
 	for (let i = 0; i < n; i++) yield generateResource(gen, terrain)
 }
+
+// Supplies -> wood, hammer, meat

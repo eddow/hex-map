@@ -81,8 +81,8 @@ export class Character {
 		}
 	}
 
-	goTo(sector: HexSector, tile: number) {
-		const plan = new GoToPlan(sector, tile, idle.plan)
+	goTo(sector: HexSector, hexIndex: number) {
+		const plan = new GoToPlan(sector, hexIndex, idle.plan)
 		const next = plan.next(this)
 		this.action.cancel?.(this)
 		for (

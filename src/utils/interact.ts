@@ -1,5 +1,6 @@
 import type { Intersection, Mesh, Object3D, Object3DEventMap } from 'three'
 import type { Character } from '~/character'
+import type { HeightPowGen } from '~/hexagon/pow2Gen'
 import type HexSector from '~/hexagon/sector'
 import { icosahedron } from './meshes'
 
@@ -32,7 +33,7 @@ export interface MouseInteraction {
 
 export interface TileHandle {
 	target: HexSector
-	point: number
+	hexIndex: number
 }
 
 let highlight: Mesh | undefined
@@ -52,13 +53,19 @@ export const tileInteraction: MouseInteraction = {
 			target.group.add(highlight)
 		}
 	},
-	move({ target, point }: TileHandle, handleFrom?: TileHandle) {
-		if (target !== handleFrom?.target || point !== handleFrom?.point) {
-			highlight!.position.copy(target.vPosition(point))
+	move({ target, hexIndex }: TileHandle, handleFrom?: TileHandle) {
+		if (target !== handleFrom?.target || hexIndex !== handleFrom?.hexIndex) {
+			highlight!.position.copy(target.vPosition(hexIndex))
 		}
 	},
-	click({ target, point }: TileHandle, button) {
-		interactionContext.pawn!.goTo(target, point)
+	click({ target, hexIndex }: TileHandle, button) {
+		interactionContext.pawn!.goTo(target, hexIndex) /*
+		const s = target as HeightPowGen
+		for (let i = 0; i < s.points.length; i++) {
+			s.points[i].type = 'no'
+		}
+		s.points[hexIndex].type = 'snow'
+		s.meshTerrain()*/
 	},
 	// down(handle, button) {},
 	// up(handle, button) {},

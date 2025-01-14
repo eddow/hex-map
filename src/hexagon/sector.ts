@@ -5,14 +5,15 @@ import {
 	type Intersection,
 	type Material,
 	Mesh,
+	MeshBasicMaterial,
 	type Object3D,
 	type Object3DEventMap,
-	type Vector3,
+	Vector3,
 } from 'three'
 import { type MouseReactive, type TileHandle, tileInteraction } from '~/utils/interact'
 import { meshVectors3, sphere } from '~/utils/meshes'
 import type { RandGenerator } from '~/utils/random'
-import { axialAt, axialIndex, axialPolynomial, hexSides, hexTiles } from './utils'
+import { axialAt, axialIndex, axialPolynomial, cartesian, hexSides, hexTiles } from './utils'
 export interface TilePosition {
 	s: number
 	u: number
@@ -39,29 +40,40 @@ export default abstract class HexSector implements MouseReactive {
 		const distances = positions.map((p) => p.distanceTo(intersection.point))
 		const minD = Math.min(...distances)
 
-		return { target: this, point: intersection.object.userData?.points[distances.indexOf(minD)] }
+		return { target: this, hexIndex: intersection.object.userData?.points[distances.indexOf(minD)] }
 	}
-	abstract vPosition(ndx: number): Vector3
-	abstract triangleMaterial(ndx: [number, number, number], side: number): Material | undefined
 
-	triangleGeometry(...ndx: [number, number, number]) {
+	triangleGeometry(ndx: [number, number, number]) {
 		const geometry = new BufferGeometry()
 
 		const positions = new Float32Array(
 			ndx.map((n) => this.vPosition(n)).reduce<number[]>((p, c) => [...p, c.x, c.y, c.z], [])
 		)
-
 		geometry.setAttribute('position', new BufferAttribute(positions, 3))
-
 		return geometry
 	}
+	//#region To override
+
+	vPosition(ndx: number) {
+		return new Vector3().copy({ ...cartesian(axialAt(ndx), this.tileSize), z: 0 })
+	}
+
+	triangle(ndx: [number, number, number], side: number): Mesh {
+		return new Mesh(
+			this.triangleGeometry(ndx),
+			new MeshBasicMaterial({ color: Math.floor(Math.random() * 0x1000000) })
+		)
+	}
+
+	//#endregion
+
 	get nbrTiles() {
 		return hexTiles(this.radius)
 	}
-	genTriangles(radius: number) {
+	meshTriangles(radius: number) {
 		const rv: Mesh[] = []
 		const mesh = (a: number, b: number, c: number, side: number) => {
-			const nm = new Mesh(this.triangleGeometry(a, b, c), this.triangleMaterial([a, b, c], side))
+			const nm = this.triangle([a, b, c], side)
 			nm.userData = { points: [a, b, c], mouseTarget: this }
 			rv.push(nm)
 		}
@@ -85,13 +97,12 @@ export default abstract class HexSector implements MouseReactive {
 		}
 		return rv
 	}
-	// To be overridden
 	generate(gen: RandGenerator) {}
 	meshTerrain() {
 		if (this.ground) this.group.remove(this.ground)
 		this.ground = new Group()
 		this.group.add(this.ground)
-		this.ground.add(...this.genTriangles(this.radius))
+		this.ground.add(...this.meshTriangles(this.radius))
 	}
 
 	cartesian(tile: number, { s, u, v }: TilePosition) {
