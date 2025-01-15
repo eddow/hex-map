@@ -11,7 +11,7 @@ import LCG from '~/utils/random'
 import { Character } from './character'
 import { HeightPowGen } from './hexagon/pow2Gen'
 import { hoveredSpecs, interactionContext } from './utils/interact'
-import { meshAsset, sphere } from './utils/meshes'
+import { sphere } from './utils/meshes'
 
 // Initialize Scene, Camera, and Renderer
 const scene = new Scene()

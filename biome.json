@@ -1,7 +1,14 @@
 {
 	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
 	"files": {
-		"include": ["src/**/*.ts", "test/**/*.ts"]
+		"include": ["**/*.ts", "**/*.js"],
+		"ignore": [
+			"dist/**/*",
+			"$types.d.ts",
+			".svelte-kit/**/*",
+			"node_modules/**/*",
+			"paraglide/**/*"
+		]
 	},
 	"javascript": {
 		"formatter": {

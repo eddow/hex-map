@@ -1,5 +1,2 @@
-assets/character
-*.zip
-*.rar
 node_modules
 dist

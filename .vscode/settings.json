@@ -2,8 +2,18 @@
 	"cSpell.words": [
 		"bary",
 		"coef",
+		"dockview",
 		"GLTF",
 		"Handelable",
+		"hexaboard",
+		"hexagame",
+		"inlang",
+		"onready",
 		"Raycaster"
-	]
+	],
+	
+	"recommendations": [
+		"inlang.vs-code-extension"
+	],
+	"npm.packageManager": "npm"
 }
