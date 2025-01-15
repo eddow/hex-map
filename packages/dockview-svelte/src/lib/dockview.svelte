@@ -18,10 +18,12 @@
 		onready,
 		children,
 		snippets = {},
+		renderers = {},
 		...props
 	}: DockviewOptions & {
 		components?: Record<string, Component>
 		snippets?: Record<string, Snippet<any>>
+		renderers?: Record<string, (id: string) => IContentRenderer>
 		api?: DockviewApi
 		theme?: 'dark' | 'light' | 'vs' | 'abyss' | 'dracula' | 'replit'
 		onready?: (api: DockviewApi) => void
@@ -56,6 +58,7 @@
 				if (components[name]) return new ContentRenderer(id, components[name])
 				if (cdc[name]) return new ContentRenderer(id, DvSnippet, { snippet: cdc[name] })
 				if (snippets[name]) return new ContentRenderer(id, DvSnippet, { snippet: snippets[name] })
+				if (renderers[name]) return renderers[name](id)
 				throw new Error(`DockView: Component ${name} not found`)
 			}
 		})

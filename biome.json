@@ -42,7 +42,9 @@
 			},
 			"complexity": {},
 			"security": {},
-			"correctness": {},
+			"correctness": {
+				"noUnusedImports": { "level": "info", "fix": "safe" }
+			},
 			"nursery": {}
 		}
 	}

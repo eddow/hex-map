@@ -1,12 +1,6 @@
 import { BufferAttribute, Group, Mesh, ShaderMaterial, Vector3 } from 'three'
 import { type Handelable, generateResources, terrainContentRadius } from '~/game/handelable'
-import {
-	type TerrainType,
-	terrainType,
-	terrainTypes,
-	waterTexture,
-	wholeScale,
-} from '~/game/terrain'
+import { type TerrainType, terrainType, waterTexture, wholeScale } from '~/game/terrain'
 import { type TerrainTexture, genTexture, textureUVs } from '~/game/texture'
 import LCG, { type RandGenerator } from '~/utils/random'
 import HexSector from './sector'
@@ -50,6 +44,7 @@ export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> ex
 	}
 	divTriangle(scale: number, ...triangle: Axial[]) {
 		if (scale === 0) return
+
 		const points = triangle.map(axialIndex)
 		const mids = triangle.map((a, i) => axialPolynomial([0.5, a], [0.5, triangle[(i + 1) % 3]]))
 		const midPoints = mids.map(axialIndex)
@@ -82,19 +77,24 @@ export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> ex
 	}
 }
 
-interface HeightPoint extends BasePoint {
+export interface HeightPoint extends BasePoint {
 	type: TerrainType
 	seed: number
 	content: (Handelable | undefined)[]
 	texture: TerrainTexture
 }
 
-function newPoint(z: number, type: TerrainType, gen: RandGenerator, seed?: number): HeightPoint {
+export function heightPoint(
+	z: number,
+	type: TerrainType,
+	gen: RandGenerator,
+	seed?: number
+): HeightPoint {
 	const texture =
 		z < 0
 			? {
 					texture: waterTexture,
-					center: { u: 0, v: 0 },
+					...genTexture(gen),
 					alpha: 0,
 				}
 			: {
@@ -104,14 +104,10 @@ function newPoint(z: number, type: TerrainType, gen: RandGenerator, seed?: numbe
 	return { z, type, seed: seed ?? gen(), content: [], texture }
 }
 
-export class HeightPowGen extends HexPow2Gen<HeightPoint> {
-	initCorners(corners: number[], gen: RandGenerator): void {
-		this.points[0] = newPoint(wholeScale, terrainTypes.snow, gen)
-		for (const corner of corners)
-			this.points[corner] = newPoint(-wholeScale * 0.5, terrainTypes.sand, gen)
-	}
-	// TODO: fix Z in the see in function of the distance
-	insidePoint(p1: HeightPoint, p2: HeightPoint, scale: number): HeightPoint {
+export abstract class HeightPowGen<
+	Point extends HeightPoint = HeightPoint,
+> extends HexPow2Gen<Point> {
+	insidePoint(p1: Point, p2: Point, scale: number): Point {
 		const variance = (p1.type.variance + p2.type.variance) / 2
 		const randScale = ((1 << scale) / this.radius) * wholeScale * variance
 		const seed = LCG(p1.seed, p2.seed)()
@@ -119,11 +115,11 @@ export class HeightPowGen extends HexPow2Gen<HeightPoint> {
 		const z = (p1.z + p2.z) / 2 + gen(0.5, -0.5) * randScale
 		const changeType = gen() < scale / this.scale
 		const type = changeType ? terrainType(z) : [p1, p2][Math.floor(gen(2))].type
-		return newPoint(z, type, gen, seed)
+		return heightPoint(z, type, gen, seed) as Point
 	}
 	meshAllArtifacts() {}
 
-	meshResources() {
+	meshContent() {
 		for (let hexIndex = 0; hexIndex < this.nbrTiles; hexIndex++) {
 			const p = this.points[hexIndex]
 			if (p.content.length) {
@@ -224,11 +220,6 @@ void main() {
 			`,
 			transparent: true,
 		})
-		/*Promise.all(points.map((p) => p.texture.texture)).then((textures) => {
-			material.uniforms = {
-				textures: { value: textures },
-			}
-		})*/
 		return new Mesh(geometry, material)
 	}
 }

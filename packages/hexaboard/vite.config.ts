@@ -11,7 +11,7 @@ export default defineConfig({
 			entry: resolve(__dirname, 'src/main.ts'),
 			name: 'HexaBoard',
 			fileName: 'hexaboard',
-			formats: ['es', 'cjs', 'umd'],
+			formats: ['es', 'umd'],
 		},
 	},
 	// @ts-ignore: dts() is not a `PluginOption` but a `vite.Plugin`

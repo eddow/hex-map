@@ -3,7 +3,6 @@ import {
 	BufferGeometry,
 	Group,
 	type Intersection,
-	type Material,
 	Mesh,
 	MeshBasicMaterial,
 	type Object3D,
@@ -23,7 +22,7 @@ export interface TilePosition {
 /**
  * Mostly abstract hex sector, has to be overridden
  */
-export default abstract class HexSector implements MouseReactive {
+export default class HexSector implements MouseReactive {
 	constructor(
 		position: Vector3,
 		public readonly tileSize: number,
@@ -97,7 +96,15 @@ export default abstract class HexSector implements MouseReactive {
 		}
 		return rv
 	}
+	/**
+	 * "Load from scratch" - this should be called *even* when loading games
+	 */
 	generate(gen: RandGenerator) {}
+	/**
+	 * Generates the primal state that will be saved and then loaded
+	 */
+	virgin() {}
+	meshContent() {}
 	meshTerrain() {
 		if (this.ground) this.group.remove(this.ground)
 		this.ground = new Group()
@@ -116,6 +123,3 @@ export default abstract class HexSector implements MouseReactive {
 		return next1Pos.multiplyScalar(u / 2).add(next2Pos.multiplyScalar(v / 2))
 	}
 }
-/**
- * We can construct a sector with 2 more sides (`puzzleTiles` tiles) so that they can nest into each another in an infinite board
- */

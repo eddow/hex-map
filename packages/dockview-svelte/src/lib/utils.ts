@@ -11,25 +11,23 @@ export const dvContext: unique symbol = Symbol('Dockview dvContext')
 export interface IDockviewContext {
 	registerComponent(name: string, snippet: Snippet<[Record<string, any>]>): Component
 }
-abstract class AbstractRenderer {
+abstract class AbstractRenderer implements IContentRenderer {
 	readonly element: HTMLElement
-	constructor() {
+	constructor(public readonly id: string) {
 		this.element = document.createElement('div')
 		this.element.className = 'dv-svelte-part'
 		this.element.style.height = '100%'
 		this.element.style.width = '100%'
 	}
+	abstract init(parameters: GroupPanelPartInitParameters): void
 }
-export class ContentRenderer<Parameters extends Record<string, any>>
-	extends AbstractRenderer
-	implements IContentRenderer
-{
+export class ContentRenderer<Parameters extends Record<string, any>> extends AbstractRenderer {
 	constructor(
-		public readonly id: string,
+		id: string,
 		public readonly renderer: Component<Parameters>,
 		private readonly props: Partial<Parameters> = {}
 	) {
-		super()
+		super(id)
 	}
 	init(parameters: GroupPanelPartInitParameters): void {
 		mount(this.renderer, {

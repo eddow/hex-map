@@ -149,15 +149,6 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 			if (camera.position.z > clampZ.max) camera.position.z = clampZ.max
 			else if (camera.position.z < clampZ.min) camera.position.z = clampZ.min
 		}
-		/*
-		// TODO: better zoom algorithm: use mouse intersection to approach/move away from a point
-		// Adjust the camera's zoom or position
-		camera.position.z *= zoomSpeed ** delta*/
-
-		// Optionally, clamp the zoom level to prevent the camera from getting too close or far
-		//camera.position.z = Math.max(2, Math.min(500, camera.position.z)) // Example clamp between 2 and 50
-		// TODO: cursor out of mouse pointer after zoom: calling mouseMove is not enough (use `onPointerLockChange` ? )
-		//mouseMove(event)
 	}
 	let reLockTimeout: ReturnType<typeof setTimeout> | undefined
 	function reLock(event: MouseEvent) {
@@ -192,7 +183,7 @@ export function mouseControls(canvas: HTMLCanvasElement, camera: Camera, scene: 
 	}
 
 	// Attach event listeners
-	document.addEventListener('mousemove', mouseMove)
+	canvas.addEventListener('mousemove', mouseMove)
 	document.addEventListener('pointerlockchange', onPointerLockChange)
 	canvas.addEventListener('mousedown', mouseDown)
 	canvas.addEventListener('mouseup', mouseUp)

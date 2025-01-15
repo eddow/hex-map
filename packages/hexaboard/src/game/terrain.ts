@@ -24,12 +24,12 @@ export const terrainTypes: Record<string, TerrainType> = {
 		texture: terrainTexture('sand'),
 		appearHeight: Number.NEGATIVE_INFINITY,
 		variance: 0.1,
-		resourceDistribution: [[Rock, 0.2]],
+		resourceDistribution: [[Rock, 0.1]],
 	},
 	grass: {
 		color: { r: 0.4, g: 0.8, b: 0.4 },
 		texture: terrainTexture('grass'),
-		appearHeight: 0.2,
+		appearHeight: 0.1,
 		variance: 0.7,
 		resourceDistribution: [
 			[Rock, 0.2],
@@ -39,7 +39,7 @@ export const terrainTypes: Record<string, TerrainType> = {
 	forest: {
 		color: { r: 0, g: 0.9, b: 0 },
 		texture: terrainTexture('forest'),
-		appearHeight: 0.5,
+		appearHeight: 0.4,
 		variance: 2,
 		resourceDistribution: [
 			[Rock, 0.1],

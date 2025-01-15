@@ -1,5 +1,6 @@
 import type { RandGenerator } from '~/utils/random'
 
+// https://www.redblobgames.com/grids/hexagons/
 export interface Axial {
 	q: number
 	r: number
@@ -77,7 +78,7 @@ export function axialIndex({ q, r }: Axial) {
 	return 3 * ring * (ring - 1) + side * ring + offset + 1
 }
 
-export function cartesian({ q, r }: Axial, size: number) {
+export function cartesian({ q, r }: Axial, size = 1) {
 	const A = Math.sqrt(3) * size
 	const B = (Math.sqrt(3) / 2) * size
 	const C = (3 / 2) * size

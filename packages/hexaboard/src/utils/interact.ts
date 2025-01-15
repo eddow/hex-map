@@ -1,6 +1,6 @@
 import type { Intersection, Mesh, Object3D, Object3DEventMap } from 'three'
 import type { Character } from '~/character'
-import type { HeightPowGen } from '~/hexagon/pow2Gen'
+import type { HeightPowGen } from '~/hexagon/pow2gen'
 import type HexSector from '~/hexagon/sector'
 import { icosahedron } from './meshes'
 
