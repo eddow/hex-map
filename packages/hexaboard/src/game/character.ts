@@ -1,4 +1,5 @@
-import type { Mesh, Object3D, Vector3 } from 'three'
+import type { Object3D, Vector3 } from 'three'
+import { GameEntity } from '~/game/game'
 import type HexSector from '~/hexagon/sector'
 import { axialIndex, axialRound, fromCartesian } from '~/hexagon/utils'
 import { nextInPath } from './path'
@@ -23,18 +24,18 @@ class Walk implements CharacterAction {
 	) {}
 	advance(character: Character, dt: number) {
 		const velocity = 20
-		const direction = this.destination.clone().sub(character.mesh.position)
+		const direction = this.destination.clone().sub(character.o3d.position)
 		const time = direction.length() / velocity
 		if (time < dt) {
-			character.mesh.position.copy(this.destination)
+			character.o3d.position.copy(this.destination)
 			this.done?.(character)
 			return dt - time
 		}
-		character.mesh.position.add(direction.normalize().multiplyScalar(dt * velocity))
+		character.o3d.position.add(direction.normalize().multiplyScalar(dt * velocity))
 	}
 	cancel(character: Character) {
 		character.tile = axialIndex(
-			axialRound(fromCartesian(character.mesh.position, character.sector.tileSize))
+			axialRound(fromCartesian(character.o3d.position, character.sector.tileSize))
 		)
 	}
 }
@@ -55,15 +56,16 @@ class GoToPlan implements CharacterPlan {
 	}
 }
 
-export class Character {
+export class Character extends GameEntity {
 	public action: CharacterAction = idle
 
 	constructor(
 		public sector: HexSector,
 		public tile: number,
-		public mesh: Object3D
+		o3d: Object3D
 	) {
-		mesh.position.copy(sector.vPosition(tile).add(sector.group.position))
+		super(o3d)
+		o3d.position.copy(sector.vPosition(tile).add(sector.group.position))
 	}
 
 	progress(dt: number) {

@@ -3,38 +3,99 @@ import {
 	Clock,
 	DirectionalLight,
 	Group,
+	type Object3D,
 	PerspectiveCamera,
-	Scene,
 	WebGLRenderer,
 } from 'three'
-import type { Character } from '~/character'
+import { MouseControl, type MouseEvolution } from '~/utils/mouseControl'
 import type { Land } from './land'
 
-export class Game {
-	private _characters = new Set<Character>()
-	private charactersGroup = new Group()
+export type MouseEvolutionEvent<Evolution extends MouseEvolution = MouseEvolution> = (
+	evolution: Evolution
+) => void
+
+export abstract class GameEntity {
+	constructor(public readonly o3d: Object3D) {}
+	progress(dt: number) {}
+}
+
+export class Game extends MouseControl {
 	public readonly lights = new Group()
-	public readonly scene = new Scene()
-	private clock = new Clock(false)
 	private _land: Land
-	private views = new Set<GameView>()
 
 	constructor(land: Land) {
+		super()
 		this._land = land
-		this.scene = new Scene()
-		this.scene.add(this.lights, land.group, this.charactersGroup)
+		this.scene.add(this.lights, land.group, this.entitiesGroup)
 		this.lights.add(new AmbientLight(0x404040))
 		const light = new DirectionalLight(0xffffff, 1)
 		light.position.set(10, 10, 10)
 		this.lights.add(light)
 	}
-	characters() {
-		return this._characters.values()
+
+	// #region Events
+
+	private readonly mouseEvents: Record<string, Set<MouseEvolutionEvent>> = {}
+	onMouse<Evolution extends { type: Evolution['type'] } & MouseEvolution>(
+		type: Evolution['type'],
+		evolution: MouseEvolutionEvent<Evolution>
+	) {
+		this.mouseEvents[type as string] ??= new Set()
+		this.mouseEvents[type as string].add(evolution as MouseEvolutionEvent)
+		return () => this.mouseEvents[type as string]?.delete(evolution as MouseEvolutionEvent)
 	}
-	addCharacter(character: Character) {
-		this._characters.add(character)
-		this.charactersGroup.add(character.mesh)
+	private readonly progressEvents: Set<(dt: number) => void> = new Set()
+	onProgress(evolution: (dt: number) => void) {
+		this.progressEvents.add(evolution)
+		return () => this.progressEvents.delete(evolution)
 	}
+
+	// #endregion
+	// #region Game entities
+
+	private _entities = new Set<GameEntity>()
+	private entitiesGroup = new Group()
+	entities() {
+		return this._entities.values()
+	}
+	addEntity(entity: GameEntity) {
+		this._entities.add(entity)
+		this.entitiesGroup.add(entity.o3d)
+	}
+
+	// #endregion
+	// #region Progress
+
+	progress(dt: number) {
+		for (const entity of this._entities) entity.progress(dt)
+		this.land.progress(dt)
+	}
+
+	private clock = new Clock(false)
+	stop() {
+		this.clock.stop()
+	}
+	start() {
+		this.clock.start()
+		const animate = () => {
+			if (!this.clock.running) return
+			const dt = this.clock.getDelta()
+			requestAnimationFrame(animate)
+			for (const evolution of this.evolutions()) {
+				const listeners = this.mouseEvents[evolution.type]
+				if (listeners) for (const listener of listeners) listener(evolution)
+			}
+			this.progress(dt)
+			for (const listener of this.progressEvents) listener(dt)
+			for (const view of this.views.values()) view.render()
+		}
+
+		requestAnimationFrame(animate)
+	}
+
+	// #endregion
+	// #region Composition
+
 	get land() {
 		return this._land
 	}
@@ -43,35 +104,17 @@ export class Game {
 		this.scene.add(value.group)
 		this._land = value
 	}
-	progress(dt: number) {
-		for (const character of this._characters) character.progress(dt)
-		this.land.progress(dt)
-	}
-	stop() {
-		this.clock.stop()
-	}
-	start(cb?: (dt: number) => void) {
-		this.clock.start()
-		const animate = () => {
-			if (!this.clock.running) return
-			const dt = this.clock.getDelta()
-			requestAnimationFrame(animate)
-			//hoveredSpecs.interaction?.animate?.(dt)
-			this.progress(dt)
-			cb?.(dt)
-			for (const view of this.views) view.render()
-		}
 
-		requestAnimationFrame(animate)
-	}
 	createView({ near = 0.1, far = 1000 }: { near: number; far: number } = { near: 0.1, far: 1000 }) {
 		const view = new GameView(this, { near, far })
-		this.views.add(view)
+		this.listenTo(view)
 		return view
 	}
 	removeView(view: GameView) {
-		this.views.delete(view)
+		this.disengage(view)
 	}
+
+	// #endregion
 }
 
 export class GameView {
@@ -84,7 +127,7 @@ export class GameView {
 		this.camera = new PerspectiveCamera(75, 1, near, far)
 		this.renderer = new WebGLRenderer({ antialias: true })
 	}
-	get domElement() {
+	get canvas() {
 		return this.renderer.domElement
 	}
 	resize(width: number, height: number) {

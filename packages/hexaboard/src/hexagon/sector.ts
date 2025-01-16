@@ -9,8 +9,8 @@ import {
 	type Object3DEventMap,
 	Vector3,
 } from 'three'
-import { type MouseReactive, type TileHandle, tileInteraction } from '~/utils/interact'
-import { meshVectors3, sphere } from '~/utils/meshes'
+import { meshVectors3 } from '~/utils/meshes'
+import { type MouseReactive, TileHandle } from '~/utils/mouseControl'
 import type { RandGenerator } from '~/utils/random'
 import { axialAt, axialIndex, axialPolynomial, cartesian, hexSides, hexTiles } from './utils'
 export interface TilePosition {
@@ -33,13 +33,12 @@ export default class HexSector implements MouseReactive {
 	group: Group = new Group()
 	ground?: Group
 
-	mouseInteraction = tileInteraction
 	mouseHandle(intersection: Intersection<Object3D<Object3DEventMap>>): TileHandle {
 		const positions = Array.from(meshVectors3(intersection.object as Mesh))
 		const distances = positions.map((p) => p.distanceTo(intersection.point))
 		const minD = Math.min(...distances)
 
-		return { target: this, hexIndex: intersection.object.userData?.points[distances.indexOf(minD)] }
+		return new TileHandle(this, intersection.object.userData?.points[distances.indexOf(minD)])
 	}
 
 	triangleGeometry(ndx: [number, number, number]) {

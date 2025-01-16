@@ -3,6 +3,7 @@ import type HexSector from '~/hexagon/sector'
 import type { RandGenerator } from '~/utils/random'
 
 export abstract class Land {
+	abstract readonly tileSize: number
 	progress(dt: number) {}
 	/**
 	 * Load foundation terrain shape from seed
@@ -23,6 +24,9 @@ export abstract class Land {
 export class MonoSectorLand<Sector extends HexSector = HexSector> extends Land {
 	constructor(public readonly sector: Sector) {
 		super()
+	}
+	get tileSize() {
+		return this.sector.tileSize
 	}
 	generate(gen: RandGenerator) {
 		this.sector.generate(gen)

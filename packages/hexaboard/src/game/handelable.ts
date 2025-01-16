@@ -1,6 +1,6 @@
-import type { Mesh, Object3D } from 'three'
+import type { Object3D } from 'three'
 import { hexTiles } from '~/hexagon/utils'
-import { meshAsset, sphere } from '~/utils/meshes'
+import { meshAsset } from '~/utils/meshes'
 import type { RandGenerator } from '~/utils/random'
 import type { TerrainType } from './terrain'
 

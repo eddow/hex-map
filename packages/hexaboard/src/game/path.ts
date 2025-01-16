@@ -7,7 +7,8 @@ export function nextInPath(
 	toSector: HexSector,
 	toTile: number
 ) {
-	console.assert(fromSector === toSector, 'Monosector')
+	if (fromSector !== toSector)
+		throw new Error('from and to sectors must be the same: not implemented yet')
 	const from = axialAt(fromTile)
 	const to = axialAt(toTile)
 	return axialRound(axialLerp(from, to, 1 / axialDistance(from, to)))
