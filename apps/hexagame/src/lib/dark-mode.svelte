@@ -1,6 +1,5 @@
 <script lang="ts">
-	import Sun from 'heroicons/24/solid/sun.svg?component'
-	import Moon from 'heroicons/24/solid/moon.svg?component'
+	import { SunSolid, MoonSolid } from 'flowbite-svelte-icons'
 	let { darkMode = $bindable(false) } = $props()
 </script>
 
@@ -10,6 +9,6 @@
 	type="button"
 	onclick={() => (darkMode = !darkMode)}
 >
-	<Moon class={['w-6 h-6 bg-gray-700', darkMode ? 'hidden' : '']} />
-	<Sun class={['w-6 h-6 bg-gray-100', darkMode ? '' : 'hidden']} />
+	<MoonSolid class={`w-6 h-6 bg-gray-700 ${darkMode ? 'hidden' : ''}`} />
+	<SunSolid class={`w-6 h-6 bg-gray-100 ${darkMode ? '' : 'hidden'}`} />
 </button>

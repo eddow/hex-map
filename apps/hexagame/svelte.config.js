@@ -13,7 +13,7 @@ const config = {
 		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
 		adapter: adapter(),
 		alias: {
-			hexaboard: '../../packages/hexaboard/dist/hexaboard.mjs',
+			hexaboard: '../../packages/hexaboard/src/main.ts',
 			'dockview-svelte': '../../packages/dockview-svelte/src/lib/index.ts',
 		},
 	},

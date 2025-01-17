@@ -4,18 +4,10 @@
 	"license": "ISC",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/eddow/ts-meta.git"
-	},
-	"scripts": {
-		"dev": "lerna run dev:repo --parallel --stream",
-		"test": "node --expose-gc node_modules/.bin/jest",
-		"test:coverage": "node --expose-gc node_modules/.bin/jest --coverage"
+		"url": "git+https://github.com/eddow/hex-map.git"
 	},
 	"workspaces": [
 		"packages/*",
 		"apps/*"
-	],
-	"devDependencies": {
-		"lerna": "^8.1.9"
-	}
+	]
 }

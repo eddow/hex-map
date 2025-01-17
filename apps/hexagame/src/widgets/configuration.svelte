@@ -1,6 +1,6 @@
 <script lang="ts">
 	import DarkMode from '$lib/dark-mode.svelte'
-	import { configuration } from '../stores/config.svelte'
+	import { configuration } from '../globals.svelte'
 	let darkMode = $state(configuration.darkMode)
 	$effect(() => {
 		configuration.darkMode = darkMode

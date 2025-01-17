@@ -1,3 +1,5 @@
+import type { Game } from 'hexaboard'
+
 export interface IConfiguration {
 	darkMode?: boolean
 }
@@ -9,3 +11,5 @@ export const configuration = $state(
 				darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
 			}
 )
+
+export const games: Record<PropertyKey, Game> = {}
