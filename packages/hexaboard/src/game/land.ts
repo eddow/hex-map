@@ -1,7 +1,7 @@
 import type { Group } from 'three'
 import type HexPow2Gen from '~/hexagon/pow2gen'
 import type HexSector from '~/hexagon/sector'
-import type { RandGenerator } from '~/utils/random'
+import type { RandGenerator } from '~/utils/misc'
 import type { TerrainsDefinition } from './terrain'
 
 export abstract class Land {

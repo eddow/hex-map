@@ -8,15 +8,16 @@ import {
 	type MouseButtonEvolution,
 	type MouseHoverEvolution,
 	TileCursor,
-	type TileHandle,
 	icosahedron,
 	sphere,
 } from 'hexaboard'
 import { Vector3 } from 'three'
+import { dockview } from './globals.svelte'
 import terrains from './world/terrain'
 
+let tileInfoPanels = 0
 export function createGame(seed: number) {
-	const worldSeed = Math.random()
+	const worldSeed = 0.43
 	const land = new MonoSectorLand(new Island(new Vector3(0, 0, 0), 10, 6, terrains))
 	land.generate(LCG(worldSeed))
 	land.virgin()
@@ -36,8 +37,24 @@ export function createGame(seed: number) {
 		cursor.tile = ev.handle?.tile
 	})
 	game.onMouse('click', (ev: MouseButtonEvolution) => {
-		const tile = ev.handle as TileHandle
-		if (ev.button === MouseButton.Left) pawn.goTo(tile.target, tile.hexIndex)
+		const tile = ev.handle?.tile
+		if (tile)
+			switch (ev.button) {
+				case MouseButton.Left:
+					pawn.goTo(tile.target, tile.hexIndex)
+					break
+				case MouseButton.Right:
+					dockview.api.addPanel({
+						id: `tileInfo.${tileInfoPanels++}`,
+						component: 'tileInfo',
+						params: {
+							//sector: tile.target,
+							hexIndex: tile.hexIndex,
+						},
+						floating: true,
+					})
+					break
+			}
 	})
 	game.addEntity(cursor)
 

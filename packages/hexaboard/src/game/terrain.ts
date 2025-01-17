@@ -1,5 +1,5 @@
 import { Float32BufferAttribute, type Texture } from 'three'
-import type { RandGenerator } from '~/utils/random'
+import type { RandGenerator } from '~/utils/misc'
 import type { ResourceDistribution } from './handelable'
 
 const inTextureRadius = 0.2

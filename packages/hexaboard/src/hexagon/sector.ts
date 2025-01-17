@@ -10,8 +10,8 @@ import {
 	Vector3,
 } from 'three'
 import { meshVectors3 } from '~/utils/meshes'
+import type { RandGenerator } from '~/utils/misc'
 import { type MouseReactive, TileHandle } from '~/utils/mouseControl'
-import type { RandGenerator } from '~/utils/random'
 import { axialAt, axialIndex, axialPolynomial, cartesian, hexSides, hexTiles } from './utils'
 export interface TilePosition {
 	s: number

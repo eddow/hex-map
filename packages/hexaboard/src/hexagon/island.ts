@@ -1,6 +1,6 @@
 import { Vector2, Vector3 } from 'three'
 import type { TerrainType } from '~/game/terrain'
-import type { RandGenerator } from '~/utils/random'
+import type { RandGenerator } from '~/utils/misc'
 import { type HeightPoint, HeightPowGen } from './pow2gen'
 import { axialAt, cartesian } from './utils'
 

@@ -1,7 +1,7 @@
 import type { Object3D } from 'three'
 import { hexTiles } from '~/hexagon/utils'
 import { meshAsset } from '~/utils/meshes'
-import type { RandGenerator } from '~/utils/random'
+import type { RandGenerator } from '~/utils/misc'
 import type { TerrainType } from './terrain'
 
 /**
@@ -43,10 +43,10 @@ export abstract class Resource extends Handelable {
 				: characteristics
 	}
 	generate(gen: RandGenerator, terrain: TerrainType): Characteristics {
-		return { model: Math.floor(gen(this.models)) + 1, rotation: gen(Math.PI * 2) }
+		return { model: Math.floor(gen(this.nbrModels)) + 1, rotation: gen(Math.PI * 2) }
 	}
 	abstract get path(): string
-	abstract get models(): number
+	abstract get nbrModels(): number
 	createMesh() {
 		const mesh = meshAsset(
 			this.path.replace('#', this.characteristics.model.toString())

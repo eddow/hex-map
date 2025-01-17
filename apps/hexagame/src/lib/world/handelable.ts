@@ -1,7 +1,7 @@
 import { Resource } from 'hexaboard'
 
 export class Tree extends Resource {
-	get models() {
+	get nbrModels() {
 		return 3
 	}
 	get path() {
@@ -10,7 +10,7 @@ export class Tree extends Resource {
 }
 
 export class Rock extends Resource {
-	get models() {
+	get nbrModels() {
 		return 3
 	}
 	get path() {

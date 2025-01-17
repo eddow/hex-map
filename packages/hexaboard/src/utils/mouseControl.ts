@@ -10,6 +10,7 @@ import {
 } from 'three'
 import type { GameView } from '~/game/game'
 import type HexSector from '~/hexagon/sector'
+import { LockSemaphore } from './misc'
 
 export interface MouseReactive {
 	mouseHandle(intersection: Intersection<Object3D<Object3DEventMap>>): MouseHandle
@@ -154,7 +155,6 @@ const mouseListeners: unique symbol = Symbol('Mouse events')
 interface MouseEventsView extends GameView {
 	[mouseListeners]: Record<string, (event: any) => void>
 }
-
 export class MouseControl {
 	protected views = new Map<HTMLCanvasElement, GameView>()
 	public readonly scene = new Scene()
@@ -162,7 +162,6 @@ export class MouseControl {
 	private hoveredHandle?: MouseHandle
 	private lastButtonDown?: MouseButtonEvolution
 	private dragStartHandle?: MouseHandle
-	private locked?: GameView
 	private lastEvolutions: MouseEvolution[] = []
 
 	get lastEvolution(): MouseEvolution | undefined {
@@ -204,9 +203,7 @@ export class MouseControl {
 
 	// #region Event listeners book-keeping
 
-	constructor(private clampZ: { min: number; max: number }) {
-		document.addEventListener('pointerlockchange', () => this.pointerLockChange())
-	}
+	constructor(private clampZ: { min: number; max: number }) {}
 	listenTo(gameView: GameView) {
 		const canvas = gameView.canvas
 		const events = {
@@ -257,12 +254,27 @@ export class MouseControl {
 			}
 		}
 	}
+
+	private lockedGV: GameView | null = null
+	private lockSemaphore = new LockSemaphore((locked) => {
+		const shouldLock = (locked instanceof HTMLCanvasElement && this.views.get(locked)) || null
+		if (!!this.lockedGV !== !!shouldLock) {
+			if (this.lockedGV) {
+				this.hovered = this.lockedGV
+				this.evolve({ type: 'unlock', target: this.lockedGV })
+				this.lockedGV = null
+				this.moveCursor(this.lastCursorEvent!)
+			} else {
+				this.hovered = undefined
+				this.evolve({ type: 'lock', target: shouldLock })
+				this.lockedGV = shouldLock
+			}
+		}
+	})
 	private reLock(event: MouseEvent) {
 		const shouldLock = Object.values(mouseConfig.lockButtons).some((c) => isCombination(event, c))
-		if (!!this.locked !== shouldLock) {
-			if (shouldLock) this.hovered!.canvas.requestPointerLock()
-			else document.exitPointerLock()
-		}
+		if (!!this.lockSemaphore.locked !== shouldLock)
+			this.lockSemaphore.lock(shouldLock ? this.hovered!.canvas : null)
 		return shouldLock
 	}
 
@@ -316,67 +328,59 @@ export class MouseControl {
 		}
 	}
 
-	// #endregion
-	// #region Events
-
-	private pointerLockChange() {
-		const locked = document.pointerLockElement
-		const shouldLock = (locked instanceof HTMLCanvasElement && this.views.get(locked)) || null
-		if (this.locked && !shouldLock) {
-			this.hovered = this.locked
-			this.evolve({ type: 'unlock', target: this.locked! })
-			this.locked = undefined
-		} else if (!this.locked && shouldLock) {
-			this.hovered = undefined
-			this.evolve({ type: 'lock', target: shouldLock })
-			this.locked = shouldLock
+	private lastCursorEvent?: MouseEvent
+	private moveCursor(event: MouseEvent) {
+		this.lastCursorEvent = event
+		this.hovered =
+			(event.target instanceof HTMLCanvasElement && this.views.get(event.target)) || undefined
+		if (this.hovered && !!event.buttons && !this.dragStartHandle && this.lastButtonDown) {
+			this.dragStartHandle = this.mouseInteract(this.lastButtonDown!)?.handle
+			if (this.dragStartHandle) {
+				this.evolve({
+					...this.lastButtonDown,
+					type: 'dragStart',
+				})
+			}
+			this.lastButtonDown = undefined
+		}
+		this.lastButtonDown = undefined
+		if (this.lastEvolution?.type === 'move') this.lastEvolutions.pop()
+		const evolution = {
+			type: 'move',
+			target: this.hovered,
+			...(this.hovered
+				? {
+						buttons: event.buttons,
+						modKeyCombination: modKeysCombinations(event),
+						position: {
+							x: event.offsetX,
+							y: event.offsetY,
+						},
+					}
+				: {
+						buttons: 0,
+						modKeyCombination: modKeysComb.none,
+						position: null,
+					}),
+		}
+		this.evolve(evolution)
+		if (this.dragStartHandle) {
+			this.evolve({
+				...evolution,
+				type: 'dragOver',
+				dragStartHandle: this.dragStartHandle,
+			})
 		}
 	}
 
+	// #endregion
+	// #region Events
+
 	private mouseMove(event: MouseEvent) {
-		if (this.locked) this.moveCamera(event, this.locked.camera)
-		else {
-			this.hovered =
-				(event.target instanceof HTMLCanvasElement && this.views.get(event.target)) || undefined
-			if (this.hovered && !!event.buttons && !this.dragStartHandle && this.lastButtonDown) {
-				this.dragStartHandle = this.mouseInteract(this.lastButtonDown!)?.handle
-				if (this.dragStartHandle) {
-					this.evolve({
-						...this.lastButtonDown,
-						type: 'dragStart',
-					})
-				}
-				this.lastButtonDown = undefined
-			}
-			this.lastButtonDown = undefined
-			if (this.lastEvolution?.type === 'move') this.lastEvolutions.pop()
-			const evolution = {
-				type: 'move',
-				target: this.hovered,
-				...(this.hovered
-					? {
-							buttons: event.buttons,
-							modKeyCombination: modKeysCombinations(event),
-							position: {
-								x: event.offsetX,
-								y: event.offsetY,
-							},
-						}
-					: {
-							buttons: 0,
-							modKeyCombination: modKeysComb.none,
-							position: null,
-						}),
-			}
-			this.evolve(evolution)
-			if (this.dragStartHandle) {
-				this.evolve({
-					...evolution,
-					type: 'dragOver',
-					dragStartHandle: this.dragStartHandle,
-				})
-			}
-		}
+		this.lockSemaphore.callWhenLocked(() => {
+			if (this.lockedGV) this.moveCamera(event, this.lockedGV.camera)
+			else this.moveCursor(event)
+		})
 	}
 	private mouseDown(event: MouseEvent) {
 		this.dragStartHandle = undefined
@@ -430,7 +434,7 @@ export class MouseControl {
 		const delta = { x: event.deltaX / 96, y: event.deltaY / 120 }
 
 		for (const axis of ['x', 'y'] as const)
-			if (delta[axis]) {
+			if (delta[axis] && !this.lockSemaphore.locked) {
 				if (
 					mouseConfig.zoomWheel.axis === axis &&
 					isModKeyCombination(event, mouseConfig.zoomWheel.modifiers)

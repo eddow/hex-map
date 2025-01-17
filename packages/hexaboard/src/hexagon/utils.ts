@@ -1,4 +1,4 @@
-import type { RandGenerator } from '~/utils/random'
+import type { RandGenerator } from '~/utils/misc'
 
 // https://www.redblobgames.com/grids/hexagons/
 export interface Axial {
@@ -129,7 +129,7 @@ export function posInTile(hexIndex: number, radius: number) {
 	if (hexIndex === 0) return { s: 0, u: 0, v: 0 }
 	const axial = axialAt(hexIndex)
 	const outerRadius = radius + 0.5
-	const { q, r } = { q: axial.q * outerRadius, r: axial.r * outerRadius }
+	const { q, r } = { q: axial.q / outerRadius, r: axial.r / outerRadius }
 	const s = -q - r
 	const signs = (q >= 0 ? 'Q' : 'q') + (r >= 0 ? 'R' : 'r') + (s >= 0 ? 'S' : 's')
 	return {

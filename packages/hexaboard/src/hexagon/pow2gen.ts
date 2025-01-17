@@ -7,7 +7,7 @@ import {
 	genTexture,
 	textureUVs,
 } from '~/game/terrain'
-import LCG, { type RandGenerator } from '~/utils/random'
+import LCG, { type RandGenerator } from '~/utils/misc'
 import HexSector from './sector'
 import {
 	type Axial,
@@ -117,7 +117,6 @@ export abstract class HeightPowGen<
 		const type = changeType ? this.terrains.terrainType(z) : [p1, p2][Math.floor(gen(2))].type
 		return this.heightPoint(z, type, gen, seed) as Point
 	}
-	meshAllArtifacts() {}
 
 	meshContent() {
 		for (let hexIndex = 0; hexIndex < this.nbrTiles; hexIndex++) {

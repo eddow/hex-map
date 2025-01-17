@@ -70,26 +70,24 @@ export class Game extends MouseControl {
 		for (const entity of this._entities) entity.progress(dt)
 		this.land.progress(dt)
 	}
-
+	animate = () => {
+		if (!this.clock.running) return
+		const dt = this.clock.getDelta()
+		for (const evolution of this.evolutions()) {
+			const listeners = this.mouseEvents[evolution.type]
+			if (listeners) for (const listener of listeners) listener(evolution)
+		}
+		this.progress(dt)
+		for (const listener of this.progressEvents) listener(dt)
+		for (const view of this.views.values()) view.render()
+		if (this.clock.running) requestAnimationFrame(this.animate)
+	}
 	private clock = new Clock(false)
 	set running(value: boolean) {
 		if (this.clock.running === value) return
 		if (value) {
 			this.clock.start()
-			// TODO Becomes this.animate
-			const animate = () => {
-				if (!this.clock.running) return
-				const dt = this.clock.getDelta()
-				requestAnimationFrame(animate)
-				for (const evolution of this.evolutions()) {
-					const listeners = this.mouseEvents[evolution.type]
-					if (listeners) for (const listener of listeners) listener(evolution)
-				}
-				this.progress(dt)
-				for (const listener of this.progressEvents) listener(dt)
-				for (const view of this.views.values()) view.render()
-			}
-			requestAnimationFrame(animate)
+			requestAnimationFrame(this.animate)
 		} else {
 			this.clock.stop()
 		}

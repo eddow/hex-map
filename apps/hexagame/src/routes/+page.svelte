@@ -9,12 +9,14 @@
 	import * as m from '$lib/paraglide/messages'
 	import { onMount } from 'svelte'
 	import createGameViewRenderer from '$lib/view-panel'
+	import TileInfo from '$widgets/tile-info.svelte'
 
 	let api: DockviewApi = $derived(dockview.api)
 	let ids = 0
 	const components = {
 		configuration: Configuration,
-		games: Games
+		games: Games,
+		tileInfo: TileInfo
 	}
 
 	function gotApi(api: DockviewApi) {
@@ -27,13 +29,14 @@
 			component: 'dc-test'
 		})
 	}
-
 	function showSystem(widget: 'configuration' | 'games') {
 		return () => {
 			const id = `system.${widget}`
 			let panel = api.getPanel(`system.${widget}`)
-			if (panel) panel.api.setActive()
-			else {
+			if (panel) {
+				if (panel.api.isActive) panel.api.close()
+				else panel.api.setActive()
+			} else {
 				const otherSystem = api.panels.find((p) => p.id.startsWith('system.'))
 				panel = api.addPanel({
 					id,
@@ -72,7 +75,7 @@
 			<ToolbarButton onclick={showSystem('configuration')} title={m.configuration()}>
 				<AdjustmentsHorizontalOutline class="w-6 h-6" />
 			</ToolbarButton>
-			<ToolbarButton onclick={showSystem('games')} title={m.configuration()}>
+			<ToolbarButton onclick={showSystem('games')} title={m.games()}>
 				<FloppyDiskAltOutline class="w-6 h-6" />
 			</ToolbarButton>
 		</ToolbarGroup>
