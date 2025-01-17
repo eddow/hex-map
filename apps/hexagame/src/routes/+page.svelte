@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { configuration, dockview } from '../globals.svelte.ts'
+	import { configuration, dockview } from '$lib/globals.svelte'
 	import { DockviewApi } from 'dockview-core'
 	import { DockView, DvComponent } from 'dockview-svelte'
 	import Configuration from '$widgets/system/configuration.svelte'

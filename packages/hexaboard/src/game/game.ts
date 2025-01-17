@@ -24,7 +24,7 @@ export class Game extends MouseControl {
 	private _land: Land
 
 	constructor(land: Land) {
-		super()
+		super({ min: land.terrains.terrainHeight, max: land.terrains.terrainHeight * 6 })
 		this._land = land
 		this.scene.add(this.lights, land.group, this.entitiesGroup)
 		this.lights.add(new AmbientLight(0x404040))

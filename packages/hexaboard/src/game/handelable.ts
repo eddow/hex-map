@@ -55,25 +55,6 @@ export abstract class Resource extends Handelable {
 		return mesh
 	}
 }
-
-export class Tree extends Resource {
-	get models() {
-		return 3
-	}
-	get path() {
-		return '/assets/resource/tree#.glb'
-	}
-}
-
-export class Rock extends Resource {
-	get models() {
-		return 3
-	}
-	get path() {
-		return '/assets/resource/rock#.glb'
-	}
-}
-
 export type ResourceGenerator = new (gen: RandGenerator, terrain: TerrainType) => Resource
 export type ResourceDistribution = [ResourceGenerator, number][]
 export function generateResource(gen: RandGenerator, terrain: TerrainType) {

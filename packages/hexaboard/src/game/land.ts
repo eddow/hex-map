@@ -1,6 +1,8 @@
 import type { Group } from 'three'
+import type HexPow2Gen from '~/hexagon/pow2gen'
 import type HexSector from '~/hexagon/sector'
 import type { RandGenerator } from '~/utils/random'
+import type { TerrainsDefinition } from './terrain'
 
 export abstract class Land {
 	abstract readonly tileSize: number
@@ -19,6 +21,7 @@ export abstract class Land {
 	 */
 	abstract mesh(): void
 	abstract get group(): Group
+	abstract get terrains(): TerrainsDefinition
 }
 
 export class MonoSectorLand<Sector extends HexSector = HexSector> extends Land {
@@ -40,6 +43,9 @@ export class MonoSectorLand<Sector extends HexSector = HexSector> extends Land {
 	}
 	get group() {
 		return this.sector.group
+	}
+	get terrains() {
+		return (this.sector as HexSector as HexPow2Gen).terrains
 	}
 }
 

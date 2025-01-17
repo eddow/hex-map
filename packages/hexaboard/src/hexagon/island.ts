@@ -1,32 +1,41 @@
 import { Vector2, Vector3 } from 'three'
-import { type TerrainType, terrainTypes, wholeScale } from '~/game/terrain'
+import type { TerrainType } from '~/game/terrain'
 import type { RandGenerator } from '~/utils/random'
-import { type HeightPoint, HeightPowGen, heightPoint } from './pow2gen'
+import { type HeightPoint, HeightPowGen } from './pow2gen'
 import { axialAt, cartesian } from './utils'
 
 export interface DisplacedPoint extends HeightPoint {
 	radius: number
 }
 
-function displacedPoint(
-	z: number,
-	radius: number, // Distance from the center
-	type: TerrainType,
-	gen: RandGenerator,
-	seed?: number
-) {
-	return {
-		...heightPoint(z, type, gen, seed),
-		radius,
-	}
-}
-
 export class Island extends HeightPowGen<DisplacedPoint> {
+	displacedPoint(
+		z: number,
+		radius: number, // Distance from the center
+		type: TerrainType,
+		gen: RandGenerator,
+		seed?: number
+	) {
+		return {
+			...this.heightPoint(z, type, gen, seed),
+			radius,
+		}
+	}
 	initCorners(corners: number[], gen: RandGenerator): void {
 		const extRadius = 1 << this.scale
-		this.points[0] = displacedPoint(wholeScale, 0, terrainTypes.snow, gen)
+		this.points[0] = this.displacedPoint(
+			this.terrains.terrainHeight,
+			0,
+			this.terrains.terrains.center,
+			gen
+		)
 		for (const corner of corners)
-			this.points[corner] = displacedPoint(-wholeScale * 0.5, extRadius, terrainTypes.sand, gen)
+			this.points[corner] = this.displacedPoint(
+				-this.terrains.terrainHeight * 0.5,
+				extRadius,
+				this.terrains.terrains.perimeter,
+				gen
+			)
 	}
 	insidePoint(p1: DisplacedPoint, p2: DisplacedPoint, scale: number): DisplacedPoint {
 		const rv = super.insidePoint(p1, p2, scale)

@@ -10,8 +10,7 @@
 		"sourceMap": true,
 		"strict": true,
 		"moduleResolution": "node",
-		"allowSyntheticDefaultImports": true,
-		"allowImportingTsExtensions": true
+		"allowSyntheticDefaultImports": true
 	},
 	"references": [
 		{ "path": "../../packages/hexaboard" },

@@ -9,7 +9,6 @@ import {
 	Vector3,
 } from 'three'
 import type { GameView } from '~/game/game'
-import { wholeScale } from '~/game/terrain'
 import type HexSector from '~/hexagon/sector'
 
 export interface MouseReactive {
@@ -77,7 +76,6 @@ export interface MouseLockButtons {
 	lookAt?: ButtonsCombination
 }
 
-const clampZ = { min: wholeScale, max: 500 }
 export interface MouseConfig {
 	lockButtons: MouseLockButtons
 	zoomWheel: WheelCombination
@@ -206,7 +204,7 @@ export class MouseControl {
 
 	// #region Event listeners book-keeping
 
-	constructor() {
+	constructor(private clampZ: { min: number; max: number }) {
 		document.addEventListener('pointerlockchange', () => this.pointerLockChange())
 	}
 	listenTo(gameView: GameView) {
@@ -360,8 +358,8 @@ export class MouseControl {
 							buttons: event.buttons,
 							modKeyCombination: modKeysCombinations(event),
 							position: {
-								x: event.clientX,
-								y: event.clientY,
+								x: event.offsetX,
+								y: event.offsetY,
 							},
 						}
 					: {
@@ -389,7 +387,7 @@ export class MouseControl {
 				button: event.button,
 				modKeyCombination: modKeysCombinations(event),
 				target: this.hovered!,
-				position: { x: event.clientX, y: event.clientY },
+				position: { x: event.offsetX, y: event.offsetY },
 			}
 			this.evolve(this.lastButtonDown)
 		}
@@ -402,7 +400,7 @@ export class MouseControl {
 				button: event.button,
 				modKeyCombination: modKeysCombinations(event),
 				target: this.hovered!,
-				position: { x: event.clientX, y: event.clientY },
+				position: { x: event.offsetX, y: event.offsetY },
 			})
 		this.lastButtonDown = undefined
 		if (this.dragStartHandle) {
@@ -412,7 +410,7 @@ export class MouseControl {
 				button: event.button,
 				modKeyCombination: modKeysCombinations(event),
 				target: this.hovered!,
-				position: { x: event.clientX, y: event.clientY },
+				position: { x: event.offsetX, y: event.offsetY },
 			})
 		}
 		this.dragStartHandle = undefined
@@ -421,7 +419,7 @@ export class MouseControl {
 			button: event.button,
 			modKeyCombination: modKeysCombinations(event),
 			target: this.hovered!,
-			position: { x: event.clientX, y: event.clientY },
+			position: { x: event.offsetX, y: event.offsetY },
 		})
 		this.reLock(event)
 	}
@@ -440,15 +438,15 @@ export class MouseControl {
 					const center = this.mouseIntersection({
 						type: 'zoom',
 						target: this.hovered!,
-						position: { x: event.clientX, y: event.clientY },
+						position: { x: event.offsetX, y: event.offsetY },
 					})
 					const camera = this.hovered!.camera
 					if (center) {
 						const dist = camera.position.clone().sub(center.point)
 						dist.multiplyScalar(mouseConfig.zoomSpeed ** delta[axis])
 						camera.position.copy(center.point).add(dist)
-						if (camera.position.z > clampZ.max) camera.position.z = clampZ.max
-						else if (camera.position.z < clampZ.min) camera.position.z = clampZ.min
+						if (camera.position.z > this.clampZ.max) camera.position.z = this.clampZ.max
+						else if (camera.position.z < this.clampZ.min) camera.position.z = this.clampZ.min
 					}
 				} else
 					this.evolve({

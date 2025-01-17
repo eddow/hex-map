@@ -1,7 +1,12 @@
 import { BufferAttribute, Group, Mesh, ShaderMaterial, Vector3 } from 'three'
 import { type Handelable, generateResources, terrainContentRadius } from '~/game/handelable'
-import { type TerrainType, terrainType, waterTexture, wholeScale } from '~/game/terrain'
-import { type TerrainTexture, genTexture, textureUVs } from '~/game/texture'
+import {
+	type TerrainTexture,
+	type TerrainType,
+	type TerrainsDefinition,
+	genTexture,
+	textureUVs,
+} from '~/game/terrain'
 import LCG, { type RandGenerator } from '~/utils/random'
 import HexSector from './sector'
 import {
@@ -25,7 +30,8 @@ export default abstract class HexPow2Gen<Point extends BasePoint = BasePoint> ex
 	constructor(
 		position: Vector3,
 		tileSize: number,
-		public readonly scale: number
+		public readonly scale: number,
+		public readonly terrains: TerrainsDefinition
 	) {
 		super(position, tileSize, 1 + (1 << scale))
 	}
@@ -84,38 +90,32 @@ export interface HeightPoint extends BasePoint {
 	texture: TerrainTexture
 }
 
-export function heightPoint(
-	z: number,
-	type: TerrainType,
-	gen: RandGenerator,
-	seed?: number
-): HeightPoint {
-	const texture =
-		z < 0
-			? {
-					texture: waterTexture,
-					...genTexture(gen),
-					alpha: 0,
-				}
-			: {
-					texture: type.texture,
-					...genTexture(gen),
-				}
-	return { z, type, seed: seed ?? gen(), content: [], texture }
-}
-
 export abstract class HeightPowGen<
 	Point extends HeightPoint = HeightPoint,
 > extends HexPow2Gen<Point> {
+	heightPoint(z: number, type: TerrainType, gen: RandGenerator, seed?: number): HeightPoint {
+		const texture =
+			z < 0
+				? {
+						texture: this.terrains.waterTexture,
+						...genTexture(gen),
+						alpha: 0,
+					}
+				: {
+						texture: type.texture,
+						...genTexture(gen),
+					}
+		return { z, type, seed: seed ?? gen(), content: [], texture }
+	}
 	insidePoint(p1: Point, p2: Point, scale: number): Point {
 		const variance = (p1.type.variance + p2.type.variance) / 2
-		const randScale = ((1 << scale) / this.radius) * wholeScale * variance
+		const randScale = ((1 << scale) / this.radius) * this.terrains.terrainHeight * variance
 		const seed = LCG(p1.seed, p2.seed)()
 		const gen = LCG(seed)
 		const z = (p1.z + p2.z) / 2 + gen(0.5, -0.5) * randScale
 		const changeType = gen() < scale / this.scale
-		const type = changeType ? terrainType(z) : [p1, p2][Math.floor(gen(2))].type
-		return heightPoint(z, type, gen, seed) as Point
+		const type = changeType ? this.terrains.terrainType(z) : [p1, p2][Math.floor(gen(2))].type
+		return this.heightPoint(z, type, gen, seed) as Point
 	}
 	meshAllArtifacts() {}
 

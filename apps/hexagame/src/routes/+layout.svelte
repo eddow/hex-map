@@ -2,7 +2,7 @@
 	import '../app.css'
 	import { i18n } from '$lib/i18n'
 	import { ParaglideJS } from '@inlang/paraglide-sveltekit'
-	import { configuration } from '../globals.svelte'
+	import { configuration } from '$lib/globals.svelte'
 	let { children } = $props()
 
 	$effect(() => {

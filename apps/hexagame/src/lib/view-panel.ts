@@ -1,6 +1,6 @@
+import { games } from '$lib/globals.svelte'
 import type { GroupPanelPartInitParameters, IContentRenderer } from 'dockview-core'
 import type { GameView } from 'hexaboard'
-import { games } from '../globals.svelte'
 
 export class GameViewRenderer implements IContentRenderer {
 	private gv?: GameView

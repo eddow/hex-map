@@ -15,6 +15,7 @@
 	},
 	"devDependencies": {
 		"@inlang/paraglide-js": "1.11.8",
+		"@inlang/paraglide-sveltekit": "^0.15.5",
 		"@playwright/test": "^1.49.1",
 		"@sveltejs/adapter-auto": "^3.0.0",
 		"@sveltejs/kit": "^2.0.0",
@@ -32,7 +33,6 @@
 		"vite": "^5.4.11"
 	},
 	"dependencies": {
-		"@inlang/paraglide-sveltekit": "^0.15.5",
 		"dockview-core": "^3.0.2",
 		"dockview-svelte": "*",
 		"hexaboard": "*",
