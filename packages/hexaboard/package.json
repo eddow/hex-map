@@ -2,7 +2,7 @@
 	"name": "hexaboard",
 	"version": "0.0.1",
 	"description": "A minimal 3D hexagonal game board using Three.js",
-	"main": "index.js",
+	"main": "dist/index.mjs",
 	"files": [
 		"dist",
 		"!dist/**/*.test.*",
@@ -22,13 +22,15 @@
 	},
 	"scripts": {
 		"vite": "vite dev",
-		"build": "vite build"
+		"build": "vite build",
+		"dev:repo": "vite build --watch"
 	},
-	"dependencies": {
+	"peerDependencies": {
 		"three": "^0.150.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
+		"@types/node": "^22.10.7",
 		"@types/three": "^0.172.0",
 		"typescript": "^5.7.3",
 		"vite": "^6.0.7",

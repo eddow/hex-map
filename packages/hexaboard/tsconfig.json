@@ -12,6 +12,7 @@
 		"strictNullChecks": true,
 		"strictBindCallApply": false,
 		"baseUrl": ".",
+		"verbatimModuleSyntax": true,
 		"paths": {
 			"~/*": ["./src/*"]
 		}

@@ -8,7 +8,15 @@
 	},
 	"scripts": {
 		"test": "node --expose-gc node_modules/.bin/jest",
-		"test:coverage": "node --expose-gc node_modules/.bin/jest --coverage"
+		"test:coverage": "node --expose-gc node_modules/.bin/jest --coverage",
+		"dev": "chokidar 'packages/**/dist/*' -c 'cd apps/hexagame && vite dev'"
 	},
-	"workspaces": ["packages/*"]
+	"workspaces": [
+		"packages/*",
+		"apps/*"
+	],
+	"devDependencies": {
+		"chokidar-cli": "^3.0.0",
+		"concurrently": "^9.1.2"
+	}
 }

@@ -1,10 +1,4 @@
-import type {
-	CreateComponentOptions,
-	GroupPanelPartInitParameters,
-	IContentRenderer,
-	PanelUpdateEvent,
-	Parameters,
-} from 'dockview-core'
+import type { GroupPanelPartInitParameters, IContentRenderer } from 'dockview-core'
 import { type Component, type Snippet, mount } from 'svelte'
 
 export const dvContext: unique symbol = Symbol('Dockview dvContext')
@@ -27,7 +21,7 @@ export class ContentRenderer<Parameters extends Record<string, any>> extends Abs
 		public readonly renderer: Component<Parameters>,
 		private readonly props: Partial<Parameters> = {}
 	) {
-		super(id)
+		super(`iad-${id}`)
 	}
 	init(parameters: GroupPanelPartInitParameters): void {
 		mount(this.renderer, {

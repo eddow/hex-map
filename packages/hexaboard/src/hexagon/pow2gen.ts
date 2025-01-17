@@ -152,6 +152,7 @@ export abstract class HeightPowGen<
 	triangle(ndx: [number, number, number], side: number): Mesh {
 		const points = ndx.map((n) => this.points[n])
 		const geometry = super.triangleGeometry(ndx)
+		// TODO: Make a vector
 		geometry.setAttribute('uvA', textureUVs(points[0].texture, side, 0))
 		geometry.setAttribute('uvB', textureUVs(points[1].texture, side, 4))
 		geometry.setAttribute('uvC', textureUVs(points[2].texture, side, 2))
@@ -189,8 +190,6 @@ void main() {
 			`,
 			fragmentShader: `
 uniform sampler2D textures[3];
-uniform sampler2D textureB;
-uniform sampler2D textureC;
 varying vec2 vUv[3];
 varying vec3 bary;
 

@@ -1,3 +1,3 @@
-export function tl() {
-	alert('blup')
-}
+export * from './hexagon'
+export * from './game'
+export * from './utils'

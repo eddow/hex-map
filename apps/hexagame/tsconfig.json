@@ -1,8 +1,6 @@
 {
 	"extends": "./.svelte-kit/tsconfig.json",
 	"compilerOptions": {
-		"noEmit": false,
-		"composite": true,
 		"allowJs": true,
 		"checkJs": true,
 		"esModuleInterop": true,
@@ -11,10 +9,12 @@
 		"skipLibCheck": true,
 		"sourceMap": true,
 		"strict": true,
-		"verbatimModuleSyntax": true,
 		"moduleResolution": "bundler"
-	}
-
+	},
+	"references": [
+		{ "path": "../../packages/hexaboard" },
+		{ "path": "../../packages/dockview-svelte" }
+	]
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
 	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
 	//

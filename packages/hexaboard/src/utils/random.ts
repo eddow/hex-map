@@ -1,5 +1,4 @@
 export type RandGenerator = (max?: number, min?: number) => number
-export type RandFactory = (...seeds: number[]) => RandGenerator
 /**
  * Linear Congruential Generator
  */
