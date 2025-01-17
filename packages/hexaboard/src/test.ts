@@ -49,4 +49,4 @@ game.onMouse('click', (ev: MouseButtonEvolution) => {
 })
 game.addEntity(cursor)
 document.body.appendChild(gameView.canvas)
-game.start()
+game.running = true

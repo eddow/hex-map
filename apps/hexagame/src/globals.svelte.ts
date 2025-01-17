@@ -1,4 +1,6 @@
-import type { Game } from 'hexaboard'
+import type { DockviewApi } from 'dockview-core'
+import { Game, Island, LCG, MonoSectorLand } from 'hexaboard'
+import { Vector3 } from 'three'
 
 export interface IConfiguration {
 	darkMode?: boolean
@@ -12,4 +14,12 @@ export const configuration = $state(
 			}
 )
 
+const worldSeed = Math.random()
+const land = new MonoSectorLand(new Island(new Vector3(0, 0, 0), 10, 6))
+land.generate(LCG(worldSeed))
+land.virgin()
+land.mesh()
 export const games: Record<PropertyKey, Game> = {}
+games.GameX = new Game(land)
+
+export const dockview = $state({ api: {} as DockviewApi } as { api: DockviewApi })

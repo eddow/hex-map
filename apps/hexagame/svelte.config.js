@@ -13,8 +13,11 @@ const config = {
 		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
 		adapter: adapter(),
 		alias: {
+			// TODO make it work from built library
 			hexaboard: '../../packages/hexaboard/src/main.ts',
+			'~/*': '../../packages/hexaboard/src/*',
 			'dockview-svelte': '../../packages/dockview-svelte/src/lib/index.ts',
+			$widgets: 'src/widgets',
 		},
 	},
 }
