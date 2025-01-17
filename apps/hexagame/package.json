@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
+		"dev:repo": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -32,7 +33,7 @@
 	"dependencies": {
 		"@inlang/paraglide-sveltekit": "^0.15.5",
 		"dockview-core": "^3.0.2",
-		"dockview-svelte": "file:../dockview-svelte",
-		"hexaboard": "file:../hexaboard"
+		"dockview-svelte": "*",
+		"hexaboard": "*"
 	}
 }

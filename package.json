@@ -7,16 +7,15 @@
 		"url": "git+https://github.com/eddow/ts-meta.git"
 	},
 	"scripts": {
+		"dev": "lerna run dev:repo --parallel --stream",
 		"test": "node --expose-gc node_modules/.bin/jest",
-		"test:coverage": "node --expose-gc node_modules/.bin/jest --coverage",
-		"dev": "chokidar 'packages/**/dist/*' -c 'cd apps/hexagame && vite dev'"
+		"test:coverage": "node --expose-gc node_modules/.bin/jest --coverage"
 	},
 	"workspaces": [
 		"packages/*",
 		"apps/*"
 	],
 	"devDependencies": {
-		"chokidar-cli": "^3.0.0",
-		"concurrently": "^9.1.2"
+		"lerna": "^8.1.9"
 	}
 }
