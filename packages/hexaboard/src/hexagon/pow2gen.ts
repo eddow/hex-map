@@ -7,7 +7,7 @@ import {
 	genTexture,
 	textureUVs,
 } from '~/game/terrain'
-import { SharedShaderMaterial } from '~/utils'
+import { SharedShaderMaterial } from '~/three/sharedShaderMaterial'
 import LCG, { type RandGenerator } from '~/utils/misc'
 import HexSector from './sector'
 import {

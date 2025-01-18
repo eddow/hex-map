@@ -5,6 +5,8 @@ import {
 	type HeightPowGen,
 	Island,
 	LCG,
+	MeshCopy,
+	MeshPaste,
 	MonoSectorLand,
 	MouseButton,
 	type MouseButtonEvolution,
@@ -16,14 +18,7 @@ import {
 	pointsAround,
 	sphere,
 } from 'hexaboard'
-import {
-	CatmullRomCurve3,
-	Mesh,
-	MeshBasicMaterial,
-	type Object3D,
-	TubeGeometry,
-	Vector3,
-} from 'three'
+import { CatmullRomCurve3, Mesh, MeshBasicMaterial, Object3D, TubeGeometry, Vector3 } from 'three'
 import { dockview } from './globals.svelte'
 import terrains from './world/terrain'
 
@@ -37,7 +32,8 @@ export function createGame(seed: number) {
 
 	const game = new Game(land)
 
-	const pawn = new Character(land.sector, 0, sphere(2, { color: 0xff0000 }))
+	//const pawn = new Character(land.sector, 0, sphere(2, { color: 0xff0000 }))
+	const pawn = new Character(land.sector, 0, new Object3D())
 	game.addEntity(pawn)
 	const cursor = new TileCursor(
 		icosahedron(land.tileSize / Math.sqrt(3), {
@@ -45,6 +41,14 @@ export function createGame(seed: number) {
 			wireframe: true,
 		})
 	)
+	const mCopy = new MeshCopy(sphere(2, { color: 0x00ff00 }))
+	const mTest = sphere(2, { color: 0x0000ff })
+	const mPaste1 = new MeshPaste(mCopy)
+	const mPaste2 = new MeshPaste(mCopy)
+	mPaste1.position.set(0, 0, 80)
+	mPaste2.position.set(10, 0, 80)
+	mTest.position.set(-10, 0, 80)
+	game.scene.add(mPaste1, mPaste2, mTest)
 	function axialV3(axial: Axial | number) {
 		return (game.land as MonoSectorLand).sector.vPosition(
 			typeof axial === 'number' ? axial : axialIndex(axial)
