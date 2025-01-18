@@ -1,4 +1,4 @@
-import { BufferAttribute, Group, Mesh, ShaderMaterial, Vector3 } from 'three'
+import { BufferAttribute, Group, type Mesh, ShaderMaterial, Vector3 } from 'three'
 import { type Handelable, generateResources, terrainContentRadius } from '~/game/handelable'
 import {
 	type TerrainTexture,
@@ -7,6 +7,7 @@ import {
 	genTexture,
 	textureUVs,
 } from '~/game/terrain'
+import { SharedShaderMaterial } from '~/utils'
 import LCG, { type RandGenerator } from '~/utils/misc'
 import HexSector from './sector'
 import {
@@ -19,6 +20,11 @@ import {
 	hexTiles,
 	posInTile,
 } from './utils'
+
+/* TODO:
+import fsTexture3 from './shaders/texture3.fs'
+import vsTexture3 from './shaders/texture3.vs'
+*/
 
 interface BasePoint {
 	z: number
@@ -89,6 +95,58 @@ export interface HeightPoint extends BasePoint {
 	content: (Handelable | undefined)[]
 	texture: TerrainTexture
 }
+
+const terrainMaterial = new SharedShaderMaterial(
+	new ShaderMaterial({
+		uniforms: {
+			textures: { value: [] },
+		},
+		vertexShader: `
+varying vec2 vUv[3];
+varying vec3 bary;
+attribute vec3 barycentric;
+attribute vec2 uvA;
+attribute vec2 uvB;
+attribute vec2 uvC;
+void main() {
+	vUv[0] = uvA;
+	vUv[1] = uvB;
+	vUv[2] = uvC;
+	bary = barycentric;
+	gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+			`,
+		fragmentShader: `
+uniform sampler2D textures[3];
+varying vec2 vUv[3];
+varying vec3 bary;
+
+float quadraticInfluence(float coord) {
+    return 4.0 * coord * coord; // Quadratic function scaled to reach 1 at coord = 0.5
+}
+
+void main() {
+	vec4 color1 = texture2D(textures[0], vUv[0]);
+	vec4 color2 = texture2D(textures[1], vUv[1]);
+	vec4 color3 = texture2D(textures[2], vUv[2]);
+	
+	// Compute weights
+	float weight1 = quadraticInfluence(bary.x);
+	float weight2 = quadraticInfluence(bary.y);
+	float weight3 = quadraticInfluence(bary.z);
+
+	// Normalize weights to ensure they sum to 1
+	float sum = weight1 + weight2 + weight3;
+	weight1 /= sum;
+	weight2 /= sum;
+	weight3 /= sum;
+
+	// Apply the weights to the colors
+	gl_FragColor = color1 * weight1 + color2 * weight2 + color3 * weight3;
+}
+			`,
+	})
+)
 
 export abstract class HeightPowGen<
 	Point extends HeightPoint = HeightPoint,
@@ -167,57 +225,6 @@ export abstract class HeightPowGen<
 			1, // corresponds to vertex 3
 		])
 		geometry.setAttribute('barycentric', new BufferAttribute(barycentric, 3))
-		// Shader Material
-		const material = new ShaderMaterial({
-			uniforms: {
-				textures: { value: points.map((p) => p.texture.texture) },
-			},
-			vertexShader: `
-varying vec2 vUv[3];
-varying vec3 bary;
-attribute vec3 barycentric;
-attribute vec2 uvA;
-attribute vec2 uvB;
-attribute vec2 uvC;
-void main() {
-	vUv[0] = uvA;
-	vUv[1] = uvB;
-	vUv[2] = uvC;
-	bary = barycentric;
-	gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-			`,
-			fragmentShader: `
-uniform sampler2D textures[3];
-varying vec2 vUv[3];
-varying vec3 bary;
-
-float quadraticInfluence(float coord) {
-    return 4.0 * coord * coord; // Quadratic function scaled to reach 1 at coord = 0.5
-}
-
-void main() {
-	vec4 color1 = texture2D(textures[0], vUv[0]);
-	vec4 color2 = texture2D(textures[1], vUv[1]);
-	vec4 color3 = texture2D(textures[2], vUv[2]);
-	
-	// Compute weights
-	float weight1 = quadraticInfluence(bary.x);
-	float weight2 = quadraticInfluence(bary.y);
-	float weight3 = quadraticInfluence(bary.z);
-
-	// Normalize weights to ensure they sum to 1
-	float sum = weight1 + weight2 + weight3;
-	weight1 /= sum;
-	weight2 /= sum;
-	weight3 /= sum;
-
-	// Apply the weights to the colors
-	gl_FragColor = color1 * weight1 + color2 * weight2 + color3 * weight3;
-}
-			`,
-			transparent: true,
-		})
-		return new Mesh(geometry, material)
+		return terrainMaterial.createMesh(geometry, { textures: points.map((p) => p.texture.texture) })
 	}
 }

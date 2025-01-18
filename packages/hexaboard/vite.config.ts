@@ -1,6 +1,7 @@
 import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
+import glsl from 'vite-plugin-glsl'
 
 export default defineConfig({
 	root: './',
@@ -25,8 +26,8 @@ export default defineConfig({
 			},
 		},
 	},
-	// @ts-ignore: dts() is not a `PluginOption` but a `vite.Plugin`
-	plugins: [dts()],
+	// @ts-expect-error: dts() is not a `PluginOption` but a `vite.Plugin`
+	plugins: [dts(), glsl()],
 	resolve: {
 		alias: {
 			'~': resolve(__dirname, 'src'),
