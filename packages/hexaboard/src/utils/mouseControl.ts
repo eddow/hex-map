@@ -120,17 +120,19 @@ interface PositionedMouseEvolution extends MouseEvolution {
 	handle?: MouseHandle
 }
 
-export interface MouseButtonEvolution extends PositionedMouseEvolution {
-	type: 'click' | 'up' | 'down' | 'dragStart'
-	button: MouseButton
+interface MouseControlledEvolution extends PositionedMouseEvolution {
 	modKeyCombination: ModKeyCombination
 }
 
-export interface MouseDragEvolution extends PositionedMouseEvolution {
+export interface MouseButtonEvolution extends MouseControlledEvolution {
+	type: 'click' | 'up' | 'down' | 'dragStart'
+	button: MouseButton
+}
+
+export interface MouseDragEvolution extends MouseControlledEvolution {
 	type: 'dragEnd' | 'dragOver'
 	dragStartHandle: MouseHandle
 	button: MouseButton
-	modKeyCombination: ModKeyCombination
 }
 
 export interface MouseEnterEvolution extends MouseEvolution {
@@ -138,7 +140,7 @@ export interface MouseEnterEvolution extends MouseEvolution {
 	target: GameView
 }
 
-export interface MouseMoveEvolution extends PositionedMouseEvolution {
+export interface MouseMoveEvolution extends MouseControlledEvolution {
 	type: 'move'
 	buttons: MouseButtons
 }
@@ -258,12 +260,13 @@ export class MouseControl {
 	private lockedGV: GameView | null = null
 	private lockSemaphore = new LockSemaphore((locked) => {
 		const shouldLock = (locked instanceof HTMLCanvasElement && this.views.get(locked)) || null
+		this.lockSemaphore.log('mainCB', !!this.lockedGV, !!shouldLock)
 		if (!!this.lockedGV !== !!shouldLock) {
 			if (this.lockedGV) {
 				this.hovered = this.lockedGV
 				this.evolve({ type: 'unlock', target: this.lockedGV })
 				this.lockedGV = null
-				this.moveCursor(this.lastCursorEvent!)
+				this.evolve(this.lastCursorEvolution!)
 			} else {
 				this.hovered = undefined
 				this.evolve({ type: 'lock', target: shouldLock })
@@ -328,9 +331,8 @@ export class MouseControl {
 		}
 	}
 
-	private lastCursorEvent?: MouseEvent
+	private lastCursorEvolution?: MouseMoveEvolution
 	private moveCursor(event: MouseEvent) {
-		this.lastCursorEvent = event
 		this.hovered =
 			(event.target instanceof HTMLCanvasElement && this.views.get(event.target)) || undefined
 		if (this.hovered && !!event.buttons && !this.dragStartHandle && this.lastButtonDown) {
@@ -362,7 +364,8 @@ export class MouseControl {
 						modKeyCombination: modKeysComb.none,
 						position: null,
 					}),
-		}
+		} as MouseMoveEvolution
+		this.lastCursorEvolution = evolution
 		this.evolve(evolution)
 		if (this.dragStartHandle) {
 			this.evolve({
@@ -377,10 +380,10 @@ export class MouseControl {
 	// #region Events
 
 	private mouseMove(event: MouseEvent) {
-		this.lockSemaphore.callWhenLocked(() => {
-			if (this.lockedGV) this.moveCamera(event, this.lockedGV.camera)
-			else this.moveCursor(event)
-		})
+		//this.lockSemaphore.callWhenLocked(() => {
+		if (this.lockedGV) this.moveCamera(event, this.lockedGV.camera)
+		else this.moveCursor(event)
+		//})
 	}
 	private mouseDown(event: MouseEvent) {
 		this.dragStartHandle = undefined
@@ -434,7 +437,7 @@ export class MouseControl {
 		const delta = { x: event.deltaX / 96, y: event.deltaY / 120 }
 
 		for (const axis of ['x', 'y'] as const)
-			if (delta[axis] && !this.lockSemaphore.locked) {
+			if (delta[axis] && this.hovered) {
 				if (
 					mouseConfig.zoomWheel.axis === axis &&
 					isModKeyCombination(event, mouseConfig.zoomWheel.modifiers)
@@ -465,7 +468,13 @@ export class MouseControl {
 	private mouseEnter(event: MouseEvent) {}
 	private mouseLeave(event: MouseEvent) {
 		// In case it has entered in another canvas then receive the `leave` just milliseconds later
-		this.mouseMove(Object.create(event, { target: { value: null } }))
+		this.evolve({
+			type: 'move',
+			target: null,
+			buttons: 0,
+			modKeyCombination: modKeysComb.none,
+			position: null,
+		})
 	}
 
 	// #endregion

@@ -43,13 +43,25 @@ export function axialPolynomial(...args: [number, Axial][]): Axial {
 }
 
 /** Returns the axial coordinates of the nth hexagonal tile */
-export function axialAt(n: number): Axial {
-	if (n === 0) return { q: 0, r: 0 }
-	const radius = Math.floor((3 + Math.sqrt(-3 + 12 * n)) / 6)
+export function axialAt(hexIndex: number): Axial {
+	if (hexIndex === 0) return { q: 0, r: 0 }
+	const radius = Math.floor((3 + Math.sqrt(-3 + 12 * hexIndex)) / 6)
 	const previous = 3 * radius * (radius - 1) + 1
-	const sidePos = n - previous
+	const sidePos = hexIndex - previous
 	const side = Math.floor(sidePos / radius)
 	return axialPolynomial([radius, hexSides[side]], [sidePos % radius, hexSides[(side + 2) % 6]])
+}
+
+/** Gets the hexIndex from the position */
+export function axialIndex({ q, r }: Axial): number {
+	if (q === 0 && r === 0) return 0
+	const s = -q - r
+	const ring = Math.max(Math.abs(q), Math.abs(r), Math.abs(s))
+	const side = [q === ring, r === -ring, s === ring, q === -ring, r === ring, s === -ring].indexOf(
+		true
+	)
+	const offset = [-r, s, -q, r, -s, q][side]
+	return 3 * ring * (ring - 1) + side * ring + offset + 1
 }
 
 /**
@@ -64,18 +76,6 @@ export function hexTiles(radius: number) {
  */
 export function puzzleTiles(radius: number) {
 	return 3 * radius ** 2
-}
-
-export function axialIndex({ q, r }: Axial) {
-	if (q === 0 && r === 0) return 0
-	const s = -q - r
-	const ring = Math.max(Math.abs(q), Math.abs(r), Math.abs(s))
-	const side = [q === ring, r === -ring, s === ring, q === -ring, r === ring, s === -ring].indexOf(
-		true
-	)
-	//const offset = [q, -s, r, -q, s, -r][side]
-	const offset = [-r, s, -q, r, -s, q][side]
-	return 3 * ring * (ring - 1) + side * ring + offset + 1
 }
 
 export function cartesian({ q, r }: Axial, size = 1) {
@@ -140,4 +140,12 @@ export function posInTile(hexIndex: number, radius: number) {
 		qRs: { s: 4, u: -s, v: -q },
 		QRs: { s: 5, u: q, v: r },
 	}[signs]!
+}
+
+/** Retrieves the tiles around a given tile (indexes) */
+export function pointsAround(tile: number, nbrTiles: number) {
+	const axial = axialAt(tile)
+	return hexSides
+		.map((side) => axialIndex(axialPolynomial([1, axial], [1, side])))
+		.filter((tile) => tile < nbrTiles)
 }

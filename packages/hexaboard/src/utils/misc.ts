@@ -14,6 +14,11 @@ export default function LCG(...seeds: number[]): RandGenerator {
 }
 
 export class LockSemaphore {
+	logs: any[][] = []
+	log(...args: any[]) {
+		this.logs.unshift(args)
+		if (this.logs.length > 100) this.logs.length = 100
+	}
 	private lockingTimeout?: ReturnType<typeof setTimeout>
 	private callBacks?: ((locked: Element | null) => void)[]
 	public locked: Element | null = null
@@ -25,6 +30,7 @@ export class LockSemaphore {
 		})
 	}
 	private doCallBack() {
+		this.log('doCallBack', !!document.pointerLockElement)
 		if (this.callBacks) {
 			if (this.mainCb) this.mainCb(document.pointerLockElement)
 			for (const cb of this.callBacks!) cb(document.pointerLockElement)
@@ -34,8 +40,10 @@ export class LockSemaphore {
 	lock(element: Element | null) {
 		if (this.lockingTimeout) clearTimeout(this.lockingTimeout)
 		this.locked = element
+		this.log('lock', !!element, !!document.pointerLockElement)
 		if (this.locked !== document.pointerLockElement) {
 			this.callWhenLocked(() => {
+				this.log('act-lock', !!element, !!document.pointerLockElement)
 				this.callBacks = []
 				this.lockingTimeout = setTimeout(() => {
 					if (element) element.requestPointerLock()

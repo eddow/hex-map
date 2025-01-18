@@ -3,7 +3,7 @@
 	import Dockview from './../lib/dockview.svelte'
 	import TestComponent from '$lib/test.component.svelte'
 	import { onMount } from 'svelte'
-	import DvComponent from '$lib/dv-component.svelte'
+	import DvWidget from '$lib/dv-widget.svelte'
 
 	let api: DockviewApi | undefined = $state.raw()
 	let ids = 0
@@ -47,11 +47,11 @@
 	<div class="content">
 		<Dockview
 			bind:api
-			components={{ Tc: TestComponent }}
+			widgets={{ Tc: TestComponent }}
 			snippets={{ testSnippet }}
 			singleTabMode="fullwidth"
 		>
-			<DvComponent name="dc-test">DvComponent test</DvComponent>
+			<DvWidget name="dc-test">DvComponent test</DvWidget>
 		</Dockview>
 	</div>
 </div>

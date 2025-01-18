@@ -1,6 +1,8 @@
 import {
+	type Axial,
 	Character,
 	Game,
+	type HeightPowGen,
 	Island,
 	LCG,
 	MonoSectorLand,
@@ -8,16 +10,26 @@ import {
 	type MouseButtonEvolution,
 	type MouseHoverEvolution,
 	TileCursor,
+	axialIndex,
+	costingPath,
 	icosahedron,
+	pointsAround,
 	sphere,
 } from 'hexaboard'
-import { Vector3 } from 'three'
+import {
+	CatmullRomCurve3,
+	Mesh,
+	MeshBasicMaterial,
+	type Object3D,
+	TubeGeometry,
+	Vector3,
+} from 'three'
 import { dockview } from './globals.svelte'
 import terrains from './world/terrain'
 
 let tileInfoPanels = 0
 export function createGame(seed: number) {
-	const worldSeed = 0.43
+	const worldSeed = Math.random()
 	const land = new MonoSectorLand(new Island(new Vector3(0, 0, 0), 10, 6, terrains))
 	land.generate(LCG(worldSeed))
 	land.virgin()
@@ -33,8 +45,55 @@ export function createGame(seed: number) {
 			wireframe: true,
 		})
 	)
+	function axialV3(axial: Axial | number) {
+		return (game.land as MonoSectorLand).sector.vPosition(
+			typeof axial === 'number' ? axial : axialIndex(axial)
+		)
+	}
+	let pathTube: Object3D | undefined
 	game.onMouse('hover', (ev: MouseHoverEvolution) => {
 		cursor.tile = ev.handle?.tile
+
+		if (pathTube) {
+			game.scene.remove(pathTube)
+			pathTube = undefined
+		}
+		if (cursor.tile) {
+			if (pawn.tile !== cursor.tile.hexIndex) {
+				const sector = (game.land as MonoSectorLand).sector as HeightPowGen
+				/* straight path
+				const path = [
+					axialAt(pawn.tile),
+					...straightPath(pawn.sector, pawn.tile, cursor.tile.target, cursor.tile.hexIndex),
+				]*/
+				/* no height path (0 height diff still has horz mvt not counted)
+				const path = costingPath(
+					cursor.tile.hexIndex,
+					(from, to) =>
+						to < sector.nbrTiles ? (sector.points[from].z - sector.points[to].z) ** 2 : Number.NaN,
+					(hexIndex) => hexIndex < sector.nbrTiles && pawn.tile === hexIndex
+				)*/
+				const path = costingPath(
+					cursor.tile.hexIndex,
+					(from, to) =>
+						to < sector.nbrTiles
+							? // The fact to climb up
+								Math.max(0, sector.points[to].z - sector.points[from].z) ** 2 +
+								// The fact to not take the strongest down slope
+								sector.points[to].z -
+								Math.min(...pointsAround(from, sector.nbrTiles).map((p) => sector.points[p].z))
+							: Number.NaN,
+					(hexIndex) => hexIndex < sector.nbrTiles && sector.points[hexIndex].z < 0
+				)
+				if (path && path.length > 1) {
+					const pathCurve = new CatmullRomCurve3(path.map((p) => axialV3(p)))
+					const pathGeometry = new TubeGeometry(pathCurve, path.length * 5, 2, 8, false)
+					const pathMaterial = new MeshBasicMaterial({ color: 0xffff00, wireframe: true })
+					pathTube = new Mesh(pathGeometry, pathMaterial)
+					game.scene.add(pathTube)
+				}
+			}
+		}
 	})
 	game.onMouse('click', (ev: MouseButtonEvolution) => {
 		const tile = ev.handle?.tile

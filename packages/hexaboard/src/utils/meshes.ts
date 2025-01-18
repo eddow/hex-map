@@ -50,6 +50,7 @@ export function meshAsset(url: string) {
 			.loadAsync(url)
 			.then((gltf) => gltf.scene)
 			.then((obj) => {
+				// We use `z` as "up" while most models use `y`
 				obj.rotateX(Math.PI / 2)
 				return obj
 			})

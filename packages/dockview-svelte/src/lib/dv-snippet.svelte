@@ -6,7 +6,6 @@
 	function doSnippet(anchor?: any) {
 		return (snippet as (...args: any[]) => any).apply(
 			null,
-			// todo: reactive?
 			parameters ? [anchor, ...parameters.map((p) => () => p)] : [anchor]
 		)
 	}

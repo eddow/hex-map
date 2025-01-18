@@ -12,18 +12,20 @@
 	import DvSnippet from './dv-snippet.svelte'
 
 	let {
-		components = {},
+		widgets = {},
 		api = $bindable(undefined),
 		theme = 'light',
 		onready,
 		children,
 		snippets = {},
 		renderers = {},
+		class: className = '',
 		...props
 	}: DockviewOptions & {
-		components?: Record<string, Component>
+		widgets?: Record<string, Component>
 		snippets?: Record<string, Snippet<any>>
 		renderers?: Record<string, (id: string) => IContentRenderer>
+		class?: string
 		api?: DockviewApi
 		theme?: 'dark' | 'light' | 'vs' | 'abyss' | 'dracula' | 'replit'
 		onready?: (api: DockviewApi) => void
@@ -55,7 +57,7 @@
 		api = createDockview(el, {
 			...props,
 			createComponent({ id, name }: CreateComponentOptions): IContentRenderer {
-				if (components[name]) return new ContentRenderer(id, components[name])
+				if (widgets[name]) return new ContentRenderer(id, widgets[name])
 				if (cdc[name]) return new ContentRenderer(id, DvSnippet, { snippet: cdc[name] })
 				if (snippets[name]) return new ContentRenderer(id, DvSnippet, { snippet: snippets[name] })
 				if (renderers[name]) return renderers[name](id)
@@ -67,7 +69,7 @@
 </script>
 
 {#if children}<div style="display: none">{@render children()}</div>{/if}
-<div class={`dockview dockview-theme-${theme}`} bind:this={el}></div>
+<div class={`dockview dockview-theme-${theme} ${className}`} bind:this={el}></div>
 
 <style>
 	.dockview {

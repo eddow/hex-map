@@ -75,19 +75,17 @@ export default class HexSector implements MouseReactive {
 			nm.userData = { points: [a, b, c], mouseTarget: this }
 			rv.push(nm)
 		}
-		for (let circle = 1; circle < radius; circle++) {
+		for (let ring = 1; ring < radius; ring++) {
 			for (let side = 0; side < 6; side++) {
-				for (let offset = 0; offset < circle; offset++) {
-					const index1 = hexTiles(circle) + side * circle + offset
-					const index2 = hexTiles(circle) + ((side * circle + offset + 1) % (6 * circle))
+				for (let offset = 0; offset < ring; offset++) {
+					const index1 = hexTiles(ring) + side * ring + offset
+					const index2 = hexTiles(ring) + ((side * ring + offset + 1) % (6 * ring))
 					const index3 =
-						circle === 1
-							? 0
-							: hexTiles(circle - 1) + ((side * (circle - 1) + offset) % (6 * (circle - 1)))
+						ring === 1 ? 0 : hexTiles(ring - 1) + ((side * (ring - 1) + offset) % (6 * (ring - 1)))
 					mesh(index1, index3, index2, side)
 					if (offset > 0) {
 						const index4 =
-							hexTiles(circle - 1) + ((side * (circle - 1) + offset - 1) % (6 * (circle - 1)))
+							hexTiles(ring - 1) + ((side * (ring - 1) + offset - 1) % (6 * (ring - 1)))
 						mesh(index1, index4, index3, (side + 1) % 6)
 					}
 				}

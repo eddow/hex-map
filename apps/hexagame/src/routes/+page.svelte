@@ -2,37 +2,22 @@
 	import { configuration, dockview } from '$lib/globals.svelte'
 	import { DockviewApi } from 'dockview-core'
 	import { DockView, DvComponent } from 'dockview-svelte'
-	import Configuration from '$widgets/system/configuration.svelte'
-	import Games from '$widgets/system/games.svelte'
 	import { Toolbar, ToolbarButton, ToolbarGroup, Button } from 'flowbite-svelte'
 	import { AdjustmentsHorizontalOutline, FloppyDiskAltOutline } from 'flowbite-svelte-icons'
 	import * as m from '$lib/paraglide/messages'
 	import { onMount } from 'svelte'
 	import createGameViewRenderer from '$lib/view-panel'
-	import TileInfo from '$widgets/tile-info.svelte'
+	import * as widgets from '$widgets'
 
 	let api: DockviewApi = $derived(dockview.api)
 	let ids = 0
-	const components = {
-		configuration: Configuration,
-		games: Games,
-		tileInfo: TileInfo
-	}
-
 	function gotApi(api: DockviewApi) {
 		dockview.api = api
-	}
-	function addComp() {}
-	function addDvComp() {
-		api.addPanel({
-			id: 'dct' + ids++,
-			component: 'dc-test'
-		})
 	}
 	function showSystem(widget: 'configuration' | 'games') {
 		return () => {
 			const id = `system.${widget}`
-			let panel = api.getPanel(`system.${widget}`)
+			let panel = api.getPanel(id)
 			if (panel) {
 				if (panel.api.isActive) panel.api.close()
 				else panel.api.setActive()
@@ -79,23 +64,14 @@
 				<FloppyDiskAltOutline class="w-6 h-6" />
 			</ToolbarButton>
 		</ToolbarGroup>
-		<Button onclick={addComp}>Comp</Button>
-		<button onclick={addDvComp}>dvComp</button>
 	</Toolbar>
-	{#snippet testSnippet(t1: string, t2: string)}
-		snippet test -{t1}||{t2}-- ups
-	{/snippet}
-	<div class="content">
-		<DockView
-			theme={configuration.darkMode ? 'dracula' : 'light'}
-			renderers={{ gameView: createGameViewRenderer }}
-			onready={gotApi}
-			snippets={{ testSnippet }}
-			{components}
-		>
-			<DvComponent name="dc-test">DvComponent test</DvComponent>
-		</DockView>
-	</div>
+	<DockView
+		class="content"
+		theme={configuration.darkMode ? 'dracula' : 'light'}
+		renderers={{ gameView: createGameViewRenderer }}
+		onready={gotApi}
+		{widgets}
+	/>
 </div>
 
 <style>
