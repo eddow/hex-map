@@ -51,7 +51,7 @@ export abstract class Resource extends Handelable {
 		const mesh = meshAsset(
 			this.path.replace('#', this.characteristics.model.toString())
 		) as Object3D
-		mesh.rotateZ(this.characteristics.rotation)
+		//mesh.rotateZ(this.characteristics.rotation)
 		return mesh
 	}
 }

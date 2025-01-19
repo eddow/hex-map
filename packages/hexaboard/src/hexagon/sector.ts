@@ -1,6 +1,7 @@
 import {
 	BufferAttribute,
 	BufferGeometry,
+	type Face,
 	Group,
 	type Intersection,
 	Mesh,
@@ -9,7 +10,6 @@ import {
 	type Object3DEventMap,
 	Vector3,
 } from 'three'
-import { meshVectors3 } from '~/utils/meshes'
 import type { RandGenerator } from '~/utils/misc'
 import { type MouseReactive, TileHandle } from '~/utils/mouseControl'
 import { axialAt, axialIndex, axialPolynomial, cartesian, hexSides, hexTiles } from './utils'
@@ -34,11 +34,14 @@ export default class HexSector implements MouseReactive {
 	ground?: Group
 
 	mouseHandle(intersection: Intersection<Object3D<Object3DEventMap>>): TileHandle {
-		const positions = Array.from(meshVectors3(intersection.object as Mesh))
+		/*const positions = Array.from(meshVectors3(intersection.object as Mesh))
 		const distances = positions.map((p) => p.distanceTo(intersection.point))
-		const minD = Math.min(...distances)
-
-		return new TileHandle(this, intersection.object.userData?.points[distances.indexOf(minD)])
+		const minD = Math.min(...distances)*/
+		const baryArr = intersection.barycoord!.toArray()
+		const facePt = baryArr.indexOf(Math.max(...baryArr))
+		const geomPt = intersection.face!['abc'[facePt] as keyof Face] as number
+		//console.log(geomPt, distances.indexOf(minD))
+		return new TileHandle(this, intersection.object.userData?.points[geomPt])
 	}
 
 	triangleGeometry(ndx: [number, number, number]) {

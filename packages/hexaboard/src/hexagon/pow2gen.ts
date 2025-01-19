@@ -1,4 +1,4 @@
-import { BufferAttribute, Group, type Mesh, ShaderMaterial, Vector3 } from 'three'
+import { BufferAttribute, Group, Mesh, MeshBasicMaterial, ShaderMaterial, Vector3 } from 'three'
 import { type Handelable, generateResources, terrainContentRadius } from '~/game/handelable'
 import {
 	type TerrainTexture,
@@ -226,6 +226,7 @@ export abstract class HeightPowGen<
 			1, // corresponds to vertex 3
 		])
 		geometry.setAttribute('barycentric', new BufferAttribute(barycentric, 3))
-		return terrainMaterial.createMesh(geometry, { textures: points.map((p) => p.texture.texture) })
+		//return terrainMaterial.createMesh(geometry, { textures: points.map((p) => p.texture.texture) })
+		return new Mesh(geometry, new MeshBasicMaterial({ wireframe: true, color: 0xffffff }))
 	}
 }

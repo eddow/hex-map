@@ -3,7 +3,6 @@ import {
 	Mesh,
 	MeshBasicMaterial,
 	type MeshBasicMaterialParameters,
-	type Object3D,
 	SphereGeometry,
 	Vector3,
 } from 'three'
@@ -27,7 +26,7 @@ export function icosahedron(radius: number, params: MeshBasicMaterialParameters)
  */
 export function meshVector3(mesh: Mesh, index: number): Vector3 {
 	const p = mesh.geometry.attributes.position
-	return new Vector3(p.getX(index), p.getY(index), p.getZ(index))
+	return new Vector3().fromBufferAttribute(p, index)
 }
 
 /**
@@ -36,7 +35,7 @@ export function meshVector3(mesh: Mesh, index: number): Vector3 {
  */
 export function* meshVectors3(mesh: Mesh): Generator<Vector3> {
 	const p = mesh.geometry.attributes.position
-	for (let i = 0; i < p.count; i++) yield new Vector3(p.getX(i), p.getY(i), p.getZ(i))
+	for (let i = 0; i < p.count; i++) yield new Vector3().fromBufferAttribute(p, i)
 }
 
 const assetsCache: Record<string, Promise<MeshCopy>> = {}
@@ -49,12 +48,13 @@ export function meshAsset(url: string) {
 		assetsCache[url] = gltfLoader
 			.loadAsync(url)
 			// We use `z` as "up" while most models use `y`
-			.then((gltf) => gltf.scene)
+			.then((gltf) => gltf.scene.rotateX(Math.PI / 2))
+			.then((obj) => new MeshCopy(obj)) /*
 			.then((obj) => {
-				//debugger
 				let browser: Object3D = obj
 				while (browser && !(browser as Mesh).isMesh) browser = browser.children[0]
-				return new MeshCopy(obj)
-			})
-	return new MeshPaste(assetsCache[url]) //.rotateX(Math.PI / 2)
+				//debugger
+				return new MeshCopy(browser as Mesh)
+			})//*/
+	return new MeshPaste(assetsCache[url])
 }

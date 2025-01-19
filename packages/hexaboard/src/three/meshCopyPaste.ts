@@ -1,6 +1,6 @@
 import { InstancedMesh, type Mesh, Object3D, type Scene } from 'three'
 
-const generalMaxCount = 1000
+const generalMaxCount = 5000
 
 interface GlobalPreRendered {
 	prerender: (scene: Scene) => void
@@ -27,7 +27,12 @@ function obj3dToInstancedMeshes(obj3d: Object3D, maxCount: number) {
 	const mesh = obj3d as Mesh
 	let rv = obj3d
 	if (mesh.isMesh) {
-		const cm = new CopiedMesh(mesh.geometry.clone(), mesh.material, maxCount)
+		mesh.updateMatrixWorld()
+		const cm = new CopiedMesh(
+			mesh.geometry.clone().applyMatrix4(mesh.matrixWorld),
+			mesh.material,
+			maxCount
+		)
 		cm.count = 0
 		rv = cm
 		mesh.updateMatrix()
@@ -36,6 +41,7 @@ function obj3dToInstancedMeshes(obj3d: Object3D, maxCount: number) {
 	const recursion = [...obj3d.children]
 	while (obj3d.children.length) obj3d.remove(obj3d.children[0])
 	for (const child of recursion) rv.add(obj3dToInstancedMeshes(child, maxCount))
+	rv.matrix.identity()
 	return rv
 }
 
@@ -46,9 +52,14 @@ function gatherIMs(obj3d: Object3D) {
 	})
 	return rv
 }
-
+let hasCount = 0
 function recount(application: MeshCopySceneApplication) {
-	for (const instance of application.instances) instance.count = application.pastes.length
+	const count = application.pastes.length
+	if (count > hasCount) {
+		hasCount = count
+		console.log('hasCount', count)
+	}
+	for (const instance of application.instances) instance.count = count
 }
 function forward(meshPaste: MeshPaste, index: number, application: MeshCopySceneApplication) {
 	for (const instance of application.instances) instance.setMatrixAt(index, meshPaste.matrixWorld)
