@@ -10,7 +10,6 @@ import {
 } from 'three'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { MeshCopy, MeshPaste } from '~/three'
 
 // #region Common shapes
 export function sphere(radius: number, params: MeshBasicMaterialParameters) {
@@ -40,7 +39,8 @@ export function* meshVectors3(mesh: Mesh): Generator<Vector3> {
 	for (let i = 0; i < p.count; i++) yield new Vector3().fromBufferAttribute(p, i)
 }
 
-const assetsCache: Record<string, Promise<MeshCopy>> = {}
+//const assetsCache: Record<string, Promise<MeshCopy>> = {}
+const assetsCache: Record<string, Promise<Object3D>> = {}
 
 const gltfLoader = new GLTFLoader()
 const fbxLoader = new FBXLoader()
@@ -50,16 +50,17 @@ export function meshAsset(url: string) {
 		assetsCache[url] = gltfLoader
 			.loadAsync(url)
 			// We use `z` as "up" while most models use `y`
-			.then((gltf) => gltf.scene.rotateX(Math.PI / 2))
-			//.then((obj) => new MeshCopy(obj)) /*
+			.then((gltf) => gltf.scene.rotateX(Math.PI / 2)) /*
+			.then((obj) => new MeshCopy(obj)) /*
 			.then((obj) => {
 				let browser: Object3D = obj
 				const g = new Group()
 				g.add(obj)
-				//debugger
 				while (browser && !(browser as Mesh).isMesh) browser = browser.children[0]
-				//debugger
 				return new MeshCopy(obj)
 			}) //*/
-	return new MeshPaste(assetsCache[url])
+	//return new MeshPaste(assetsCache[url])
+	const group = new Group()
+	assetsCache[url].then((obj) => group.add(obj.clone()))
+	return group
 }

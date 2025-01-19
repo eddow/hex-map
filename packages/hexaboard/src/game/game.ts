@@ -8,6 +8,7 @@ import {
 	WebGLRenderer,
 } from 'three'
 import { prerenderGlobals } from '~/three/meshCopyPaste'
+import { debugGameViews } from '~/utils'
 import { MouseControl, type MouseEvolution } from '~/utils/mouseControl'
 import type { Land } from './land'
 
@@ -107,8 +108,11 @@ export class Game extends MouseControl {
 		this._land = value
 	}
 
-	createView({ near = 0.1, far = 1000 }: { near: number; far: number } = { near: 0.1, far: 1000 }) {
-		const view = new GameView(this, { near, far })
+	createView(
+		canvas?: HTMLCanvasElement,
+		{ near = 0.1, far = 1000 }: { near: number; far: number } = { near: 0.1, far: 1000 }
+	) {
+		const view = new GameView(this, canvas, { near, far })
 		this.listenTo(view)
 		return view
 	}
@@ -124,10 +128,12 @@ export class GameView {
 	private readonly renderer
 	constructor(
 		public readonly game: Game,
+		canvas?: HTMLCanvasElement,
 		{ near = 0.1, far = 1000 }: { near: number; far: number } = { near: 0.1, far: 1000 }
 	) {
+		debugGameViews.push(this)
 		this.camera = new PerspectiveCamera(75, 1, near, far)
-		this.renderer = new WebGLRenderer({ antialias: true })
+		this.renderer = new WebGLRenderer({ canvas, antialias: true })
 	}
 	get canvas() {
 		return this.renderer.domElement

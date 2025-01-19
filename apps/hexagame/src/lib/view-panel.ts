@@ -4,27 +4,28 @@ import type { GameView } from 'hexaboard'
 
 export class GameViewRenderer implements IContentRenderer {
 	private gv?: GameView
-	private nog = document.createElement('div')
-	constructor(public readonly id: string) {}
+	private canvas: HTMLCanvasElement
+	constructor(public readonly id: string) {
+		this.canvas = document.createElement('canvas')
+		this.canvas.style.width = '100%'
+		this.canvas.style.height = '100%'
+	}
 	get element(): HTMLElement {
-		this.nog.textContent = 'No game selected'
-		return this.gv?.canvas || this.nog
+		return this.canvas
 	}
 	init(parameters: GroupPanelPartInitParameters): void {
 		const { game } = parameters.params
-		this.gv = games[game]?.createView()
+		this.gv = games[game]?.createView(this.canvas)
 		const { camera } = this.gv
 		camera.position.set(0, 0, 100)
 		camera.lookAt(0, 0, 0)
-		this.gv.canvas.style.width = '100%'
-		this.gv.canvas.style.height = '100%'
 		this.gv.game.running = true
 	}
 	layout?(width: number, height: number): void {
 		this.gv?.resize(width, height)
 	}
 	dispose(): void {
-		alert('vpispose!')
+		this.gv?.game.removeView(this.gv)
 	}
 
 	/*

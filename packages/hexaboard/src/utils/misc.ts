@@ -1,3 +1,5 @@
+import type { GameView } from '~/game'
+
 export type RandGenerator = (max?: number, min?: number) => number
 /**
  * Linear Congruential Generator
@@ -13,16 +15,57 @@ export default function LCG(...seeds: number[]): RandGenerator {
 	}
 }
 
+/**
+ * Returns an array of numbers between min and maxP (without maxP)
+ */
+export function numbers(maxP: number, min = 0) {
+	const arr = []
+	for (let i = min; i < maxP; i++) arr.push(i)
+	return arr
+}
+
+export const debugGameViews: GameView[] = []
+
+let lockedSemaphore:
+	| {
+			semaphore: LockSemaphore
+			element: Element | null
+	  }
+	| undefined
+
+let semaphoreInitialized = false
+const semaphoreLogs: any[][] = []
 export class LockSemaphore {
-	logs: any[][] = []
+	static init() {
+		if (semaphoreInitialized) return
+		semaphoreInitialized = true
+		document.addEventListener('pointerlockchange', () => {
+			const x = debugGameViews
+			if (lockedSemaphore) {
+				if (lockedSemaphore.element === document.pointerLockElement) {
+					lockedSemaphore.semaphore.doCallBack()
+					if (!document.pointerLockElement) lockedSemaphore = undefined
+				} else lockedSemaphore.semaphore.lock(lockedSemaphore.element)
+			}
+		})
+	}
 	log(...args: any[]) {
-		this.logs.unshift(args)
-		if (this.logs.length > 100) this.logs.length = 100
+		const log = [this.uuid, ...args]
+		semaphoreLogs.unshift(log)
+		if (semaphoreLogs.length > 100) semaphoreLogs.length = 100
 	}
 	private lockingTimeout?: ReturnType<typeof setTimeout>
 	private callBacks?: ((locked: Element | null) => void)[]
-	public locked: Element | null = null
+	get locked(): Element | null {
+		return (lockedSemaphore?.semaphore === this && lockedSemaphore?.element) || null
+	}
+	set locked(element: Element | null) {
+		if (lockedSemaphore?.element && lockedSemaphore.semaphore !== this)
+			throw new Error('LockSemaphore  conflict: already locking')
+		lockedSemaphore = { semaphore: this, element }
+	}
 
+	uuid = Math.random().toString(36).slice(2)
 	constructor(private mainCb?: (locked: Element | null) => void) {
 		document.addEventListener('pointerlockchange', () => {
 			if (this.locked === document.pointerLockElement) this.doCallBack()
@@ -38,6 +81,7 @@ export class LockSemaphore {
 		}
 	}
 	lock(element: Element | null) {
+		const x = debugGameViews
 		if (this.lockingTimeout) clearTimeout(this.lockingTimeout)
 		this.locked = element
 		this.log('lock', !!element, !!document.pointerLockElement)
@@ -58,12 +102,4 @@ export class LockSemaphore {
 		else cb(this.locked)
 	}
 }
-
-/**
- * Returns an array of numbers between min and maxP (without maxP)
- */
-export function numbers(maxP: number, min = 0) {
-	const arr = []
-	for (let i = min; i < maxP; i++) arr.push(i)
-	return arr
-}
+LockSemaphore.init()

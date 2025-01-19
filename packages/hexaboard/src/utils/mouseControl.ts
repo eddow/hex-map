@@ -229,6 +229,10 @@ export class MouseControl {
 		this.views.delete(canvas)
 	}
 
+	disengageAll() {
+		for (const gameView of this.views.values()) this.disengage(gameView)
+	}
+
 	// #endregion
 	// #region Mouse Interactions
 

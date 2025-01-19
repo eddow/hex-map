@@ -1,16 +1,22 @@
 <script lang="ts">
 	import { configuration, dockview } from '$lib/globals.svelte'
 	import { DockviewApi } from 'dockview-core'
-	import { DockView, DvComponent } from 'dockview-svelte'
-	import { Toolbar, ToolbarButton, ToolbarGroup, Button } from 'flowbite-svelte'
+	import { DockView } from 'dockview-svelte'
+	import { Toolbar, ToolbarButton, ToolbarGroup } from 'flowbite-svelte'
 	import { AdjustmentsHorizontalOutline, FloppyDiskAltOutline } from 'flowbite-svelte-icons'
 	import * as m from '$lib/paraglide/messages'
 	import { onMount } from 'svelte'
 	import createGameViewRenderer from '$lib/view-panel'
 	import * as widgets from '$widgets'
+	import { games } from '$lib/globals.svelte'
+
+	$effect(() => {
+		return () => {
+			for (const game of Object.values(games)) game.disengageAll()
+		}
+	})
 
 	let api: DockviewApi = $derived(dockview.api)
-	let ids = 0
 	function gotApi(api: DockviewApi) {
 		dockview.api = api
 	}
