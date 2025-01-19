@@ -61,17 +61,12 @@ export class LockSemaphore {
 	}
 	set locked(element: Element | null) {
 		if (lockedSemaphore?.element && lockedSemaphore.semaphore !== this)
-			throw new Error('LockSemaphore  conflict: already locking')
+			throw new Error('LockSemaphore conflict: already locking')
 		lockedSemaphore = { semaphore: this, element }
 	}
 
 	uuid = Math.random().toString(36).slice(2)
-	constructor(private mainCb?: (locked: Element | null) => void) {
-		document.addEventListener('pointerlockchange', () => {
-			if (this.locked === document.pointerLockElement) this.doCallBack()
-			else this.lock(this.locked)
-		})
-	}
+	constructor(private mainCb?: (locked: Element | null) => void) {}
 	private doCallBack() {
 		this.log('doCallBack', !!document.pointerLockElement)
 		if (this.callBacks) {

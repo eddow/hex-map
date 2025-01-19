@@ -206,7 +206,6 @@ export class MouseControl {
 	// #region Event listeners book-keeping
 
 	constructor(private clampZ: { min: number; max: number }) {}
-	private isListening = false
 	listenTo(gameView: GameView) {
 		const canvas = gameView.canvas
 		const events = {
