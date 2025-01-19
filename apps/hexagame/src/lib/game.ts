@@ -22,7 +22,7 @@ import terrains from './world/terrain'
 
 let tileInfoPanels = 0
 export function createGame(seed: number) {
-	const worldSeed = Math.random()
+	const worldSeed = 0.77
 	const land = new MonoSectorLand(new Island(new Vector3(0, 0, 0), 10, 6, terrains))
 	land.generate(LCG(worldSeed))
 	land.virgin()

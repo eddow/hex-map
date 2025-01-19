@@ -19,6 +19,24 @@ export interface TilePosition {
 	v: number
 }
 
+export function* sectorTriangles(radius: number) {
+	for (let ring = 1; ring < radius; ring++) {
+		for (let side = 0; side < 6; side++) {
+			for (let offset = 0; offset < ring; offset++) {
+				const index1 = hexTiles(ring) + side * ring + offset
+				const index2 = hexTiles(ring) + ((side * ring + offset + 1) % (6 * ring))
+				const index3 =
+					ring === 1 ? 0 : hexTiles(ring - 1) + ((side * (ring - 1) + offset) % (6 * (ring - 1)))
+				yield [index1, index3, index2, side]
+				if (offset > 0) {
+					const index4 = hexTiles(ring - 1) + ((side * (ring - 1) + offset - 1) % (6 * (ring - 1)))
+					yield [index1, index4, index3, (side + 1) % 6]
+				}
+			}
+		}
+	}
+}
+
 /**
  * Mostly abstract hex sector, has to be overridden
  */
@@ -51,6 +69,7 @@ export default class HexSector implements MouseReactive {
 			ndx.map((n) => this.vPosition(n)).reduce<number[]>((p, c) => [...p, c.x, c.y, c.z], [])
 		)
 		geometry.setAttribute('position', new BufferAttribute(positions, 3))
+		geometry.setIndex
 		return geometry
 	}
 	//#region To override
@@ -73,26 +92,10 @@ export default class HexSector implements MouseReactive {
 	}
 	meshTriangles(radius: number) {
 		const rv: Mesh[] = []
-		const mesh = (a: number, b: number, c: number, side: number) => {
+		for (const [a, b, c, side] of sectorTriangles(radius)) {
 			const nm = this.triangle([a, b, c], side)
 			nm.userData = { points: [a, b, c], mouseTarget: this }
 			rv.push(nm)
-		}
-		for (let ring = 1; ring < radius; ring++) {
-			for (let side = 0; side < 6; side++) {
-				for (let offset = 0; offset < ring; offset++) {
-					const index1 = hexTiles(ring) + side * ring + offset
-					const index2 = hexTiles(ring) + ((side * ring + offset + 1) % (6 * ring))
-					const index3 =
-						ring === 1 ? 0 : hexTiles(ring - 1) + ((side * (ring - 1) + offset) % (6 * (ring - 1)))
-					mesh(index1, index3, index2, side)
-					if (offset > 0) {
-						const index4 =
-							hexTiles(ring - 1) + ((side * (ring - 1) + offset - 1) % (6 * (ring - 1)))
-						mesh(index1, index4, index3, (side + 1) % 6)
-					}
-				}
-			}
 		}
 		return rv
 	}

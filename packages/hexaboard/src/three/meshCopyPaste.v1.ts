@@ -5,9 +5,6 @@ const generalMaxCount = 5000
 interface GlobalPreRendered {
 	prerender: (scene: Scene) => void
 }
-class CopiedMesh extends InstancedMesh {
-	readonly isCopiedMesh = true
-}
 const globalPreRendered = new Set<GlobalPreRendered>()
 export function prerenderGlobals(scene: Scene) {
 	for (const g of globalPreRendered) g.prerender(scene)
@@ -20,66 +17,37 @@ function rootScene(obj3d: Object3D) {
 	return scene.isScene ? scene : undefined
 }
 
-function obj3dToInstancedMeshes(obj3d: Object3D, maxCount: number) {
-	// For debug purpose only
-	// In the real worlds, no InstancedMesh is supported
-	if ((obj3d as CopiedMesh).isCopiedMesh) throw new Error('Mesh has already be copied')
-	const mesh = obj3d as Mesh
-	let rv = obj3d
-	if (mesh.isMesh) {
-		mesh.updateMatrixWorld()
-		const cm = new CopiedMesh(
-			mesh.geometry.clone().applyMatrix4(mesh.matrixWorld),
-			mesh.material,
-			maxCount
-		)
-		cm.count = 0
-		rv = cm
-		mesh.updateMatrix()
-		//rv.matrix.copy(mesh.matrix)
-	}
-	const recursion = [...obj3d.children]
-	while (obj3d.children.length) obj3d.remove(obj3d.children[0])
-	for (const child of recursion) rv.add(obj3dToInstancedMeshes(child, maxCount))
-	rv.matrix.identity()
-	return rv
+function toInstanced(mesh: Mesh, maxCount: number) {
+	mesh.updateMatrixWorld()
+	return new InstancedMesh(
+		mesh.geometry.clone().applyMatrix4(mesh.matrixWorld),
+		mesh.material,
+		maxCount
+	)
 }
-
-function gatherIMs(obj3d: Object3D) {
-	const rv: InstancedMesh[] = []
-	obj3d.traverse((child) => {
-		if ((child as CopiedMesh).isCopiedMesh) rv.push(child as InstancedMesh)
-	})
-	return rv
-}
-let hasCount = 0
+//let hasCount = 0
 function recount(application: MeshCopySceneApplication) {
-	const count = application.pastes.length
-	if (count > hasCount) {
-		hasCount = count
-		console.log('hasCount', count)
-	}
-	for (const instance of application.instances) instance.count = count
+	//if (count > hasCount) hasCount = count
+	application.iMesh.count = application.pastes.length
 }
 function forward(meshPaste: MeshPaste, index: number, application: MeshCopySceneApplication) {
-	for (const instance of application.instances) instance.setMatrixAt(index, meshPaste.matrixWorld)
+	application.iMesh.setMatrixAt(index, meshPaste.matrixWorld)
 }
 
 type MeshCopySceneApplication = {
-	object3d: Object3D
+	iMesh: InstancedMesh
 	pastes: MeshPaste[]
-	instances: InstancedMesh[]
 }
 /**
  * Give this guy a mesh, and it will paste it as many times as you wish without a cost
  * @see https://threejs.org/docs/#api/en/objects/InstancedMesh
  */
 export class MeshCopy implements GlobalPreRendered {
-	private object3d: Object3D
+	private mesh: InstancedMesh
 	private readonly applications = new WeakMap<Scene, MeshCopySceneApplication>()
-	constructor(object3d: Object3D, maxCount: number = generalMaxCount) {
-		const clone = object3d.clone()
-		this.object3d = obj3dToInstancedMeshes(clone, maxCount) || clone
+	constructor(mesh: Mesh, maxCount: number = generalMaxCount) {
+		const clone = mesh.clone()
+		this.mesh = toInstanced(clone, maxCount) || clone
 		globalPreRendered.add(this)
 		//? dispose => globalPreRendered.delete
 	}
@@ -89,13 +57,12 @@ export class MeshCopy implements GlobalPreRendered {
 	}
 	register(meshPaste: MeshPaste, scene: Scene) {
 		if (!this.applications.has(scene)) {
-			const object3d = this.object3d.clone()
+			const mesh = this.mesh.clone()
 			this.applications.set(scene, {
-				object3d,
-				instances: gatherIMs(object3d),
+				iMesh: mesh,
 				pastes: [],
 			})
-			scene.add(object3d)
+			scene.add(mesh)
 		}
 		const application = this.application(scene)
 		//const index = application.pastes.length
@@ -125,7 +92,7 @@ export class MeshCopy implements GlobalPreRendered {
 			if (paste.matrixWorldNeedsUpdate) paste.updateMatrixWorld()
 			forward(paste, i, application)
 		}
-		for (const instance of application.instances) instance.instanceMatrix.needsUpdate = true
+		application.iMesh.instanceMatrix.needsUpdate = true
 	}
 }
 

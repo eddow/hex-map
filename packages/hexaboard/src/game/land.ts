@@ -39,7 +39,7 @@ export class MonoSectorLand<Sector extends HexSector = HexSector> extends Land {
 	}
 	mesh() {
 		this.sector.meshTerrain()
-		this.sector.meshContent()
+		//REM this.sector.meshContent()
 	}
 	get group() {
 		return this.sector.group
@@ -48,7 +48,3 @@ export class MonoSectorLand<Sector extends HexSector = HexSector> extends Land {
 		return (this.sector as HexSector as HexPow2Gen).terrains
 	}
 }
-
-/**
- * We can construct a sector with 2 more sides (`puzzleTiles` tiles) so that they can nest into each another in an infinite board
- */

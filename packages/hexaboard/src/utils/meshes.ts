@@ -1,8 +1,10 @@
 import {
+	Group,
 	IcosahedronGeometry,
 	Mesh,
 	MeshBasicMaterial,
 	type MeshBasicMaterialParameters,
+	type Object3D,
 	SphereGeometry,
 	Vector3,
 } from 'three'
@@ -49,12 +51,15 @@ export function meshAsset(url: string) {
 			.loadAsync(url)
 			// We use `z` as "up" while most models use `y`
 			.then((gltf) => gltf.scene.rotateX(Math.PI / 2))
-			.then((obj) => new MeshCopy(obj)) /*
+			//.then((obj) => new MeshCopy(obj)) /*
 			.then((obj) => {
 				let browser: Object3D = obj
+				const g = new Group()
+				g.add(obj)
+				//debugger
 				while (browser && !(browser as Mesh).isMesh) browser = browser.children[0]
 				//debugger
-				return new MeshCopy(browser as Mesh)
-			})//*/
+				return new MeshCopy(obj)
+			}) //*/
 	return new MeshPaste(assetsCache[url])
 }
