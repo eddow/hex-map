@@ -22,7 +22,12 @@ export class GameViewRenderer implements IContentRenderer {
 	}
 	layout?(width: number, height: number): void {
 		this.gv?.resize(width, height)
-	} /*
+	}
+	dispose(): void {
+		alert('vpispose!')
+	}
+
+	/*
 	focus?(): void {
 		//throw new Error('Method not implemented.');
 	}

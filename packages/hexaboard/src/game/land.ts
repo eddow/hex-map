@@ -1,8 +1,8 @@
 import type { Group } from 'three'
-import type HexPow2Gen from '~/hexagon/pow2gen'
+import type HexPow2Gen from '~/sector/pow2gen'
 import type HexSector from '~/sector/sector'
 import type { RandGenerator } from '~/utils/misc'
-import type { TerrainsDefinition } from './terrain'
+import type { TerrainsDefinition } from '../sector/terrain'
 
 export abstract class Land {
 	abstract readonly tileSize: number

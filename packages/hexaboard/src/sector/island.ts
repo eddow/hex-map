@@ -1,8 +1,8 @@
 import { Vector2, Vector3 } from 'three'
-import type { TerrainType } from '~/game/terrain'
+import type { TerrainType } from '~/sector/terrain'
 import type { RandGenerator } from '~/utils/misc'
+import { axialAt, cartesian } from './hexagon'
 import { HeightPowGen, type TexturedTile } from './textured'
-import { axialAt, cartesian } from './utils'
 
 export interface DisplacedPoint extends TexturedTile {
 	radius: number

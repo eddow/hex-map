@@ -1,4 +1,4 @@
-export * from './utils'
+export * from './hexagon'
 export * from './sector'
 export * from './pow2gen'
 export * from './textured'

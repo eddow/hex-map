@@ -15,7 +15,7 @@ import {
 } from 'three'
 import type { RandGenerator } from '~/utils/misc'
 import { type MouseReactive, TileHandle } from '~/utils/mouseControl'
-import { axialAt, axialIndex, axialPolynomial, cartesian, hexSides, hexTiles } from './utils'
+import { axialAt, axialIndex, axialPolynomial, cartesian, hexSides, hexTiles } from './hexagon'
 export interface TilePosition {
 	s: number
 	u: number

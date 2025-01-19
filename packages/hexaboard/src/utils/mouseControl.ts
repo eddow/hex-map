@@ -9,7 +9,7 @@ import {
 	Vector3,
 } from 'three'
 import type { GameView } from '~/game/game'
-import type HexSector from '~/hexagon/sector'
+import type HexSector from '~/sector/sector'
 import { LockSemaphore } from './misc'
 
 export interface MouseReactive {
@@ -206,6 +206,7 @@ export class MouseControl {
 	// #region Event listeners book-keeping
 
 	constructor(private clampZ: { min: number; max: number }) {}
+	private isListening = false
 	listenTo(gameView: GameView) {
 		const canvas = gameView.canvas
 		const events = {

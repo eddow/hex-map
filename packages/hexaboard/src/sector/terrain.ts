@@ -1,6 +1,6 @@
 import type { Texture } from 'three'
 import type { RandGenerator } from '~/utils/misc'
-import type { ResourceDistribution } from './handelable'
+import type { ResourceDistribution } from '../game/handelable'
 
 const inTextureRadius = 0.2
 export interface TerrainTexture {

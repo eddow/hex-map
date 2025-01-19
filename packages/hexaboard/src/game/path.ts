@@ -1,4 +1,3 @@
-import type HexSector from '~/hexagon/sector'
 import {
 	type Axial,
 	axialAt,
@@ -8,7 +7,8 @@ import {
 	axialPolynomial,
 	axialRound,
 	hexSides,
-} from '~/hexagon/utils'
+} from '~/sector/hexagon'
+import type HexSector from '~/sector/sector'
 
 export function nextInPath(
 	fromSector: HexSector,
