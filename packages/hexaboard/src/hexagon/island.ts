@@ -1,10 +1,10 @@
 import { Vector2, Vector3 } from 'three'
 import type { TerrainType } from '~/game/terrain'
 import type { RandGenerator } from '~/utils/misc'
-import { type HeightPoint, HeightPowGen } from './pow2gen'
+import { HeightPowGen, type TexturedTile } from './textured'
 import { axialAt, cartesian } from './utils'
 
-export interface DisplacedPoint extends HeightPoint {
+export interface DisplacedPoint extends TexturedTile {
 	radius: number
 }
 
@@ -17,7 +17,7 @@ export class Island extends HeightPowGen<DisplacedPoint> {
 		seed?: number
 	) {
 		return {
-			...this.heightPoint(z, type, gen, seed),
+			...this.heightTile(z, type, gen, seed),
 			radius,
 		}
 	}

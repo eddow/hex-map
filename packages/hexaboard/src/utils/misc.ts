@@ -58,3 +58,12 @@ export class LockSemaphore {
 		else cb(this.locked)
 	}
 }
+
+/**
+ * Returns an array of numbers between min and maxP (without maxP)
+ */
+export function numbers(maxP: number, min = 0) {
+	const arr = []
+	for (let i = min; i < maxP; i++) arr.push(i)
+	return arr
+}

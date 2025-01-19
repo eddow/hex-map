@@ -1,9 +1,12 @@
+// TODO: "hexagon" -> "sector" & "utils.ts" -> "hexagon.ts"
 import {
 	BufferAttribute,
 	BufferGeometry,
 	type Face,
+	Float32BufferAttribute,
 	Group,
 	type Intersection,
+	type Material,
 	Mesh,
 	MeshBasicMaterial,
 	type Object3D,
@@ -19,6 +22,12 @@ export interface TilePosition {
 	v: number
 }
 
+export interface PositionPointInfo {
+	position: Vector3
+}
+export interface PositionGeometryAttribute {
+	position: number[]
+}
 export function* sectorTriangles(radius: number) {
 	for (let ring = 1; ring < radius; ring++) {
 		for (let side = 0; side < 6; side++) {
@@ -37,10 +46,17 @@ export function* sectorTriangles(radius: number) {
 	}
 }
 
+// TODO !! Calculate instead of caching
+let pointsHexIndex: number[] = []
+
 /**
  * Mostly abstract hex sector, has to be overridden
  */
-export default class HexSector implements MouseReactive {
+export default class HexSector<
+	PointInfo extends PositionPointInfo = PositionPointInfo,
+	GeometryAttribute extends PositionGeometryAttribute = PositionGeometryAttribute,
+> implements MouseReactive
+{
 	constructor(
 		position: Vector3,
 		public readonly tileSize: number,
@@ -49,17 +65,13 @@ export default class HexSector implements MouseReactive {
 		this.group.position.copy(position)
 	}
 	group: Group = new Group()
-	ground?: Group
+	ground?: Object3D
 
 	mouseHandle(intersection: Intersection<Object3D<Object3DEventMap>>): TileHandle {
-		/*const positions = Array.from(meshVectors3(intersection.object as Mesh))
-		const distances = positions.map((p) => p.distanceTo(intersection.point))
-		const minD = Math.min(...distances)*/
 		const baryArr = intersection.barycoord!.toArray()
 		const facePt = baryArr.indexOf(Math.max(...baryArr))
 		const geomPt = intersection.face!['abc'[facePt] as keyof Face] as number
-		//console.log(geomPt, distances.indexOf(minD))
-		return new TileHandle(this, intersection.object.userData?.points[geomPt])
+		return new TileHandle(this, pointsHexIndex[geomPt])
 	}
 
 	triangleGeometry(ndx: [number, number, number]) {
@@ -69,36 +81,74 @@ export default class HexSector implements MouseReactive {
 			ndx.map((n) => this.vPosition(n)).reduce<number[]>((p, c) => [...p, c.x, c.y, c.z], [])
 		)
 		geometry.setAttribute('position', new BufferAttribute(positions, 3))
-		geometry.setIndex
 		return geometry
 	}
-	//#region To override
-
 	vPosition(ndx: number) {
 		return new Vector3().copy({ ...cartesian(axialAt(ndx), this.tileSize), z: 0 })
 	}
 
-	triangle(ndx: [number, number, number], side: number): Mesh {
-		return new Mesh(
-			this.triangleGeometry(ndx),
-			new MeshBasicMaterial({ color: Math.floor(Math.random() * 0x1000000) })
-		)
-	}
-
-	//#endregion
-
 	get nbrTiles() {
 		return hexTiles(this.radius)
 	}
-	meshTriangles(radius: number) {
-		const rv: Mesh[] = []
-		for (const [a, b, c, side] of sectorTriangles(radius)) {
-			const nm = this.triangle([a, b, c], side)
-			nm.userData = { points: [a, b, c], mouseTarget: this }
-			rv.push(nm)
-		}
-		return rv
+
+	// #region Geometry
+
+	protected get initialGeometryAttributes(): GeometryAttribute {
+		return { position: [] as number[] } as GeometryAttribute
 	}
+	protected setGeometryAttributes(geometry: BufferGeometry, attributes: GeometryAttribute) {
+		geometry.setAttribute('position', new Float32BufferAttribute(attributes.position, 3))
+	}
+	protected geometryPointInfos(hexIndex: number): PointInfo {
+		return { position: this.vPosition(hexIndex) } as PointInfo
+	}
+	protected addGeometryAttributes(
+		geometryAttributes: GeometryAttribute,
+		[a, b, c]: [number, number, number],
+		[A, B, C]: [PointInfo, PointInfo, PointInfo],
+		side: number
+	) {
+		geometryAttributes.position.push(
+			...A.position.toArray(),
+			...B.position.toArray(),
+			...C.position.toArray()
+		)
+	}
+	protected geometry1() {
+		const pointInfos: PointInfo[] = []
+		for (let hI = 0; hI < this.nbrTiles; hI++) pointInfos.push(this.geometryPointInfos(hI))
+		const attributes = this.initialGeometryAttributes
+		pointsHexIndex = []
+		for (const [a, b, c, side] of sectorTriangles(this.radius)) {
+			pointsHexIndex.push(a, b, c)
+			this.addGeometryAttributes(
+				attributes,
+				[a, b, c],
+				[pointInfos[a], pointInfos[b], pointInfos[c]],
+				side
+			)
+		}
+
+		const geometry = new BufferGeometry()
+		this.setGeometryAttributes(geometry, attributes)
+		return geometry
+	}
+
+	protected get material(): Material {
+		return new MeshBasicMaterial({
+			color: 0xffffff,
+			wireframe: true,
+		})
+	}
+
+	protected mesh1() {
+		const geometry = this.geometry1()
+		const mesh = new Mesh(geometry, this.material)
+		mesh.userData = { mouseTarget: this }
+		return mesh
+	}
+
+	// #endregion
 	/**
 	 * "Load from scratch" - this should be called *even* when loading games
 	 */
@@ -110,9 +160,8 @@ export default class HexSector implements MouseReactive {
 	meshContent() {}
 	meshTerrain() {
 		if (this.ground) this.group.remove(this.ground)
-		this.ground = new Group()
+		this.ground = this.mesh1()
 		this.group.add(this.ground)
-		this.ground.add(...this.meshTriangles(this.radius))
 	}
 
 	cartesian(tile: number, { s, u, v }: TilePosition) {

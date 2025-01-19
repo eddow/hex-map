@@ -4,6 +4,8 @@ import { type BufferGeometry, type IUniform, Mesh, type ShaderMaterial } from 't
  * Shared shader material
  * Allows to share to share a shader while only changing the `uniforms` for each mesh
  * @see https://threejs.org/docs/#api/en/materials/ShaderMaterial - Custom attributes and uniforms
+ * History: when the land was a bunch of triangle mesh...
+ * Unused, but could still be useful
  */
 export class SharedShaderMaterial {
 	private meshUniforms = new WeakMap<Mesh, Record<string, IUniform>>()

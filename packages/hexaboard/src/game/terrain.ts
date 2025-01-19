@@ -1,4 +1,4 @@
-import { Float32BufferAttribute, type Texture } from 'three'
+import type { Texture } from 'three'
 import type { RandGenerator } from '~/utils/misc'
 import type { ResourceDistribution } from './handelable'
 
@@ -23,11 +23,10 @@ export function textureUVs(texture: TerrainTexture, side: number, rot: number) {
 		v + inTextureRadius * Math.sin(texture.alpha + ((side + rot) * Math.PI) / 3),
 	]
 	const arr = [u, v, ...outP(side + 1), ...outP(side)]
-	return new Float32BufferAttribute(arr.slice(rot, 6).concat(arr.slice(0, rot)), 2)
+	return arr.slice(rot, 6).concat(arr.slice(0, rot))
 }
 
 export interface TerrainType {
-	color: { r: number; g: number; b: number }
 	appearHeight: number
 	variance: number
 	resourceDistribution: ResourceDistribution
