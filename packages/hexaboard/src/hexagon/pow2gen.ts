@@ -213,6 +213,7 @@ export abstract class HeightPowGen<
 		geometry.setAttribute('uvA', textureUVs(points[0].texture, side, 0))
 		geometry.setAttribute('uvB', textureUVs(points[1].texture, side, 4))
 		geometry.setAttribute('uvC', textureUVs(points[2].texture, side, 2))
+		//geometry.setAttribute('texturesIdx', new Int16BufferAttribute([0, 1, 2], 1))
 		const barycentric = new Float32Array([
 			1,
 			0,

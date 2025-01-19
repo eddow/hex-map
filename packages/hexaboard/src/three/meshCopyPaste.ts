@@ -1,4 +1,4 @@
-import { InstancedMesh, type Mesh, MeshNormalMaterial, Object3D, type Scene } from 'three'
+import { InstancedMesh, type Mesh, Object3D, type Scene } from 'three'
 
 const generalMaxCount = 1000
 
@@ -27,29 +27,15 @@ function obj3dToInstancedMeshes(obj3d: Object3D, maxCount: number) {
 	const mesh = obj3d as Mesh
 	let rv = obj3d
 	if (mesh.isMesh) {
-		const cm = new CopiedMesh(
-			mesh.geometry.clone(),
-			/*mesh.material*/ new MeshNormalMaterial(),
-			maxCount
-		)
+		const cm = new CopiedMesh(mesh.geometry.clone(), mesh.material, maxCount)
 		cm.count = 0
 		rv = cm
 		mesh.updateMatrix()
 		rv.matrix.copy(mesh.matrix)
-		for (const child of mesh.children) {
-			// This is a cloned mesh anyway
-			mesh.remove(child)
-			rv.add(child)
-		}
 	}
-
-	for (const child of rv.children) {
-		const iv = obj3dToInstancedMeshes(child, maxCount)
-		if (iv) {
-			obj3d.remove(child)
-			obj3d.add(iv)
-		}
-	}
+	const recursion = [...obj3d.children]
+	while (obj3d.children.length) obj3d.remove(obj3d.children[0])
+	for (const child of recursion) rv.add(obj3dToInstancedMeshes(child, maxCount))
 	return rv
 }
 
@@ -101,7 +87,7 @@ export class MeshCopy implements GlobalPreRendered {
 			scene.add(object3d)
 		}
 		const application = this.application(scene)
-		const index = application.pastes.length
+		//const index = application.pastes.length
 		application.pastes.push(meshPaste)
 		recount(application)
 		//if (!meshPaste.matrixWorldNeedsUpdate) forward(meshPaste, index, application)
@@ -121,12 +107,14 @@ export class MeshCopy implements GlobalPreRendered {
 		}
 	}
 	prerender(scene: Scene) {
-		const application = this.application(scene)
+		const application = this.applications.get(scene)
+		if (!application) return
 		for (let i = 0; i < application.pastes.length; i++) {
 			const paste = application.pastes[i]
 			if (paste.matrixWorldNeedsUpdate) paste.updateMatrixWorld()
 			forward(paste, i, application)
 		}
+		for (const instance of application.instances) instance.instanceMatrix.needsUpdate = true
 	}
 }
 

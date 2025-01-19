@@ -5,8 +5,6 @@ import {
 	type HeightPowGen,
 	Island,
 	LCG,
-	MeshCopy,
-	MeshPaste,
 	MonoSectorLand,
 	MouseButton,
 	type MouseButtonEvolution,
@@ -15,8 +13,8 @@ import {
 	axialIndex,
 	costingPath,
 	icosahedron,
+	meshAsset,
 	pointsAround,
-	sphere,
 } from 'hexaboard'
 import { CatmullRomCurve3, Mesh, MeshBasicMaterial, Object3D, TubeGeometry, Vector3 } from 'three'
 import { dockview } from './globals.svelte'
@@ -40,15 +38,20 @@ export function createGame(seed: number) {
 			color: 0xffffff,
 			wireframe: true,
 		})
-	)
+	) /*
 	const mCopy = new MeshCopy(sphere(2, { color: 0x00ff00 }))
 	const mTest = sphere(2, { color: 0x0000ff })
 	const mPaste1 = new MeshPaste(mCopy)
 	const mPaste2 = new MeshPaste(mCopy)
-	mPaste1.position.set(0, 0, 80)
+	mPaste1.position.set(0, 0, 20)
 	mPaste2.position.set(10, 0, 80)
 	mTest.position.set(-10, 0, 80)
-	game.scene.add(mPaste1, mPaste2, mTest)
+	game.scene.add(mPaste1, mPaste2, mTest)*/
+	const mTest = meshAsset('/assets/resource/rock1.glb')
+
+	mTest.position.set(0, 0, 20)
+	game.scene.add(mTest)
+
 	function axialV3(axial: Axial | number) {
 		return (game.land as MonoSectorLand).sector.vPosition(
 			typeof axial === 'number' ? axial : axialIndex(axial)

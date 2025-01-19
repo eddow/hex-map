@@ -3,13 +3,13 @@ import {
 	Mesh,
 	MeshBasicMaterial,
 	type MeshBasicMaterialParameters,
-	Object3D,
+	type Object3D,
 	SphereGeometry,
 	Vector3,
 } from 'three'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import type { MeshCopy } from '~/three'
+import { MeshCopy, MeshPaste } from '~/three'
 
 // #region Common shapes
 export function sphere(radius: number, params: MeshBasicMaterialParameters) {
@@ -44,13 +44,17 @@ const assetsCache: Record<string, Promise<MeshCopy>> = {}
 const gltfLoader = new GLTFLoader()
 const fbxLoader = new FBXLoader()
 export function meshAsset(url: string) {
-	return new Object3D() /*
 	//const loader = url.endsWith('.fbx') ? fbxLoader : gltfLoader
 	if (!assetsCache[url])
 		assetsCache[url] = gltfLoader
 			.loadAsync(url)
 			// We use `z` as "up" while most models use `y`
-			.then((gltf) => gltf.scene.rotateX(Math.PI / 2))
-			.then((obj) => new MeshCopy(obj))
-	return new MeshPaste(assetsCache[url])*/
+			.then((gltf) => gltf.scene)
+			.then((obj) => {
+				//debugger
+				let browser: Object3D = obj
+				while (browser && !(browser as Mesh).isMesh) browser = browser.children[0]
+				return new MeshCopy(obj)
+			})
+	return new MeshPaste(assetsCache[url]) //.rotateX(Math.PI / 2)
 }

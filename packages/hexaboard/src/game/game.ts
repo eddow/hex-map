@@ -27,7 +27,7 @@ export class Game extends MouseControl {
 	constructor(land: Land) {
 		super({ min: land.terrains.terrainHeight, max: land.terrains.terrainHeight * 6 })
 		this._land = land
-		this.scene.add(this.lights, /*land.group,*/ this.entitiesGroup)
+		this.scene.add(this.lights, land.group, this.entitiesGroup)
 		this.lights.add(new AmbientLight(0x404040))
 		const light = new DirectionalLight(0xffffff, 1)
 		light.position.set(10, 10, 10)
