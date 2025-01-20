@@ -16,7 +16,7 @@ import {
 	terrainContentRadius,
 	textureUVs,
 } from '~/game'
-import { LCG, type RandGenerator, numbers } from '~/utils'
+import { LCG, numbers, type RandGenerator } from '~/utils'
 import { type Axial, hexTiles, posInTile } from './hexagon'
 import HexPow2Gen, { type HeightTile } from './pow2gen'
 import type { PositionGeometryAttribute, PositionPointInfo } from './sector'
@@ -107,10 +107,10 @@ export abstract class HeightPowGen<
 	texturedMeshBuilding?: {
 		textures: Texture[]
 	}
-	protected mesh1() {
+	protected createMesh() {
 		this.texturedMeshBuilding = { textures: [] }
 		try {
-			return super.mesh1()
+			return super.createMesh()
 		} finally {
 			this.texturedMeshBuilding = undefined
 		}
@@ -165,7 +165,8 @@ export abstract class HeightPowGen<
 		geometry.setAttribute('uvB', new Float32BufferAttribute(attributes.uvB, 2))
 		geometry.setAttribute('uvC', new Float32BufferAttribute(attributes.uvC, 2))
 	}
-	get material() {
+	protected createMaterial() {
+		//return super.createMaterial() /*
 		const nbrTextures = this.texturedMeshBuilding!.textures.length
 		const texturesCase = numbers(nbrTextures).map(
 			(n) => `if (i == ${n}) return texture2D(textures[${n}], vUv);`
@@ -227,7 +228,7 @@ void main() {
 	gl_FragColor = color1 * weight1 + color2 * weight2 + color3 * weight3;
 }
 			`,
-		})
+		}) //*/
 	}
 
 	// #endregion

@@ -114,7 +114,7 @@ export default class HexSector<
 			...C.position.toArray()
 		)
 	}
-	protected geometry1() {
+	protected createGeometry() {
 		const pointInfos: PointInfo[] = []
 		for (let hI = 0; hI < this.nbrTiles; hI++) pointInfos.push(this.geometryPointInfos(hI))
 		const attributes = this.initialGeometryAttributes
@@ -134,16 +134,15 @@ export default class HexSector<
 		return geometry
 	}
 
-	protected get material(): Material {
+	protected createMaterial(): Material {
 		return new MeshBasicMaterial({
 			color: 0xffffff,
 			wireframe: true,
 		})
 	}
 
-	protected mesh1() {
-		const geometry = this.geometry1()
-		const mesh = new Mesh(geometry, this.material)
+	protected createMesh() {
+		const mesh = new Mesh(this.createGeometry(), this.createMaterial())
 		mesh.userData = { mouseTarget: this }
 		return mesh
 	}
@@ -160,7 +159,7 @@ export default class HexSector<
 	meshContent() {}
 	meshTerrain() {
 		if (this.ground) this.group.remove(this.ground)
-		this.ground = this.mesh1()
+		this.ground = this.createMesh()
 		this.group.add(this.ground)
 	}
 

@@ -42,7 +42,7 @@ export const terrainTypes: Record<string, TerrainType> = {
 	stone: {
 		color: { r: 0.6, g: 0.4, b: 0.1 },
 		texture: terrainTexture('stone'),
-		appearHeight: 0.7,
+		appearHeight: 0.8,
 		variance: 3,
 		resourceDistribution: [
 			[Rock, 1.5],

@@ -27,6 +27,7 @@ export function textureUVs(texture: TerrainTexture, side: number, rot: number) {
 }
 
 export interface TerrainType {
+	color: { r: number; g: number; b: number }
 	appearHeight: number
 	variance: number
 	resourceDistribution: ResourceDistribution

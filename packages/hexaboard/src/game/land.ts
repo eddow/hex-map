@@ -39,7 +39,7 @@ export class MonoSectorLand<Sector extends HexSector = HexSector> extends Land {
 	}
 	mesh() {
 		this.sector.meshTerrain()
-		//REM this.sector.meshContent()
+		this.sector.meshContent()
 	}
 	get group() {
 		return this.sector.group
