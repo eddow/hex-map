@@ -1,3 +1,3 @@
 export * from './system'
-import tileInfo from './tile-info.svelte'
-export { tileInfo }
+import selectionInfo from './selection-info.svelte'
+export { selectionInfo }

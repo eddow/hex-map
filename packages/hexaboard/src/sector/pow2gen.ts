@@ -1,8 +1,8 @@
 import { type Group, Vector3 } from 'three'
 import type { TerrainsDefinition } from '~/sector/terrain'
 import type { RandGenerator } from '~/utils/misc'
+import HexSector, { type PositionGeometryAttribute, type PositionPointInfo } from './base'
 import { type Axial, axialAt, axialIndex, axialPolynomial, cartesian, hexSides } from './hexagon'
-import HexSector, { type PositionGeometryAttribute, type PositionPointInfo } from './sector'
 
 export interface HeightTile {
 	z: number

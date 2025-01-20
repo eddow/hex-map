@@ -1,6 +1,6 @@
 import type { Group } from 'three'
+import type HexSector from '~/sector/base'
 import type HexPow2Gen from '~/sector/pow2gen'
-import type HexSector from '~/sector/sector'
 import type { RandGenerator } from '~/utils/misc'
 import type { TerrainsDefinition } from '../sector/terrain'
 

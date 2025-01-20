@@ -16,10 +16,10 @@ import {
 	terrainContentRadius,
 	textureUVs,
 } from '~/game'
-import { LCG, numbers, type RandGenerator } from '~/utils'
+import { LCG, type RandGenerator, numbers } from '~/utils'
+import type { PositionGeometryAttribute, PositionPointInfo } from './base'
 import { type Axial, hexTiles, posInTile } from './hexagon'
 import HexPow2Gen, { type HeightTile } from './pow2gen'
-import type { PositionGeometryAttribute, PositionPointInfo } from './sector'
 
 export interface TexturedTile extends HeightTile {
 	type: TerrainType

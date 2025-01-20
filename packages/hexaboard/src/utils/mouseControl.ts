@@ -9,7 +9,7 @@ import {
 	Vector3,
 } from 'three'
 import type { GameView } from '~/game/game'
-import type HexSector from '~/sector/sector'
+import type HexSector from '~/sector/base'
 import { LockSemaphore } from './misc'
 
 export interface MouseReactive {

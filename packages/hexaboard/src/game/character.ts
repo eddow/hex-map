@@ -1,7 +1,7 @@
 import type { Object3D, Vector3 } from 'three'
 import { GameEntity } from '~/game/game'
+import type HexSector from '~/sector/base'
 import { axialIndex, axialRound, fromCartesian } from '~/sector/hexagon'
-import type HexSector from '~/sector/sector'
 import { nextInPath } from './path'
 
 export interface CharacterPlan {

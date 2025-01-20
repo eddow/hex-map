@@ -1,3 +1,4 @@
+import * as m from '$lib/paraglide/messages'
 import {
 	type Axial,
 	Character,
@@ -19,7 +20,6 @@ import { CatmullRomCurve3, Mesh, MeshBasicMaterial, Object3D, TubeGeometry, Vect
 import { dockview } from './globals.svelte'
 import terrains from './world/terrain'
 
-let tileInfoPanels = 0
 export function createGame(seed: number) {
 	const worldSeed = 0.77
 	const land = new MonoSectorLand(new Island(new Vector3(0, 0, 0), 10, 6, terrains))
@@ -98,8 +98,9 @@ export function createGame(seed: number) {
 					break
 				case MouseButton.Right:
 					dockview.api.addPanel({
-						id: `tileInfo.${tileInfoPanels++}`,
-						component: 'tileInfo',
+						id: `selectionInfo.${crypto.randomUUID()}`,
+						component: 'selectionInfo',
+						title: m.selectInfo(),
 						params: {
 							//sector: tile.target,
 							hexIndex: tile.hexIndex,
