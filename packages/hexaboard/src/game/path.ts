@@ -1,4 +1,3 @@
-import type HexSector from '~/sector/base'
 import {
 	type Axial,
 	axialAt,
@@ -8,14 +7,10 @@ import {
 	axialPolynomial,
 	axialRound,
 	hexSides,
-} from '~/sector/hexagon'
+} from '~/ground/hexagon'
+import type Sector from '~/ground/sector'
 
-export function nextInPath(
-	fromSector: HexSector,
-	fromTile: number,
-	toSector: HexSector,
-	toTile: number
-) {
+export function nextInPath(fromSector: Sector, fromTile: number, toSector: Sector, toTile: number) {
 	if (fromSector !== toSector)
 		throw new Error('from and to sectors must be the same: not implemented yet')
 	const from = axialAt(fromTile)
@@ -24,9 +19,9 @@ export function nextInPath(
 }
 
 export function straightPath(
-	fromSector: HexSector,
+	fromSector: Sector,
 	fromTile: number,
-	toSector: HexSector,
+	toSector: Sector,
 	toTile: number
 ) {
 	if (fromSector !== toSector)

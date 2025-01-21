@@ -1,4 +1,4 @@
-import { type TerrainType, TerrainsDefinition } from 'hexaboard'
+import { TerrainDefinition, type TexturedTerrain } from 'hexaboard'
 import { RepeatWrapping, TextureLoader } from 'three'
 import { Rock, Tree } from './handelable'
 
@@ -11,7 +11,9 @@ function terrainTexture(type: string) {
 export const terrainHeight = 80
 export const waterTexture = terrainTexture('water')
 
-export const terrainTypes: Record<string, TerrainType> = {
+type Terrain = TexturedTerrain & { [key: string]: any }
+
+export const terrainTypes: Record<string, Terrain> = {
 	sand: {
 		color: { r: 0.8, g: 0.8, b: 0 },
 		texture: terrainTexture('sand'),
@@ -58,8 +60,12 @@ export const terrainTypes: Record<string, TerrainType> = {
 	},
 }
 
-const terrains = new TerrainsDefinition(terrainTypes, waterTexture, terrainHeight, {
+const terrains = new TerrainDefinition<TexturedTerrain>(
+	terrainTypes,
+	terrainHeight
+	/*, waterTexture, {
 	center: terrainTypes.snow,
 	perimeter: terrainTypes.sand,
-})
+}*/
+)
 export default terrains

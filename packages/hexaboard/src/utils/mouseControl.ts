@@ -9,8 +9,8 @@ import {
 	Vector3,
 } from 'three'
 import type { GameView } from '~/game/game'
-import type HexSector from '~/sector/base'
-import { LockSemaphore } from './misc'
+import type Sector from '~/ground/sector'
+import { LockSemaphore } from './lockSemaphore'
 
 export interface MouseReactive {
 	mouseHandle(intersection: Intersection<Object3D<Object3DEventMap>>): MouseHandle
@@ -25,7 +25,7 @@ export class TileHandle extends MouseHandle {
 	readonly tile = this
 
 	constructor(
-		public readonly target: HexSector,
+		public readonly target: Sector,
 		public readonly hexIndex: number
 	) {
 		super(target)
@@ -180,12 +180,15 @@ export class MouseControl {
 		this.lastEvolutions = []
 		for (const e of rv) {
 			const eP = e as PositionedMouseEvolution
-			if (eP.position) {
-				if (lastPosition?.x === eP.position.x && lastPosition?.y === eP.position.y)
+			if ('position' in eP) {
+				if (lastPosition?.x === eP.position?.x && lastPosition?.y === eP.position?.y)
 					eP.handle = lastHandle
-				else {
+				else if (eP.position) {
 					lastPosition = eP.position
 					lastHandle = eP.handle = this.mouseInteract(eP)?.handle
+				} else {
+					lastHandle = undefined
+					lastPosition = undefined
 				}
 			}
 			yield e

@@ -1,4 +1,4 @@
-import { axialAt, hexTiles } from './sector'
+import { axialAt, hexTiles } from './ground'
 
 function* connections(radius: number) {
 	for (let ring = 1; ring < radius; ring++) {

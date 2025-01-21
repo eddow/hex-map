@@ -1,7 +1,7 @@
 import type { Object3D, Vector3 } from 'three'
 import { GameEntity } from '~/game/game'
-import type HexSector from '~/sector/base'
-import { axialIndex, axialRound, fromCartesian } from '~/sector/hexagon'
+import { axialIndex, axialRound, fromCartesian } from '~/ground/hexagon'
+import type Sector from '~/ground/sector'
 import { nextInPath } from './path'
 
 export interface CharacterPlan {
@@ -43,14 +43,14 @@ class Walk implements CharacterAction {
 // TODO: Cache the path and reevaluate if something changed
 class GoToPlan implements CharacterPlan {
 	constructor(
-		public sector: HexSector,
+		public sector: Sector,
 		public tile: number,
 		public plan: CharacterPlan
 	) {}
 	next(character: Character) {
 		if (character.sector === this.sector && character.tile === this.tile) return
 		const next = axialIndex(nextInPath(character.sector, character.tile, this.sector, this.tile))
-		return new Walk(character.sector.vPosition(next), this, () => {
+		return new Walk(character.sector.tileCenter(next), this, () => {
 			character.tile = next
 		})
 	}
@@ -60,12 +60,12 @@ export class Character extends GameEntity {
 	public action: CharacterAction = idle
 
 	constructor(
-		public sector: HexSector,
+		public sector: Sector,
 		public tile: number,
 		o3d: Object3D
 	) {
 		super(o3d)
-		o3d.position.copy(sector.vPosition(tile).add(sector.group.position))
+		o3d.position.copy(sector.tileCenter(tile).add(sector.group.position))
 	}
 
 	progress(dt: number) {
@@ -83,7 +83,7 @@ export class Character extends GameEntity {
 		}
 	}
 
-	goTo(sector: HexSector, hexIndex: number) {
+	goTo(sector: Sector, hexIndex: number) {
 		const plan = new GoToPlan(sector, hexIndex, idle.plan)
 		const next = plan.next(this)
 		this.action.cancel?.(this)
@@ -96,7 +96,7 @@ export class Character extends GameEntity {
 		if (next) {
 			if (this.action instanceof Walk && this.action.destination.equals(next.destination))
 				this.action = next
-			else this.action = new Walk(this.sector.vPosition(this.tile), plan)
+			else this.action = new Walk(this.sector.tileCenter(this.tile), plan)
 		}
 	}
 }

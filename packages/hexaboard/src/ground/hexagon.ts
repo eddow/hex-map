@@ -1,4 +1,4 @@
-import type { RandGenerator } from '~/utils/misc'
+import type { RandGenerator } from '~/utils/numbers'
 
 // https://www.redblobgames.com/grids/hexagons/
 export interface Axial {

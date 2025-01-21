@@ -1,8 +1,8 @@
 import type { Object3D } from 'three'
-import { hexTiles } from '~/sector/hexagon'
+import { hexTiles } from '~/ground/hexagon'
+import type { RandGenerator } from '~/utils/lockSemaphore'
 import { meshAsset } from '~/utils/meshes'
-import type { RandGenerator } from '~/utils/misc'
-import type { TerrainType } from '../sector/terrain'
+import type { TerrainType } from '../ground/terrain'
 
 /**
  * Number of hexagonal "circles" around the center of sub-tiles that can contain something

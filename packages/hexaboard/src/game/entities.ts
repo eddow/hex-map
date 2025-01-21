@@ -20,7 +20,7 @@ export class TileCursor extends GameEntity {
 				this.shown = true
 				group.add(this.mesh)
 			}
-			group.position.copy(value.target.vPosition(value.hexIndex))
+			group.position.copy(value.target.tileCenter(value.hexIndex))
 		} else if (this.shown) {
 			this.shown = false
 			group.remove(this.mesh)

@@ -1,31 +1,3 @@
-import type { GameView } from '~/game'
-
-export type RandGenerator = (max?: number, min?: number) => number
-/**
- * Linear Congruential Generator
- */
-const [a, c, m] = [1664525, 1013904223, 2 ** 32]
-export default function LCG(...seeds: number[]): RandGenerator {
-	let state = seeds.length
-		? Math.abs(seeds.reduce((acc, seed) => acc ^ (seed * m), 0))
-		: Math.random() * m
-	return (max = 1, min = 0) => {
-		state = (a * state + c + m) % m
-		return (state / m) * (max - min) + min
-	}
-}
-
-/**
- * Returns an array of numbers between min and maxP (without maxP)
- */
-export function numbers(maxP: number, min = 0) {
-	const arr = []
-	for (let i = min; i < maxP; i++) arr.push(i)
-	return arr
-}
-
-export const debugGameViews: GameView[] = []
-
 let lockedSemaphore:
 	| {
 			semaphore: LockSemaphore
@@ -40,7 +12,6 @@ export class LockSemaphore {
 		if (semaphoreInitialized) return
 		semaphoreInitialized = true
 		document.addEventListener('pointerlockchange', () => {
-			const x = debugGameViews
 			if (lockedSemaphore) {
 				if (lockedSemaphore.element === document.pointerLockElement) {
 					lockedSemaphore.semaphore.doCallBack()
@@ -76,7 +47,6 @@ export class LockSemaphore {
 		}
 	}
 	lock(element: Element | null) {
-		const x = debugGameViews
 		if (this.lockingTimeout) clearTimeout(this.lockingTimeout)
 		this.locked = element
 		this.log('lock', !!element, !!document.pointerLockElement)

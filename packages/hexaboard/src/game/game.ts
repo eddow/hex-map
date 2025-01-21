@@ -8,9 +8,8 @@ import {
 	WebGLRenderer,
 } from 'three'
 import { prerenderGlobals } from '~/three/meshCopyPaste'
-import { debugGameViews } from '~/utils'
 import { MouseControl, type MouseEvolution } from '~/utils/mouseControl'
-import type { Land } from './land'
+import type { LandBase } from '../ground/land/land'
 
 export type MouseEvolutionEvent<Evolution extends MouseEvolution = MouseEvolution> = (
 	evolution: Evolution
@@ -21,12 +20,13 @@ export abstract class GameEntity {
 	progress(dt: number) {}
 }
 
-export class Game extends MouseControl {
+export class Game<Land extends LandBase = LandBase> extends MouseControl {
 	public readonly lights = new Group()
 	private _land: Land
 
 	constructor(land: Land) {
-		super({ min: land.terrains.terrainHeight, max: land.terrains.terrainHeight * 6 })
+		// TODO: calculate
+		super({ min: 50, max: 500 })
 		this._land = land
 		this.scene.add(this.lights, land.group, this.entitiesGroup)
 		this.lights.add(new AmbientLight(0x404040))
@@ -131,7 +131,6 @@ export class GameView {
 		canvas?: HTMLCanvasElement,
 		{ near = 0.1, far = 1000 }: { near: number; far: number } = { near: 0.1, far: 1000 }
 	) {
-		debugGameViews.push(this)
 		this.camera = new PerspectiveCamera(75, 1, near, far)
 		this.renderer = new WebGLRenderer({ canvas, antialias: true })
 	}

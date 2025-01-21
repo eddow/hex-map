@@ -7,7 +7,7 @@
 	let { hexIndex }: { hexIndex?: number } = $props()
 	const land = games.GameX.land as MonoSectorLand
 	const sector = land.sector as HeightPowGen
-	let point = sector.points[hexIndex!]
+	let point = sector.tiles[hexIndex!]
 	let terrainTypeName = $derived(
 		point ? Object.entries(terrainTypes).find(([k, v]) => v === point.type)?.[0] : 'unknown'
 	)

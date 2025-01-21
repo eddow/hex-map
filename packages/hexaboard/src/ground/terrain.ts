@@ -1,5 +1,6 @@
+/*
 import type { Texture } from 'three'
-import type { RandGenerator } from '~/utils/misc'
+import type { RandGenerator } from '~/utils/numbers'
 import type { ResourceDistribution } from '../game/handelable'
 
 const inTextureRadius = 0.2
@@ -44,6 +45,31 @@ export class TerrainsDefinition {
 	terrainType(height: number): TerrainType {
 		let rvH: number | undefined
 		let rvT: undefined | TerrainType
+		for (const type in this.terrainTypes) {
+			const tType = this.terrainTypes[type as keyof typeof this.terrainTypes]
+			const thisH = tType.appearHeight
+			if (height / this.terrainHeight >= thisH && (rvH === undefined || thisH > rvH)) {
+				rvH = thisH
+				rvT = tType
+			}
+		}
+		return rvT!
+	}
+}
+*/
+export interface TerrainBase {
+	color: { r: number; g: number; b: number }
+	appearHeight: number
+}
+
+export class TerrainDefinition<Terrain extends TerrainBase = TerrainBase> {
+	constructor(
+		public readonly terrainTypes: Record<string, Terrain>,
+		public readonly terrainHeight: number
+	) {}
+	terrainType(height: number): Terrain {
+		let rvH: number | undefined
+		let rvT: undefined | Terrain
 		for (const type in this.terrainTypes) {
 			const tType = this.terrainTypes[type as keyof typeof this.terrainTypes]
 			const thisH = tType.appearHeight

@@ -153,4 +153,5 @@ export class MeshPaste extends Object3D {
 			if (this.scene) copy.register(this, this.scene)
 		})
 	}
+	// TODO: override updateWordMatrix instead of re-updating all each render
 }
