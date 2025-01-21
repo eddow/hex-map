@@ -25,7 +25,6 @@ export function textureUVs(texture: TexturePosition, side: number, rot: number) 
 		v + inTextureRadius * Math.sin(texture.alpha + ((side + rot) * Math.PI) / 3),
 	]
 	const arr = [u, v, ...outP(side + 1), ...outP(side)]
-	console.log(arr)
 	return arr.slice(rot, 6).concat(arr.slice(0, rot))
 }
 

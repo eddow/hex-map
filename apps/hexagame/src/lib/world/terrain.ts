@@ -17,14 +17,14 @@ export const terrainTypes: Record<string, Terrain> = {
 	sand: {
 		color: { r: 0.8, g: 0.8, b: 0 },
 		texture: terrainTexture('sand'),
-		appearHeight: Number.NEGATIVE_INFINITY,
+		appearHeight: 0,
 		variance: 0.1,
 		resourceDistribution: [[Rock, 0.1]],
 	},
 	grass: {
 		color: { r: 0.4, g: 0.8, b: 0.4 },
 		texture: terrainTexture('grass'),
-		appearHeight: 0.1,
+		appearHeight: 0.4,
 		variance: 0.7,
 		resourceDistribution: [
 			[Rock, 0.2],
@@ -34,7 +34,7 @@ export const terrainTypes: Record<string, Terrain> = {
 	forest: {
 		color: { r: 0, g: 0.9, b: 0 },
 		texture: terrainTexture('forest'),
-		appearHeight: 0.4,
+		appearHeight: 0.6,
 		variance: 2,
 		resourceDistribution: [
 			[Rock, 0.1],
@@ -44,7 +44,7 @@ export const terrainTypes: Record<string, Terrain> = {
 	stone: {
 		color: { r: 0.6, g: 0.4, b: 0.1 },
 		texture: terrainTexture('stone'),
-		appearHeight: 0.8,
+		appearHeight: 0.7,
 		variance: 3,
 		resourceDistribution: [
 			[Rock, 1.5],
@@ -54,15 +54,14 @@ export const terrainTypes: Record<string, Terrain> = {
 	snow: {
 		color: { r: 0.9, g: 0.9, b: 0.9 },
 		texture: terrainTexture('snow'),
-		appearHeight: 0.95,
+		appearHeight: 0.8,
 		variance: 1.5,
 		resourceDistribution: [[Rock, 0.2]],
 	},
 }
 
 const terrains = new TerrainDefinition<TexturedTerrain>(
-	terrainTypes,
-	terrainHeight
+	terrainTypes
 	/*, waterTexture, {
 	center: terrainTypes.snow,
 	perimeter: terrainTypes.sand,

@@ -18,8 +18,11 @@ export abstract class Pow2Procedural<
 	Tile extends Pow2Tile = Pow2Tile,
 	Terrain extends Pow2Terrain = Pow2Terrain,
 > extends ProceduralBase<Tile> {
-	constructor(public readonly scale: number) {
-		super(1 + (1 << scale))
+	constructor(
+		public readonly scale: number,
+		terrainHeight: number
+	) {
+		super(1 + (1 << scale), terrainHeight)
 	}
 	listTiles(land: LandBase<Tile, Terrain>, gen: RandGenerator): Tile[] {
 		const tiles = new Array(this.nbrTiles).fill(null)
@@ -55,12 +58,14 @@ export abstract class Pow2Procedural<
 	abstract initCorners(tiles: Tile[], corners: number[], gen: RandGenerator): void
 	insidePoint(land: LandBase<Tile, Terrain>, p1: Tile, p2: Tile, scale: number): Pow2Tile {
 		const variance = (p1.terrain.variance + p2.terrain.variance) / 2
-		const randScale = ((1 << scale) / this.radius) * land.terrains.terrainHeight * variance
+		const randScale = ((1 << scale) / this.radius) * this.terrainHeight * variance
 		const seed = LCG(p1.seed, p2.seed)()
 		const gen = LCG(seed)
 		const z = (p1.z + p2.z) / 2 + gen(0.5, -0.5) * randScale
 		const changeType = gen() < scale / this.scale
-		const terrain = changeType ? land.terrains.terrainType(z) : [p1, p2][Math.floor(gen(2))].terrain
+		const terrain = changeType
+			? land.terrains.terrainType(z / this.terrainHeight)
+			: [p1, p2][Math.floor(gen(2))].terrain
 		return { z, terrain, seed }
 	}
 	/**

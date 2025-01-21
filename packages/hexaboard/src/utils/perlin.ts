@@ -1,8 +1,12 @@
 import { Vector2, type Vector2Like } from 'three'
 import { type RandGenerator, numbers } from './numbers'
 
-function getConstantVector(v: number): Vector2 {
+/*function getConstantVector(v: number): Vector2 {
 	return new Vector2(v & 1 ? -1 : 1, v & 2 ? -1 : 1)
+}*/
+function getConstantVector(v: number): Vector2 {
+	const angle = v * Math.SQRT2 // Square root of 2 for full cycle over 256
+	return new Vector2(Math.cos(angle), Math.sin(angle))
 }
 
 function fade(t: number): number {
@@ -12,6 +16,7 @@ function fade(t: number): number {
 function lerp(t: number, a1: number, a2: number): number {
 	return a1 + t * (a2 - a1)
 }
+
 export class Perlin {
 	readonly permutation: number[]
 	constructor(gen: RandGenerator) {
@@ -56,6 +61,7 @@ export class Perlin {
 		let n = 0.0
 		let a = 1.0
 		let f = 0.05
+		y += 500
 		for (let o = 0; o < 8; o++) {
 			const v = a * this.noise2D({ x: x * f, y: y * f })
 			n += v
@@ -63,6 +69,6 @@ export class Perlin {
 			a *= 0.5
 			f *= 2.0
 		}
-		return ((n + 1) / 2) * (max - min) + min
+		return Math.max(((n + 1) / 2) * (max - min) + min, 0)
 	}
 }

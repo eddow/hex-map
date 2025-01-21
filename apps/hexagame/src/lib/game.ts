@@ -16,15 +16,14 @@ import {
 import { NoiseProcedural } from 'hexaboard'
 import { CatmullRomCurve3, Mesh, MeshBasicMaterial, type Object3D, TubeGeometry } from 'three'
 import { dockview } from './globals.svelte'
-import terrains from './world/terrain'
+import terrains, { terrainHeight } from './world/terrain'
 
 export function createGame(seed: number) {
-	const worldSeed = 0.77
 	//const land = new MonoSectorLand(new Island(new Vector3(0, 0, 0), 10, 6, terrains))
 	const landscape = new TexturedLandscape(20)
-	const procedural = new NoiseProcedural(32)
+	const procedural = new NoiseProcedural(32, terrainHeight, 0.77)
 
-	const land = new MonoSectorLand(terrains, procedural, landscape, worldSeed)
+	const land = new MonoSectorLand(terrains, procedural, landscape, seed)
 
 	const game = new Game<MonoSectorLand>(land)
 

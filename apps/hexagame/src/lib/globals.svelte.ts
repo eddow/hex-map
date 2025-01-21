@@ -15,7 +15,7 @@ export const configuration = $state(
 )
 
 export const games: Record<PropertyKey, Game> = {
-	GameX: createGame(Math.random()),
+	GameX: createGame(5982),
 }
 
 export const dockview = $state({ api: {} as DockviewApi } as { api: DockviewApi })
