@@ -105,6 +105,10 @@ export abstract class LandscapeBase<
 		return pointsHexIndex[geometryIndex]
 	}
 
+	/**
+	 * Retrieves the exact (xyz) position of a tile in the sector
+	 * Reference: sector
+	 */
 	localTileCenter(sector: Sector<Tile>, aRef: AxialRef) {
 		const [hexIndex, coords] = [axial.index(aRef), axial.coords(aRef)]
 
@@ -113,15 +117,18 @@ export abstract class LandscapeBase<
 			z: sector.tiles[hexIndex].z,
 		})
 	}
+
 	/**
 	 * Retrieves the exact (xyz) position of a tile in the world
+	 * Reference: world
 	 */
 	worldTileCenter(sector: Sector<Tile>, aRef: AxialRef) {
 		return this.localTileCenter(sector, aRef).add(sector.group.position)
 	}
 
 	/**
-	 * Retrieves a point (xyz) inside a tile
+	 * Retrieves a point (xyz) inside a rendered tile
+	 * Reference: tile
 	 * @returns
 	 */
 	cartesian(sector: Sector<Tile>, aRef: AxialRef, { s, u, v }: PositionInTile) {
@@ -149,6 +156,7 @@ export class UniformLandscape<Tile extends TileBase = TileBase> extends Landscap
 	) {
 		super(tileSize)
 	}
+
 	protected createMaterial(sector: Sector<Tile>) {
 		return new MeshBasicMaterial({
 			color: (sector as any).color ?? this.color,
