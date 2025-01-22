@@ -8,7 +8,7 @@ import {
 	type Vector3Tuple,
 } from 'three'
 import { numbers } from '~/utils/numbers'
-import { axialAt, axialIndex, axialPolynomial, cartesian, hexSides, hexTiles } from '../hexagon'
+import { type AxialRef, axial, cartesian, hexSides, hexTiles } from '../../utils/axial'
 import type Sector from '../sector'
 import type { TileBase } from '../sector'
 
@@ -51,6 +51,8 @@ export interface PositionPointInfo {
 export interface PositionGeometryAttribute {
 	position: number[]
 }
+// Note: landscaping uses `sector.tiles.length instead of `sector.nbrTiles` because,
+//  in puzzle tiles, common tiles have to be double or triple-rendered
 export abstract class LandscapeBase<
 	Tile extends TileBase = TileBase,
 	PointInfo extends PositionPointInfo = PositionPointInfo,
@@ -91,10 +93,10 @@ export abstract class LandscapeBase<
 		return geometry
 	}
 
-	protected abstract get material(): Material
+	protected abstract createMaterial(sector: Sector<Tile>): Material
 
 	createMesh(sector: Sector<Tile>) {
-		const mesh = new Mesh(this.createGeometry(sector), this.material)
+		const mesh = new Mesh(this.createGeometry(sector), this.createMaterial(sector))
 		mesh.userData = { mouseTarget: sector }
 		return mesh
 	}
@@ -106,10 +108,12 @@ export abstract class LandscapeBase<
 	/**
 	 * Retrieves the exact (xyz) position of a tile
 	 */
-	tileCenter(sector: Sector<Tile>, hexIndex: number) {
+	tileCenter(sector: Sector<Tile>, aRef: AxialRef) {
+		const [hexIndex, coords] = [axial.index(aRef), axial.coords(aRef)]
+
 		return new Vector3()
 			.copy({
-				...cartesian(axialAt(hexIndex), this.tileSize),
+				...cartesian(coords, this.tileSize),
 				z: sector.tiles[hexIndex].z,
 			})
 			.add(sector.group.position)
@@ -119,28 +123,35 @@ export abstract class LandscapeBase<
 	 * Retrieves a point (xyz) inside a tile
 	 * @returns
 	 */
-	cartesian(sector: Sector<Tile>, hexIndex: number, { s, u, v }: PositionInTile) {
-		const axial = axialAt(hexIndex)
-		const next1 = axialIndex(axialPolynomial([1, axial], [1, hexSides[s]]))
-		const next2 = axialIndex(axialPolynomial([1, axial], [1, hexSides[(s + 1) % 6]]))
+	cartesian(sector: Sector<Tile>, aRef: AxialRef, { s, u, v }: PositionInTile) {
+		const coords = axial.coords(aRef)
+		const next1 = axial.index(axial.linear([1, coords], [1, hexSides[s]]))
+		const next2 = axial.index(axial.linear([1, coords], [1, hexSides[(s + 1) % 6]]))
 		const nbrTiles = sector.tiles.length
 		if (next1 >= nbrTiles || next2 >= nbrTiles) return null
-		const pos = this.tileCenter(sector, hexIndex)
+		const pos = this.tileCenter(sector, aRef)
 		const next1Pos = this.tileCenter(sector, next1).sub(pos)
 		const next2Pos = this.tileCenter(sector, next2).sub(pos)
 		return next1Pos.multiplyScalar(u / 2).add(next2Pos.multiplyScalar(v / 2))
 	}
 }
 
-export class WireFrameLandscape<Tile extends TileBase = TileBase> extends LandscapeBase<
+export class UniformLandscape<Tile extends TileBase = TileBase> extends LandscapeBase<
 	Tile,
 	PositionPointInfo,
 	PositionGeometryAttribute
 > {
-	protected get material() {
+	constructor(
+		tileSize: number,
+		public readonly color: number = 0xffffff,
+		public readonly wireframe: boolean = false
+	) {
+		super(tileSize)
+	}
+	protected createMaterial(sector: Sector<Tile>) {
 		return new MeshBasicMaterial({
-			color: 0xffffff,
-			wireframe: true,
+			color: (sector as any).color ?? this.color,
+			wireframe: this.wireframe,
 		})
 	}
 }

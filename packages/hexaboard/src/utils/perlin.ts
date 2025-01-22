@@ -19,7 +19,10 @@ function lerp(t: number, a1: number, a2: number): number {
 
 export class Perlin {
 	readonly permutation: number[]
-	constructor(gen: RandGenerator) {
+	constructor(
+		gen: RandGenerator,
+		private readonly zoomFactor = 0.05
+	) {
 		const perm1 = numbers(256)
 		for (let e = perm1.length - 1; e > 0; e--) {
 			const index = Math.floor(gen(e))
@@ -60,8 +63,7 @@ export class Perlin {
 	heightMap({ x, y }: Vector2Like, max = 1, min = 0): number {
 		let n = 0.0
 		let a = 1.0
-		let f = 0.05
-		y += 500
+		let f = this.zoomFactor
 		for (let o = 0; o < 8; o++) {
 			const v = a * this.noise2D({ x: x * f, y: y * f })
 			n += v

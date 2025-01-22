@@ -1,8 +1,9 @@
+import type { TerrainType } from 'dist/src/game'
 import type { Object3D } from 'three'
-import { hexTiles } from '~/ground/hexagon'
-import type { RandGenerator } from '~/utils/lockSemaphore'
+import type { TerrainBase } from '~/ground/terrain'
+import { hexTiles } from '~/utils/axial'
 import { meshAsset } from '~/utils/meshes'
-import type { TerrainType } from '../ground/terrain'
+import type { RandGenerator } from '~/utils/numbers'
 
 /**
  * Number of hexagonal "circles" around the center of sub-tiles that can contain something
@@ -55,21 +56,69 @@ export abstract class Resource extends Handelable {
 		return mesh
 	}
 }
-export type ResourceGenerator = new (gen: RandGenerator, terrain: TerrainType) => Resource
+
+interface ResourcefulTerrain extends TerrainBase {
+	resourceDistribution: ResourceDistribution[]
+}
+
+export type ResourceGenerator = new (gen: RandGenerator, terrain: ResourcefulTerrain) => Resource
 export type ResourceDistribution = [ResourceGenerator, number][]
-export function generateResource(gen: RandGenerator, terrain: TerrainType) {
+export function generateResource(gen: RandGenerator, terrain: ResourcefulTerrain) {
 	const resources = terrain.resourceDistribution
 	const repeat = hexTiles(terrainContentRadius + 1)
-	if (!resources.length) return
-	let choice = gen()
-	for (let [resource, chance] of resources) {
-		chance /= repeat
-		if (choice < chance) return new resource(gen, terrain)
-		choice -= chance
-	}
+	if (!resources.length) return /* TODO
+		let choice = gen()
+		for (let [resource, chance] of resources) {
+			chance /= repeat
+			if (choice < chance) return new resource(gen, terrain)
+			choice -= chance
+		}
+		*/
 }
-export function* generateResources(gen: RandGenerator, terrain: TerrainType, n: number) {
+export function* generateResources(gen: RandGenerator, terrain: ResourcefulTerrain, n: number) {
 	for (let i = 0; i < n; i++) yield generateResource(gen, terrain)
 }
 
 // Supplies -> wood, hammer, meat
+
+/*
+	meshContent() {
+		for (let hexIndex = 0; hexIndex < this.nbrTiles; hexIndex++) {
+			const p = this.points[hexIndex]
+			if (p.content.length) {
+				if (!p.group) {
+					p.group = new Group()
+					p.group.position.copy(this.vPosition(hexIndex))
+					this.group.add(p.group)
+				}
+				for (let i = 0; i < p.content.length; i++)
+					if (p.content[i]) {
+						const pos = this.cartesian(hexIndex, posInTile(i, terrainContentRadius))
+						// Pos is null when no neighbor sector is present and the resource is out of rendering zone on the border
+						if (pos) {
+							const rsc = p.content[i]!
+							if (!rsc.builtMesh) {
+								const mesh = rsc.createMesh()
+								mesh.position.copy(pos)
+								p.group.add(mesh)
+							}
+						}
+					}
+			}
+		}
+	}
+	populatePoint(p: TexturedTile, position: Axial, hexIndex: number): void {
+		const gen = LCG(p.seed + 0.2)
+		if (p.z > 0)
+			p.content = Array.from(generateResources(gen, p.type, hexTiles(terrainContentRadius + 1)))
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+*/

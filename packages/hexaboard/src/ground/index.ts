@@ -1,4 +1,4 @@
-export * from './hexagon'
+export * from '../utils/axial'
 
 export * from './landscape'
 export * from './procedural'

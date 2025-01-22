@@ -1,4 +1,5 @@
-import { type Group, Vector3 } from 'three'
+import type { Group } from 'three'
+import { type AxialRef, axial } from '~/utils/axial'
 import { LCG, subSeed } from '~/utils/numbers'
 import type { LandscapeBase } from '../landscape'
 import type { ProceduralBase } from '../procedural'
@@ -11,6 +12,9 @@ export class MonoSectorLand<
 	Tile extends TileBase = TileBase,
 	Terrain extends TerrainBase = TerrainBase,
 > extends LandBase<Tile, Terrain> {
+	tileSector(aRef: AxialRef) {
+		return { sector: this.sector, hexIndex: axial.index(aRef) }
+	}
 	public readonly sector: Sector
 	constructor(
 		public readonly terrains: TerrainDefinition<Terrain>,
@@ -21,14 +25,13 @@ export class MonoSectorLand<
 		super(terrains, procedural, landscape)
 		this.sector = new Sector(
 			this,
-			procedural.listTiles(this, LCG(seed)),
-			subSeed(seed, 'sector'),
-			new Vector3(0, 0, 0)
+			procedural.listTiles(this, { gen: LCG(seed), center: { q: 0, r: 0 } }),
+			subSeed(seed, 'sector')
 		)
 	}
 
 	/**
-	 * @obsolete Should be replaced and see how it's needed
+	 * @deprecated Should be replaced and see how it's needed
 	 */
 	get tileSize() {
 		return this.landscape.tileSize

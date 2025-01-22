@@ -1,7 +1,9 @@
 import type { Group } from 'three'
+import type { AxialRef } from '~/main'
 import type { LandscapeBase } from '../landscape'
 import type { ProceduralBase } from '../procedural'
 import type { TileBase } from '../sector'
+import type Sector from '../sector'
 import type { TerrainBase, TerrainDefinition } from '../terrain'
 
 export abstract class LandBase<
@@ -15,4 +17,9 @@ export abstract class LandBase<
 	) {}
 	progress(dt: number) {}
 	abstract get group(): Group
+	abstract tileSector(aRef: AxialRef): { sector: Sector; hexIndex: number }
+	tileCenter(aRef: AxialRef) {
+		const { sector, hexIndex } = this.tileSector(aRef)
+		return this.landscape.tileCenter(sector, hexIndex)
+	}
 }

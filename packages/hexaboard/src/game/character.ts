@@ -1,7 +1,7 @@
 import type { Object3D, Vector3 } from 'three'
 import { GameEntity } from '~/game/game'
-import { axialIndex, axialRound, fromCartesian } from '~/ground/hexagon'
 import type Sector from '~/ground/sector'
+import { axialRound, fromCartesian, indexAt } from '~/utils/axial'
 import { nextInPath } from './path'
 
 export interface CharacterPlan {
@@ -34,7 +34,7 @@ class Walk implements CharacterAction {
 		character.o3d.position.add(direction.normalize().multiplyScalar(dt * velocity))
 	}
 	cancel(character: Character) {
-		character.tile = axialIndex(
+		character.tile = indexAt(
 			axialRound(fromCartesian(character.o3d.position, character.sector.tileSize))
 		)
 	}
@@ -49,7 +49,7 @@ class GoToPlan implements CharacterPlan {
 	) {}
 	next(character: Character) {
 		if (character.sector === this.sector && character.tile === this.tile) return
-		const next = axialIndex(nextInPath(character.sector, character.tile, this.sector, this.tile))
+		const next = indexAt(nextInPath(character.sector, character.tile, this.sector, this.tile))
 		return new Walk(character.sector.tileCenter(next), this, () => {
 			character.tile = next
 		})

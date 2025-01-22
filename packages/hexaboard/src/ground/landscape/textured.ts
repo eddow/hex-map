@@ -45,10 +45,8 @@ export interface TexturedGeometryAttribute extends PositionGeometryAttribute {
 	uvB: number[]
 	uvC: number[]
 }
-/*export function TexturedLandscape<Tile extends TexturedTile>(
-	superClass: typeof LandscapeBase<Tile, TexturedPointInfo, TexturedGeometryAttribute>
-) {}*/
-export class TexturedLandscape<
+
+export class DynamicTexturedLandscape<
 	Tile extends TexturedTile = TexturedTile,
 	PointInfo extends TexturedPointInfo = TexturedPointInfo,
 	GeometryAttribute extends TexturedGeometryAttribute = TexturedGeometryAttribute,
@@ -69,9 +67,17 @@ export class TexturedLandscape<
 			uvC: [],
 		}
 	}
+	textureIdx(texture: Texture): number {
+		let textureIdx = this.textures.indexOf(texture)
+		if (textureIdx < 0) {
+			textureIdx = this.textures.length
+			this.textures.push(texture)
+		}
+		return textureIdx
+	}
 	geometryPointInfos(sector: Sector<Tile>, hexIndex: number): TexturedPointInfo {
 		const p = sector.tiles[hexIndex]
-		let textureIdx = this.textures.indexOf(p.terrain.texture)
+		let textureIdx = this.textureIdx(p.terrain.texture)
 
 		const gen = LCG(sector.tileSeed(hexIndex))
 
@@ -116,7 +122,7 @@ export class TexturedLandscape<
 		geometry.setAttribute('uvB', new Float32BufferAttribute(attributes.uvB, 2))
 		geometry.setAttribute('uvC', new Float32BufferAttribute(attributes.uvC, 2))
 	}
-	get material(): Material {
+	generateMaterial(): Material {
 		const nbrTextures = this.textures.length
 		const texturesCase = numbers(nbrTextures).map(
 			(n) => `if (i == ${n}) return texture2D(textures[${n}], vUv);`
@@ -179,5 +185,26 @@ void main() {
 }
 			`,
 		})
+	}
+	createMaterial(): Material {
+		return this.generateMaterial()
+	}
+}
+
+/**
+ * Make one and only one material, but has to specify all the used texture at constructor
+ */
+export class TexturedLandscape<
+	Tile extends TexturedTile = TexturedTile,
+	PointInfo extends TexturedPointInfo = TexturedPointInfo,
+	GeometryAttribute extends TexturedGeometryAttribute = TexturedGeometryAttribute,
+> extends DynamicTexturedLandscape<Tile, PointInfo, GeometryAttribute> {
+	private readonly oneMaterial: Material
+	constructor(tileSize: number, textures: Texture[]) {
+		super(tileSize, textures)
+		this.oneMaterial = this.generateMaterial()
+	}
+	createMaterial(): Material {
+		return this.oneMaterial
 	}
 }

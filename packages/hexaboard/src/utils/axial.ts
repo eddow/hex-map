@@ -31,29 +31,23 @@ export const rotations: Rotation[] = [
 export const hexSides = rotations.map((c) => c({ q: 1, r: 0 }))
 
 /**
- * Sum of coef*axial
- * @param args [coef, axial]
- * @returns Axial
+ * Returns the axial coordinates of the nth hexagonal tile
+ * @deprecated use `ArialRef` and `axial.coords`
  */
-export function axialPolynomial(...args: [number, Axial][]): Axial {
-	return args.reduce(
-		(acc, [coef, axial]) => ({ q: acc.q + coef * axial.q, r: acc.r + coef * axial.r }),
-		{ q: 0, r: 0 }
-	)
-}
-
-/** Returns the axial coordinates of the nth hexagonal tile */
 export function axialAt(hexIndex: number): Axial {
 	if (hexIndex === 0) return { q: 0, r: 0 }
 	const radius = Math.floor((3 + Math.sqrt(-3 + 12 * hexIndex)) / 6)
 	const previous = 3 * radius * (radius - 1) + 1
 	const sidePos = hexIndex - previous
 	const side = Math.floor(sidePos / radius)
-	return axialPolynomial([radius, hexSides[side]], [sidePos % radius, hexSides[(side + 2) % 6]])
+	return axial.linear([radius, hexSides[side]], [sidePos % radius, hexSides[(side + 2) % 6]])
 }
 
-/** Gets the hexIndex from the position */
-export function axialIndex({ q, r }: Axial): number {
+/**
+ * Gets the hexIndex from the position
+ * @deprecated use `ArialRef` and `axial.index`
+ */
+export function indexAt({ q, r }: Axial): number {
 	if (q === 0 && r === 0) return 0
 	const s = -q - r
 	const ring = Math.max(Math.abs(q), Math.abs(r), Math.abs(s))
@@ -78,7 +72,8 @@ export function puzzleTiles(radius: number) {
 	return 3 * radius ** 2
 }
 
-export function cartesian({ q, r }: Axial, size = 1) {
+export function cartesian(aRef: AxialRef, size = 1) {
+	const { q, r } = axial.coords(aRef)
 	const A = Math.sqrt(3) * size
 	const B = (Math.sqrt(3) / 2) * size
 	const C = (3 / 2) * size
@@ -125,11 +120,11 @@ export function genTilePosition(gen: RandGenerator) {
 	return { s, u, v }
 }
 
-export function posInTile(hexIndex: number, radius: number) {
-	if (hexIndex === 0) return { s: 0, u: 0, v: 0 }
-	const axial = axialAt(hexIndex)
+export function posInTile(aRef: AxialRef, radius: number) {
+	if (axial.zero(aRef)) return { s: 0, u: 0, v: 0 }
+	const coords = axial.coords(aRef)
 	const outerRadius = radius + 0.5
-	const { q, r } = { q: axial.q / outerRadius, r: axial.r / outerRadius }
+	const { q, r } = { q: coords.q / outerRadius, r: coords.r / outerRadius }
 	const s = -q - r
 	const signs = (q >= 0 ? 'Q' : 'q') + (r >= 0 ? 'R' : 'r') + (s >= 0 ? 'S' : 's')
 	return {
@@ -144,8 +139,47 @@ export function posInTile(hexIndex: number, radius: number) {
 
 /** Retrieves the tiles around a given tile (indexes) */
 export function pointsAround(tile: number, nbrTiles: number) {
-	const axial = axialAt(tile)
+	const coords = axialAt(tile)
 	return hexSides
-		.map((side) => axialIndex(axialPolynomial([1, axial], [1, side])))
+		.map((side) => indexAt(axial.linear([1, coords], [1, side])))
 		.filter((tile) => tile < nbrTiles)
+}
+
+export type AxialRef = number | Axial | string
+export const axial = {
+	coords(aRef: AxialRef) {
+		if (typeof aRef === 'string') {
+			const [q, r] = aRef.split(',')
+			return { q: Number(q), r: Number(r) }
+		}
+		return typeof aRef === 'number' ? axialAt(aRef) : aRef
+	},
+	index(aRef: AxialRef) {
+		if (typeof aRef === 'string') {
+			const [q, r] = aRef.split(',')
+			return indexAt({ q: Number(q), r: Number(r) })
+		}
+		return typeof aRef === 'number' ? aRef : indexAt(aRef)
+	},
+	key(aRef: AxialRef) {
+		if (typeof aRef === 'number') {
+			const { q, r } = axialAt(aRef)
+			return `${q},${r}`
+		}
+		return typeof aRef === 'string' ? aRef : `${aRef.q},${aRef.r}`
+	},
+	linear(...args: [number, AxialRef][]): Axial {
+		return args.reduce(
+			(acc, [coef, aRef]) => {
+				const { q, r } = axial.coords(aRef)
+				return { q: acc.q + coef * q, r: acc.r + coef * r }
+			},
+			{ q: 0, r: 0 }
+		)
+	},
+	zero(aRef: AxialRef) {
+		if (typeof aRef !== 'object') return [0, '0,0'].includes(aRef)
+		const { q, r } = axial.coords(aRef)
+		return q === 0 && r === 0
+	},
 }

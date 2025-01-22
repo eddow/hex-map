@@ -1,16 +1,17 @@
 import * as m from '$lib/paraglide/messages'
 import {
-	type Axial,
+	type AxialRef,
+	DynamicTexturedLandscape,
 	Game,
-	MonoSectorLand,
 	MouseButton,
 	type MouseButtonEvolution,
 	type MouseHoverEvolution,
-	TexturedLandscape,
+	PuzzleLand,
 	TileCursor,
-	axialIndex,
+	axial,
 	costingPath,
 	icosahedron,
+	numbers,
 	pointsAround,
 } from 'hexaboard'
 import { NoiseProcedural } from 'hexaboard'
@@ -20,28 +21,29 @@ import terrains, { terrainHeight } from './world/terrain'
 
 export function createGame(seed: number) {
 	//const land = new MonoSectorLand(new Island(new Vector3(0, 0, 0), 10, 6, terrains))
-	const landscape = new TexturedLandscape(20)
-	const procedural = new NoiseProcedural(32, terrainHeight, 0.77)
+	const landscape = new DynamicTexturedLandscape(20)
+	//const landscape = new UniformLandscape(20)
+	const procedural = new NoiseProcedural(2, terrainHeight, 0.77)
 
-	const land = new MonoSectorLand(terrains, procedural, landscape, seed)
+	const land = new PuzzleLand(terrains, procedural, landscape, seed)
 
-	const game = new Game<MonoSectorLand>(land)
+	const game = new Game(land)
+	const centralSector = game.land.sector(0)
+	for (const sn of numbers(2)) game.land.sector(sn)
+	//game.land.sector(2)
 
 	//const pawn = new Character(land.sector, 0, sphere(2, { color: 0xff0000 }))
 	//const pawn = new Character(land.sector, 0, new Object3D())
 	//game.addEntity(pawn)
 	const cursor = new TileCursor(
-		icosahedron(land.tileSize / Math.sqrt(3), {
+		icosahedron(landscape.tileSize, {
 			color: 0xffffff,
 			wireframe: true,
 		})
 	)
 
-	function axialV3(axial: Axial | number) {
-		return game.land.landscape.tileCenter(
-			game.land.sector,
-			typeof axial === 'number' ? axial : axialIndex(axial)
-		)
+	function axialV3(aRef: AxialRef) {
+		return game.land.landscape.tileCenter(centralSector, axial.coords(aRef))
 	}
 	let pathTube: Object3D | undefined
 	game.onMouse('hover', (ev: MouseHoverEvolution) => {
@@ -53,7 +55,6 @@ export function createGame(seed: number) {
 		}
 		if (cursor.tile) {
 			//if (pawn.tile !== cursor.tile.hexIndex) {
-			const sector = game.land.sector
 			/* straight path
 				const path = [
 					axialAt(pawn.tile),
@@ -63,20 +64,22 @@ export function createGame(seed: number) {
 				const path = costingPath(
 					cursor.tile.hexIndex,
 					(from, to) =>
-						to < sector.tiles.length ? (sector.points[from].z - sector.points[to].z) ** 2 : Number.NaN,
-					(hexIndex) => hexIndex < sector.tiles.length && pawn.tile === hexIndex
+						to < sector.nbrTiles ? (sector.points[from].z - sector.points[to].z) ** 2 : Number.NaN,
+					(hexIndex) => hexIndex < sector.nbrTiles && pawn.tile === hexIndex
 				)*/
 			const path = costingPath(
 				cursor.tile.hexIndex,
 				(from, to) =>
-					to < sector.tiles.length
+					to < centralSector.nbrTiles
 						? // The fact to climb up
-							Math.max(0, sector.tiles[to].z - sector.tiles[from].z) ** 2 +
+							Math.max(0, centralSector.tiles[to].z - centralSector.tiles[from].z) ** 2 +
 							// The fact to not take the strongest down slope
-							sector.tiles[to].z -
-							Math.min(...pointsAround(from, sector.tiles.length).map((p) => sector.tiles[p].z))
+							centralSector.tiles[to].z -
+							Math.min(
+								...pointsAround(from, centralSector.nbrTiles).map((p) => centralSector.tiles[p].z)
+							)
 						: Number.NaN,
-				(hexIndex) => hexIndex < sector.tiles.length && sector.tiles[hexIndex].z < 0
+				(hexIndex) => hexIndex < centralSector.nbrTiles && centralSector.tiles[hexIndex].z < 0
 			)
 			if (path && path.length > 1) {
 				const pathCurve = new CatmullRomCurve3(path.map((p) => axialV3(p)))

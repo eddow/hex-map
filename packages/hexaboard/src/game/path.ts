@@ -1,14 +1,14 @@
+import type Sector from '~/ground/sector'
 import {
 	type Axial,
+	axial,
 	axialAt,
 	axialDistance,
-	axialIndex,
 	axialLerp,
-	axialPolynomial,
 	axialRound,
 	hexSides,
-} from '~/ground/hexagon'
-import type Sector from '~/ground/sector'
+	indexAt,
+} from '~/utils/axial'
 
 export function nextInPath(fromSector: Sector, fromTile: number, toSector: Sector, toTile: number) {
 	if (fromSector !== toSector)
@@ -48,9 +48,9 @@ export function costingPath(fromTile: number, cost: Cost, isFound: IsFound) {
 	let found: { hexIndex: number; cost: number } | undefined
 	while (toStudy.length && (!found || found.cost > toStudy[0].cost)) {
 		const study = toStudy.shift()!
-		const axial = axialAt(study.hexIndex)
+		const coords = axialAt(study.hexIndex)
 		for (const hexSide of hexSides) {
-			const hexIndex = axialIndex(axialPolynomial([1, axial], [1, hexSide]))
+			const hexIndex = indexAt(axial.linear([1, coords], [1, hexSide]))
 			if (hexIndex !== origins[study.hexIndex].hexIndex) {
 				const nextCost = cost(study.hexIndex, hexIndex)
 				if (Number.isNaN(nextCost)) continue

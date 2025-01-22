@@ -1,11 +1,5 @@
-import {
-	type Face,
-	Group,
-	type Intersection,
-	type Object3D,
-	type Object3DEventMap,
-	type Vector3,
-} from 'three'
+import { type Face, Group, type Intersection, type Object3D, type Object3DEventMap } from 'three'
+import { type AxialRef, axial } from '~/main'
 import { subSeed } from '~/utils'
 import { type MouseReactive, TileHandle } from '~/utils/mouseControl'
 import type { LandBase } from './land/land'
@@ -20,17 +14,11 @@ export default class Sector<Tile extends TileBase = TileBase> implements MouseRe
 	constructor(
 		public readonly land: LandBase,
 		public readonly tiles: Tile[],
-		public readonly seed: number,
-		position: Vector3
-	) {
-		this.group.position.copy(position)
-	}
+		public readonly seed: number
+	) {}
 	group: Group = new Group()
 	ground?: Object3D
 
-	/**
-	 * Used by the mouse control
-	 */
 	mouseHandle(intersection: Intersection<Object3D<Object3DEventMap>>): TileHandle {
 		const baryArr = intersection.barycoord!.toArray()
 		const facePt = baryArr.indexOf(Math.max(...baryArr))
@@ -41,10 +29,13 @@ export default class Sector<Tile extends TileBase = TileBase> implements MouseRe
 
 	/**
 	 * Total amount of tiles
-	 * @obsolete Should be replaced and see how it's needed
+	 * Overridden by `PuzzleSector` for common tiles management
 	 */
 	get nbrTiles() {
 		return this.tiles.length
+	}
+	worldTile(aRef: AxialRef) {
+		return axial.coords(aRef)
 	}
 
 	/**
@@ -58,12 +49,12 @@ export default class Sector<Tile extends TileBase = TileBase> implements MouseRe
 
 	// #region forward helpers
 
-	tileCenter(hexIndex: number) {
-		return this.land.landscape.tileCenter(this, hexIndex)
+	tileCenter(aRef: AxialRef) {
+		return this.land.landscape.tileCenter(this, axial.index(aRef))
 	}
 
-	tileSeed(hexIndex: number) {
-		return subSeed(this.seed, 'tile', hexIndex)
+	tileSeed(aRef: AxialRef) {
+		return subSeed(this.seed, 'tile', axial.index(aRef))
 	}
 
 	// #endregion

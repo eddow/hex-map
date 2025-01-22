@@ -1,5 +1,5 @@
 import { LCG, type RandGenerator } from '~/utils/numbers'
-import { type Axial, axialIndex, axialPolynomial, hexSides, hexTiles } from '../hexagon'
+import { type Axial, axial, hexSides, hexTiles } from '../../utils/axial'
 import type { LandBase } from '../land'
 import type { TileBase } from '../sector'
 import type { TerrainBase } from '../terrain'
@@ -24,10 +24,10 @@ export abstract class Pow2Procedural<
 	) {
 		super(1 + (1 << scale), terrainHeight)
 	}
-	listTiles(land: LandBase<Tile, Terrain>, gen: RandGenerator): Tile[] {
+	listTiles(land: LandBase<Tile, Terrain>, { gen }: { gen: RandGenerator }): Tile[] {
 		const tiles = new Array(this.nbrTiles).fill(null)
-		const corners = hexSides.map((side) => axialPolynomial([1 << this.scale, side]))
-		this.initCorners(tiles, corners.map(axialIndex), gen)
+		const corners = hexSides.map((side) => axial.linear([1 << this.scale, side]))
+		this.initCorners(tiles, corners.map(axial.index), gen)
 		for (let c = 0; c < 6; c++)
 			this.divTriangle(land, tiles, this.scale, corners[c], corners[(c + 1) % 6], { q: 0, r: 0 })
 
@@ -37,9 +37,9 @@ export abstract class Pow2Procedural<
 	divTriangle(land: LandBase<Tile, Terrain>, tiles: Tile[], scale: number, ...triangle: Axial[]) {
 		if (scale === 0) return
 
-		const points = triangle.map(axialIndex)
-		const mids = triangle.map((a, i) => axialPolynomial([0.5, a], [0.5, triangle[(i + 1) % 3]]))
-		const midPoints = mids.map(axialIndex)
+		const points = triangle.map(axial.index)
+		const mids = triangle.map((a, i) => axial.linear([0.5, a], [0.5, triangle[(i + 1) % 3]]))
+		const midPoints = mids.map(axial.index)
 		for (let i = 0; i < 3; i++)
 			if (!tiles[midPoints[i]])
 				tiles[midPoints[i]] = this.insidePoint(
@@ -63,9 +63,7 @@ export abstract class Pow2Procedural<
 		const gen = LCG(seed)
 		const z = (p1.z + p2.z) / 2 + gen(0.5, -0.5) * randScale
 		const changeType = gen() < scale / this.scale
-		const terrain = changeType
-			? land.terrains.terrainType(z / this.terrainHeight)
-			: [p1, p2][Math.floor(gen(2))].terrain
+		const terrain = changeType ? land.terrains.terrainType(z) : [p1, p2][Math.floor(gen(2))].terrain
 		return { z, terrain, seed }
 	}
 	/**

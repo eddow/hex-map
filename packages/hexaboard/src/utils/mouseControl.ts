@@ -15,17 +15,17 @@ import { LockSemaphore } from './lockSemaphore'
 export interface MouseReactive {
 	mouseHandle(intersection: Intersection<Object3D<Object3DEventMap>>): MouseHandle
 }
-export abstract class MouseHandle {
-	constructor(public readonly target: MouseReactive) {}
+export abstract class MouseHandle<Target = any> {
+	constructor(public readonly target: Target) {}
 	abstract readonly tile: TileHandle
 	abstract equals(other: MouseHandle): boolean
 }
 
-export class TileHandle extends MouseHandle {
+export class TileHandle extends MouseHandle<Sector> {
 	readonly tile = this
 
 	constructor(
-		public readonly target: Sector,
+		target: Sector,
 		public readonly hexIndex: number
 	) {
 		super(target)

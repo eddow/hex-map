@@ -19,3 +19,5 @@ export const games: Record<PropertyKey, Game> = {
 }
 
 export const dockview = $state({ api: {} as DockviewApi } as { api: DockviewApi })
+
+export const debugInfo = $state({} as Record<string, any>)
