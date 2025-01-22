@@ -3,7 +3,7 @@ import type { AxialRef } from '~/main'
 import type { LandscapeBase } from '../landscape'
 import type { ProceduralBase } from '../procedural'
 import type { TileBase } from '../sector'
-import type Sector from '../sector'
+import Sector from '../sector'
 import type { TerrainBase, TerrainDefinition } from '../terrain'
 
 export interface LandInit<
@@ -33,13 +33,16 @@ export class LandBase<
 		this.landscape = init.landscape
 		this.seed = init.seed
 	}
+	createSector(tiles: Tile[], seed: number, ...args: any[]) {
+		return new Sector(this, tiles, seed)
+	}
 	progress(dt: number) {}
 	tileSector(aRef: AxialRef): { sector: Sector; hexIndex: number } {
 		throw new Error('Not implemented')
 	}
 	tileCenter(aRef: AxialRef) {
 		const { sector, hexIndex } = this.tileSector(aRef)
-		return this.landscape.tileCenter(sector, hexIndex)
+		return this.landscape.worldTileCenter(sector, hexIndex)
 	}
 	addedSector(sector: Sector) {
 		if (!sector.ground) sector.landscape(this.landscape.createMesh(sector))

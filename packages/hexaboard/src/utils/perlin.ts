@@ -13,7 +13,7 @@ export class PerlinNoise {
 		const gen = LCG(seed)
 		const perm = Array.from({ length: 256 }, (_, i) => i)
 		for (let i = perm.length - 1; i > 0; i--) {
-			const j = Math.floor(gen(seed) * (i + 1))
+			const j = Math.floor((gen(seed) * (i + 1)) & 255)
 			;[perm[i], perm[j]] = [perm[j], perm[i]]
 		}
 		return perm

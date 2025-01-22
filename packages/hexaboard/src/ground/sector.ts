@@ -50,7 +50,7 @@ export default class Sector<Tile extends TileBase = TileBase> implements MouseRe
 	// #region forward helpers
 
 	tileCenter(aRef: AxialRef) {
-		return this.land.landscape.tileCenter(this, axial.index(aRef))
+		return this.land.landscape.worldTileCenter(this, axial.index(aRef))
 	}
 
 	tileGen(aRef: AxialRef, ...otherArgs: (number | string)[]) {

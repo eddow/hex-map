@@ -1,3 +1,5 @@
+import type { TexturedTerrain } from './landscape'
+
 export interface TerrainBase {
 	color: { r: number; g: number; b: number }
 	appearHeight: number
@@ -17,5 +19,13 @@ export class TerrainDefinition<Terrain extends TerrainBase = TerrainBase> {
 			}
 		}
 		return rvT!
+	}
+}
+
+export class TexturedTerrainDefinition<
+	Terrain extends TexturedTerrain = TexturedTerrain,
+> extends TerrainDefinition<Terrain> {
+	get textures() {
+		return Object.values(this.terrainTypes).map((t) => t.texture)
 	}
 }

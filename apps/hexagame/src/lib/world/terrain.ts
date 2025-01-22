@@ -1,4 +1,4 @@
-import { TerrainDefinition, type TexturedTerrain } from 'hexaboard'
+import { type TexturedTerrain, TexturedTerrainDefinition } from 'hexaboard'
 import type { ResourcefulTerrain } from 'hexaboard'
 import { RepeatWrapping, TextureLoader } from 'three'
 import { Rock, Tree } from './handelable'
@@ -61,7 +61,7 @@ export const terrainTypes: Record<string, Terrain> = {
 	},
 }
 
-const terrains = new TerrainDefinition<Terrain>(
+const terrains = new TexturedTerrainDefinition<Terrain>(
 	terrainTypes
 	/*, waterTexture, {
 	center: terrainTypes.snow,

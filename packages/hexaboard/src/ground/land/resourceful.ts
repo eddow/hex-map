@@ -18,15 +18,25 @@ interface ResourceOccupation {
 	dirty: boolean
 }
 
-// Note: should be a plugin
+export type ResourcefulInit<
+	Terrain extends ResourcefulTerrain = ResourcefulTerrain,
+	Tile extends TileBase<Terrain> = TileBase<Terrain>,
+> = LandInit<Terrain, Tile> & {
+	/**
+	 * Specifies the amount of rings *in* the tile. These are the divisions with points where resources can appear
+	 */
+	tileRadius: number
+	seaLevel: number
+}
+
 export class ResourcefulLand<
 	Terrain extends ResourcefulTerrain = ResourcefulTerrain,
 	Tile extends TileBase<Terrain> = TileBase<Terrain>,
-> extends PuzzleLand {
-	tileRadius: number
-	seaLevel: number
+> extends PuzzleLand<Terrain, Tile> {
+	readonly tileRadius: number
+	readonly seaLevel: number
 	resourcesGroup = new Group()
-	constructor(init: LandInit<Terrain, Tile> & { tileRadius: number; seaLevel: number }) {
+	constructor(init: ResourcefulInit<Terrain, Tile>) {
 		super(init)
 		this.tileRadius = init.tileRadius
 		this.seaLevel = init.seaLevel

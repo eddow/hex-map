@@ -10,11 +10,7 @@ function sector2tile(aRef: AxialRef, radius = 1) {
 	return axial.linear([q * radius, { q: 1, r: 1 }], [r * radius, { q: 2, r: -1 }])
 }
 
-export class PuzzleSector<
-	Terrain extends TerrainBase = TerrainBase,
-	Tile extends TileBase<Terrain> = TileBase<Terrain>,
-> extends Sector<Tile> {
-	public color: number
+export class PuzzleSector<Tile extends TileBase = TileBase> extends Sector<Tile> {
 	constructor(
 		land: LandBase,
 		tiles: Tile[],
@@ -23,12 +19,7 @@ export class PuzzleSector<
 	) {
 		super(land, tiles, seed)
 		const gen = LCG(seed)
-		this.color = gen(0x1000000)
 	}
-	/*get nbrTiles(): number {
-		const radius = this.land.procedural.radius - 1
-		return hexTiles(radius) + 2 * radius
-	}*/
 	tileGen(aRef: AxialRef) {
 		const { q: qs, r: rs } = sector2tile(this.center)
 		const { q, r } = axial.coords(aRef)
@@ -57,13 +48,15 @@ export class PuzzleLand<
 	}
 	private sectors: Record<string, Sector<Tile>> = {}
 
+	createSector(tiles: Tile[], seed: number, axial: Axial, ...args: any[]) {
+		return new PuzzleSector(this, tiles, seed, axial)
+	}
 	sector(aRef: AxialRef): Sector<Tile> {
 		const key = axial.key(aRef)
 		if (!this.sectors[key]) {
 			const sectorCenter = sector2tile(aRef)
 			const seed = subSeed(this.seed, 'key', axial.index(aRef))
-			const sector = new PuzzleSector(
-				this,
+			const sector = this.createSector(
 				this.procedural.listTiles(this, {
 					gen: LCG(seed),
 					center: axial.linear([this.procedural.radius - 1, sectorCenter]),

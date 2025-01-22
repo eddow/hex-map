@@ -1,7 +1,7 @@
 import { type AxialRef, axial } from '~/utils/axial'
 import { LCG, subSeed } from '~/utils/numbers'
 import type { TileBase } from '../sector'
-import Sector from '../sector'
+import type Sector from '../sector'
 import type { TerrainBase } from '../terrain'
 import { LandBase, type LandInit } from './land'
 
@@ -15,8 +15,7 @@ export class MonoSectorLand<
 	public readonly sector: Sector
 	constructor(init: LandInit<Terrain, Tile>) {
 		super(init)
-		this.sector = new Sector(
-			this,
+		this.sector = this.createSector(
 			this.procedural.listTiles(this, { gen: LCG(this.seed), center: { q: 0, r: 0 } }),
 			subSeed(this.seed, 'sector')
 		)

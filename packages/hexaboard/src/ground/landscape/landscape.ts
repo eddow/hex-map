@@ -66,7 +66,7 @@ export abstract class LandscapeBase<
 		geometry.setAttribute('position', new Float32BufferAttribute(attributes.position, 3))
 	}
 	protected geometryPointInfos(sector: Sector<Tile>, hexIndex: number): PointInfo {
-		return { position: this.tileCenter(sector, hexIndex).toArray() } as PointInfo
+		return { position: this.localTileCenter(sector, hexIndex).toArray() } as PointInfo
 	}
 
 	protected addGeometryAttributes(
@@ -105,18 +105,19 @@ export abstract class LandscapeBase<
 		return pointsHexIndex[geometryIndex]
 	}
 
-	/**
-	 * Retrieves the exact (xyz) position of a tile
-	 */
-	tileCenter(sector: Sector<Tile>, aRef: AxialRef) {
+	localTileCenter(sector: Sector<Tile>, aRef: AxialRef) {
 		const [hexIndex, coords] = [axial.index(aRef), axial.coords(aRef)]
 
-		return new Vector3()
-			.copy({
-				...cartesian(coords, this.tileSize),
-				z: sector.tiles[hexIndex].z,
-			})
-			.add(sector.group.position)
+		return new Vector3().copy({
+			...cartesian(coords, this.tileSize),
+			z: sector.tiles[hexIndex].z,
+		})
+	}
+	/**
+	 * Retrieves the exact (xyz) position of a tile in the world
+	 */
+	worldTileCenter(sector: Sector<Tile>, aRef: AxialRef) {
+		return this.localTileCenter(sector, aRef).add(sector.group.position)
 	}
 
 	/**
@@ -129,9 +130,9 @@ export abstract class LandscapeBase<
 		const next2 = axial.index(axial.linear([1, coords], [1, hexSides[(s + 1) % 6]]))
 		const nbrTiles = sector.tiles.length
 		if (next1 >= nbrTiles || next2 >= nbrTiles) return null
-		const pos = this.tileCenter(sector, aRef)
-		const next1Pos = this.tileCenter(sector, next1).sub(pos)
-		const next2Pos = this.tileCenter(sector, next2).sub(pos)
+		const pos = this.localTileCenter(sector, aRef)
+		const next1Pos = this.localTileCenter(sector, next1).sub(pos)
+		const next2Pos = this.localTileCenter(sector, next2).sub(pos)
 		return next1Pos.multiplyScalar(u / 2).add(next2Pos.multiplyScalar(v / 2))
 	}
 }

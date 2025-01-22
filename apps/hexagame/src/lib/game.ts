@@ -1,15 +1,16 @@
 import * as m from '$lib/paraglide/messages'
 import {
 	type AxialRef,
-	DynamicTexturedLandscape,
 	Game,
 	MouseButton,
 	type MouseButtonEvolution,
 	type MouseHoverEvolution,
 	type ResourcefulTerrain,
+	TexturedLandscape,
 	type TexturedTerrain,
 	type TileBase,
 	TileCursor,
+	WateredLand,
 	axial,
 	cartesian,
 	costingPath,
@@ -19,31 +20,29 @@ import {
 } from 'hexaboard'
 import { NoiseProcedural } from 'hexaboard'
 import { CatmullRomCurve3, Mesh, MeshBasicMaterial, type Object3D, TubeGeometry } from 'three'
-import { ResourcefulLand } from '~/ground/land/resourceful'
 import { debugInfo, dockview } from './globals.svelte'
 import terrains, { terrainHeight } from './world/terrain'
 
 export function createGame(seed: number) {
 	//const land = new MonoSectorLand(new Island(new Vector3(0, 0, 0), 10, 6, terrains))
-	const landscape = new DynamicTexturedLandscape(20)
+	const landscape = new TexturedLandscape(20, terrains.textures)
 	//const landscape = new UniformLandscape(20)
 	type Terrain = ResourcefulTerrain & TexturedTerrain
 	type Tile = TileBase<Terrain>
-	const procedural = new NoiseProcedural<Tile>(32, terrainHeight, 0.77)
+	const procedural = new NoiseProcedural<Tile>(32, terrainHeight, 73058, 50)
 
-	const land = new ResourcefulLand({
+	const land = new WateredLand({
 		terrains,
 		procedural,
 		landscape,
 		seed,
 		tileRadius: 1,
-		seaLevel: 20,
+		seaLevel: 27,
 	})
 
 	const game = new Game(land)
 	const centralSector = game.land.sector(0)
 	for (const sn of numbers(2)) game.land.sector(sn)
-
 	//const pawn = new Character(land.sector, 0, sphere(2, { color: 0xff0000 }))
 	//const pawn = new Character(land.sector, 0, new Object3D())
 	//game.addEntity(pawn)
@@ -55,7 +54,7 @@ export function createGame(seed: number) {
 	)
 
 	function axialV3(aRef: AxialRef) {
-		return game.land.landscape.tileCenter(centralSector, axial.coords(aRef))
+		return game.land.landscape.worldTileCenter(centralSector, axial.coords(aRef))
 	}
 	let pathTube: Object3D | undefined
 	game.onMouse('hover', (ev: MouseHoverEvolution) => {
