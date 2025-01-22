@@ -11,7 +11,7 @@ import {
 import type { GameView } from '~/game/game'
 import type Sector from '~/ground/sector'
 import { LockSemaphore } from './lockSemaphore'
-
+// TODO: Still some cursor show/hide behavior inconsistency when 2-buttons + hover is null when taking canvas in reLock, &c
 export interface MouseReactive {
 	mouseHandle(intersection: Intersection<Object3D<Object3DEventMap>>): MouseHandle
 }

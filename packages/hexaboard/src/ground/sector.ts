@@ -1,6 +1,6 @@
 import { type Face, Group, type Intersection, type Object3D, type Object3DEventMap } from 'three'
 import { type AxialRef, axial } from '~/main'
-import { subSeed } from '~/utils'
+import { LCG } from '~/utils'
 import { type MouseReactive, TileHandle } from '~/utils/mouseControl'
 import type { LandBase } from './land/land'
 import type { TerrainBase } from './terrain'
@@ -53,9 +53,7 @@ export default class Sector<Tile extends TileBase = TileBase> implements MouseRe
 		return this.land.landscape.tileCenter(this, axial.index(aRef))
 	}
 
-	tileSeed(aRef: AxialRef) {
-		return subSeed(this.seed, 'tile', axial.index(aRef))
+	tileGen(aRef: AxialRef, ...otherArgs: (number | string)[]) {
+		return LCG(this.seed, 'tile', axial.index(aRef), ...otherArgs)
 	}
-
-	// #endregion
 }

@@ -1,6 +1,7 @@
 export * from './land'
 export * from './mono'
 export * from './puzzle'
+export * from './resourceful'
 
 /*
 HS = radius * tileSize * 3/2 = distance (q,r)=(0,0) & (radius,0)

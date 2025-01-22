@@ -5,25 +5,25 @@ import type { LandBase } from '../land'
 import type { TileBase } from '../sector'
 import { ProceduralBase } from './procedural'
 
-export class NoiseProcedural extends ProceduralBase<TileBase> {
+export class NoiseProcedural<Tile extends TileBase = TileBase> extends ProceduralBase<Tile> {
 	readonly perlin: HeightMap
 	constructor(
 		radius: number,
 		terrainHeight: number,
 		public readonly worldSeed: number,
-		perlinZoomFactor = 0.05
+		scale = 10
 	) {
 		super(radius, terrainHeight)
-		this.perlin = new HeightMap(worldSeed, 10, [0, terrainHeight])
+		this.perlin = new HeightMap(worldSeed, scale, [0, terrainHeight])
 	}
-	listTiles(land: LandBase, { center }: { center: Axial }): TileBase[] {
-		return numbers(this.nbrTiles).map((hexIndex): TileBase => {
+	listTiles(land: LandBase, { center }: { center: Axial }): Tile[] {
+		return numbers(this.nbrTiles).map((hexIndex) => {
 			const { x, y } = cartesian(axial.linear([1, axial.coords(hexIndex)], [1, center]))
 			const z = this.perlin.getHeight(x, y)
 			return {
 				z,
 				terrain: land.terrains.terrainType(z),
-			}
+			} as Tile
 		})
 	}
 }

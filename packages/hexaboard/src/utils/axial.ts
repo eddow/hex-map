@@ -138,8 +138,8 @@ export function posInTile(aRef: AxialRef, radius: number) {
 }
 
 /** Retrieves the tiles around a given tile (indexes) */
-export function pointsAround(tile: number, nbrTiles: number) {
-	const coords = axialAt(tile)
+export function pointsAround(aRef: AxialRef, nbrTiles: number) {
+	const coords = axial.coords(aRef)
 	return hexSides
 		.map((side) => indexAt(axial.linear([1, coords], [1, side])))
 		.filter((tile) => tile < nbrTiles)

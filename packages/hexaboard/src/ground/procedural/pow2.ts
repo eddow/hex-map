@@ -14,6 +14,9 @@ export interface Pow2Tile extends TileBase {
 	seed: number
 }
 
+/**
+ * @deprecated Not maintained
+ */
 export abstract class Pow2Procedural<
 	Tile extends Pow2Tile = Pow2Tile,
 	Terrain extends Pow2Terrain = Pow2Terrain,

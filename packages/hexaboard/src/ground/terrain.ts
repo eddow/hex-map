@@ -6,8 +6,6 @@ export interface TerrainBase {
 export class TerrainDefinition<Terrain extends TerrainBase = TerrainBase> {
 	constructor(public readonly terrainTypes: Record<string, Terrain>) {}
 	terrainType(height: number): Terrain {
-		// TODO: kill me
-		//if (height < 0) debugger
 		let rvH: number | undefined
 		let rvT: undefined | Terrain
 		for (const type in this.terrainTypes) {

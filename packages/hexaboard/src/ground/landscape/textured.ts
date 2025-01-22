@@ -6,7 +6,7 @@ import {
 	ShaderMaterial,
 	type Texture,
 } from 'three'
-import { LCG, numbers } from '~/utils/numbers'
+import { numbers } from '~/utils/numbers'
 import type { TileBase } from '../sector'
 import type Sector from '../sector'
 import type { TerrainBase } from '../terrain'
@@ -79,7 +79,7 @@ export class DynamicTexturedLandscape<
 		const p = sector.tiles[hexIndex]
 		let textureIdx = this.textureIdx(p.terrain.texture)
 
-		const gen = LCG(sector.tileSeed(hexIndex))
+		const gen = sector.tileGen(hexIndex)
 
 		const texturePosition = {
 			center: { u: gen(), v: gen() },

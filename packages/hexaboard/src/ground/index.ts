@@ -1,5 +1,3 @@
-export * from '../utils/axial'
-
 export * from './landscape'
 export * from './procedural'
 export * from './land'

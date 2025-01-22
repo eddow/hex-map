@@ -6,7 +6,9 @@ import {
 	MouseButton,
 	type MouseButtonEvolution,
 	type MouseHoverEvolution,
-	PuzzleLand,
+	type ResourcefulTerrain,
+	type TexturedTerrain,
+	type TileBase,
 	TileCursor,
 	axial,
 	cartesian,
@@ -17,6 +19,7 @@ import {
 } from 'hexaboard'
 import { NoiseProcedural } from 'hexaboard'
 import { CatmullRomCurve3, Mesh, MeshBasicMaterial, type Object3D, TubeGeometry } from 'three'
+import { ResourcefulLand } from '~/ground/land/resourceful'
 import { debugInfo, dockview } from './globals.svelte'
 import terrains, { terrainHeight } from './world/terrain'
 
@@ -24,14 +27,22 @@ export function createGame(seed: number) {
 	//const land = new MonoSectorLand(new Island(new Vector3(0, 0, 0), 10, 6, terrains))
 	const landscape = new DynamicTexturedLandscape(20)
 	//const landscape = new UniformLandscape(20)
-	const procedural = new NoiseProcedural(32, terrainHeight, 0.77, 0.005)
+	type Terrain = ResourcefulTerrain & TexturedTerrain
+	type Tile = TileBase<Terrain>
+	const procedural = new NoiseProcedural<Tile>(32, terrainHeight, 0.77)
 
-	const land = new PuzzleLand(terrains, procedural, landscape, seed)
+	const land = new ResourcefulLand({
+		terrains,
+		procedural,
+		landscape,
+		seed,
+		tileRadius: 1,
+		seaLevel: 20,
+	})
 
 	const game = new Game(land)
 	const centralSector = game.land.sector(0)
 	for (const sn of numbers(2)) game.land.sector(sn)
-	//game.land.sector(2)
 
 	//const pawn = new Character(land.sector, 0, sphere(2, { color: 0xff0000 }))
 	//const pawn = new Character(land.sector, 0, new Object3D())
@@ -93,7 +104,7 @@ export function createGame(seed: number) {
 			debugInfo.tile = cursor.tile.target.worldTile(cursor.tile.hexIndex)
 			debugInfo.tilePos = cartesian(debugInfo.tile, 20)
 		} else {
-			debugInfo.tile = 'none'
+			debugInfo.tilePos = debugInfo.tile = 'none'
 		}
 	})
 	game.onMouse('click', (ev: MouseButtonEvolution) => {

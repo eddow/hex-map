@@ -3,7 +3,14 @@
 	import { configuration, debugInfo, dockview } from '$lib/globals.svelte'
 	import { Button, Table, TableBody, TableBodyCell, TableBodyRow } from 'flowbite-svelte'
 	let darkMode = $state(configuration.darkMode)
-	let dDebugInfo = $derived(Object.entries(debugInfo).map(([k, v]) => [k, JSON.stringify(v)]))
+
+	function debugged(value: any) {
+		if (typeof value !== 'object') return value
+		return Object.entries(value)
+			.map(([k, v]): string => `${k}: ${debugged(v)}`)
+			.join(' | ')
+	}
+	let dDebugInfo = $derived(Object.entries(debugInfo).map(([k, v]) => [k, debugged(v)]))
 	$effect(() => {
 		configuration.darkMode = darkMode
 	})
@@ -24,7 +31,7 @@
 		{#each dDebugInfo as content}
 			<TableBodyRow>
 				<TableBodyCell>{content[0]}</TableBodyCell>
-				<TableBodyCell>{content[1]}</TableBodyCell>
+				<TableBodyCell>{@html content[1]}</TableBodyCell>
 			</TableBodyRow>
 		{/each}
 	</TableBody>
