@@ -1,5 +1,4 @@
 import {
-	type Camera,
 	type Intersection,
 	type Object3D,
 	type Object3DEventMap,
@@ -288,7 +287,8 @@ export class MouseControl {
 		return shouldLock
 	}
 
-	private moveCamera(event: MouseEvent, camera: Camera) {
+	private moveCamera(event: MouseEvent, gameView: GameView) {
+		const { camera } = gameView
 		// Relative mouse movement
 		const { dx, dy } = { dx: event.movementX, dy: event.movementY } // Relative mouse event
 		let movement: undefined | keyof MouseLockButtons
@@ -388,7 +388,7 @@ export class MouseControl {
 
 	private mouseMove(event: MouseEvent) {
 		//this.lockSemaphore.callWhenLocked(() => {
-		if (this.lockedGV) this.moveCamera(event, this.lockedGV.camera)
+		if (this.lockedGV) this.moveCamera(event, this.lockedGV)
 		else this.moveCursor(event)
 		//})
 	}

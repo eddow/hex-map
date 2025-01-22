@@ -5,6 +5,7 @@ import {
 	Group,
 	type Object3D,
 	PerspectiveCamera,
+	type Vector3Like,
 	WebGLRenderer,
 } from 'three'
 import { prerenderGlobals } from '~/three/meshCopyPaste'
@@ -46,11 +47,6 @@ export class Game<Land extends LandBase = LandBase> extends MouseControl {
 		this.mouseEvents[type as string].add(evolution as MouseEvolutionEvent)
 		return () => this.mouseEvents[type as string]?.delete(evolution as MouseEvolutionEvent)
 	}
-	private readonly progressEvents: Set<(dt: number) => void> = new Set()
-	onProgress(evolution: (dt: number) => void) {
-		this.progressEvents.add(evolution)
-		return () => this.progressEvents.delete(evolution)
-	}
 
 	// #endregion
 	// #region Game entities
@@ -80,7 +76,7 @@ export class Game<Land extends LandBase = LandBase> extends MouseControl {
 			if (listeners) for (const listener of listeners) listener(evolution)
 		}
 		this.progress(dt)
-		for (const listener of this.progressEvents) listener(dt)
+		this.updateViews()
 		prerenderGlobals(this.scene)
 		for (const view of this.views.values()) view.render()
 		if (this.clock.running) requestAnimationFrame(this.animate)
@@ -94,6 +90,21 @@ export class Game<Land extends LandBase = LandBase> extends MouseControl {
 		} else {
 			this.clock.stop()
 		}
+	}
+
+	private viewPositions = new WeakMap<GameView, Vector3Like>()
+	updateViews() {
+		const movedViews: GameView[] = []
+		for (const view of this.views.values()) {
+			const { camera } = view
+			const oldViewPosition = this.viewPositions.get(view)
+			if (!oldViewPosition || !camera.position.equals(oldViewPosition)) {
+				this.viewPositions.set(view, camera.position.clone())
+				movedViews.push(view)
+			}
+		}
+		if (movedViews.length)
+			this.land.updateViews(Array.from(this.views.values().map((v) => v.camera.position)))
 	}
 
 	// #endregion

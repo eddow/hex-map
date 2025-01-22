@@ -1,4 +1,3 @@
-import { type AxialRef, axial } from '~/utils/axial'
 import { LCG, subSeed } from '~/utils/numbers'
 import type { TileBase } from '../sector'
 import type Sector from '../sector'
@@ -9,9 +8,6 @@ export class MonoSectorLand<
 	Terrain extends TerrainBase = TerrainBase,
 	Tile extends TileBase<Terrain> = TileBase<Terrain>,
 > extends LandBase<Terrain, Tile> {
-	tileSector(aRef: AxialRef) {
-		return { sector: this.sector, hexIndex: axial.index(aRef) }
-	}
 	public readonly sector: Sector
 	constructor(init: LandInit<Terrain, Tile>) {
 		super(init)

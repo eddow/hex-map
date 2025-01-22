@@ -127,15 +127,16 @@ export class MeshCopy implements GlobalPreRendered {
 		}
 	}
 	prerender(scene: Scene) {
-		// Now updating on matrix update - killme
-		/*const application = this.applications.get(scene)
+		// Now updating on matrix update - kill me when sure
+		// cost: 1.23 ms/frame
+		const application = this.applications.get(scene)
 		if (!application) return
 		for (let i = 0; i < application.pastes.length; i++) {
 			const paste = application.pastes[i]
 			if (paste.matrixWorldNeedsUpdate) paste.updateMatrixWorld()
 			forward(paste, i, application)
 		}
-		for (const instance of application.instances) instance.instanceMatrix.needsUpdate = true*/
+		for (const instance of application.instances) instance.instanceMatrix.needsUpdate = true
 	}
 }
 

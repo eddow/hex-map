@@ -1,5 +1,4 @@
-import { Group } from 'three'
-import type { AxialRef } from '~/main'
+import { Group, type Vector3 } from 'three'
 import type { LandscapeBase } from '../landscape'
 import type { ProceduralBase } from '../procedural'
 import type { TileBase } from '../sector'
@@ -37,18 +36,18 @@ export class LandBase<
 		return new Sector(this, tiles, seed)
 	}
 	progress(dt: number) {}
-	tileSector(aRef: AxialRef): { sector: Sector; hexIndex: number } {
-		throw new Error('Not implemented')
-	}
-	tileCenter(aRef: AxialRef) {
-		const { sector, hexIndex } = this.tileSector(aRef)
-		return this.landscape.worldTileCenter(sector, hexIndex)
-	}
 	addedSector(sector: Sector) {
 		if (!sector.ground) sector.landscape(this.landscape.createMesh(sector))
 		this.group.add(sector.group)
 	}
 	removeSector(sector: Sector) {
 		this.group.remove(sector.group)
+	}
+	/**
+	 * Called when the views have moved
+	 * @param cameras List of camera positions
+	 */
+	updateViews(cameras: Vector3[]) {
+		// Make sure all sectors in a certain radius are visible
 	}
 }
