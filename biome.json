@@ -30,7 +30,8 @@
 				"useTemplate": {
 					"level": "warn",
 					"fix": "safe"
-				}
+				},
+				"noParameterAssign": "off"
 			},
 			"suspicious": {
 				"noExplicitAny": "off",

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import DarkMode from '$lib/dark-mode.svelte'
 	import { configuration, debugInfo, dockview } from '$lib/globals.svelte'
-	import { Button } from 'flowbite-svelte'
+	import { Button, Table, TableBody, TableBodyCell, TableBodyRow } from 'flowbite-svelte'
 	let darkMode = $state(configuration.darkMode)
-	let dDebugInfo = $derived(Object.entries(debugInfo))
+	let dDebugInfo = $derived(Object.entries(debugInfo).map(([k, v]) => [k, JSON.stringify(v)]))
 	$effect(() => {
 		configuration.darkMode = darkMode
 	})
@@ -19,8 +19,13 @@
 
 <Button onclick={resetLayout}>Reset layout</Button>
 <DarkMode bind:darkMode />
-<div>
-	{#each dDebugInfo as content}
-		{content[0]} | {content[1]}
-	{/each}
-</div>
+<Table>
+	<TableBody title="Debug info">
+		{#each dDebugInfo as content}
+			<TableBodyRow>
+				<TableBodyCell>{content[0]}</TableBodyCell>
+				<TableBodyCell>{content[1]}</TableBodyCell>
+			</TableBodyRow>
+		{/each}
+	</TableBody>
+</Table>

@@ -9,6 +9,7 @@ import {
 	PuzzleLand,
 	TileCursor,
 	axial,
+	cartesian,
 	costingPath,
 	icosahedron,
 	numbers,
@@ -16,14 +17,14 @@ import {
 } from 'hexaboard'
 import { NoiseProcedural } from 'hexaboard'
 import { CatmullRomCurve3, Mesh, MeshBasicMaterial, type Object3D, TubeGeometry } from 'three'
-import { dockview } from './globals.svelte'
+import { debugInfo, dockview } from './globals.svelte'
 import terrains, { terrainHeight } from './world/terrain'
 
 export function createGame(seed: number) {
 	//const land = new MonoSectorLand(new Island(new Vector3(0, 0, 0), 10, 6, terrains))
 	const landscape = new DynamicTexturedLandscape(20)
 	//const landscape = new UniformLandscape(20)
-	const procedural = new NoiseProcedural(2, terrainHeight, 0.77)
+	const procedural = new NoiseProcedural(32, terrainHeight, 0.77, 0.005)
 
 	const land = new PuzzleLand(terrains, procedural, landscape, seed)
 
@@ -60,7 +61,7 @@ export function createGame(seed: number) {
 					axialAt(pawn.tile),
 					...straightPath(pawn.sector, pawn.tile, cursor.tile.target, cursor.tile.hexIndex),
 				]*/
-			/* no height path (0 height diff still has horz mvt not counted)
+			/* no height path (0 height diff still has horizontal mvt not counted)
 				const path = costingPath(
 					cursor.tile.hexIndex,
 					(from, to) =>
@@ -89,6 +90,10 @@ export function createGame(seed: number) {
 				game.scene.add(pathTube)
 			}
 			//}
+			debugInfo.tile = cursor.tile.target.worldTile(cursor.tile.hexIndex)
+			debugInfo.tilePos = cartesian(debugInfo.tile, 20)
+		} else {
+			debugInfo.tile = 'none'
 		}
 	})
 	game.onMouse('click', (ev: MouseButtonEvolution) => {
