@@ -21,12 +21,11 @@ export class PuzzleSector<Tile extends TileBase = TileBase> extends Sector<Tile>
 		const gen = LCG(seed)
 	}
 	tileGen(aRef: AxialRef) {
-		const { q: qs, r: rs } = sector2tile(this.center)
-		const { q, r } = axial.coords(aRef)
-		return LCG('puzzle-tile', qs + q, rs + r)
+		const { q, r } = this.worldTile(aRef)
+		return LCG('puzzle-tile', q, r)
 	}
 	worldTile(aRef: AxialRef) {
-		const { q: qs, r: rs } = sector2tile(this.center)
+		const { q: qs, r: rs } = sector2tile(this.center, this.land.procedural.radius - 1)
 		const { q, r } = axial.coords(aRef)
 		return { q: qs + q, r: rs + r }
 	}

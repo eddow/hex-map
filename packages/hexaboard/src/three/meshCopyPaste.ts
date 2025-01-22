@@ -100,12 +100,19 @@ export class MeshCopy implements GlobalPreRendered {
 			scene.add(object3d)
 		}
 		const application = this.application(scene)
-		//const index = application.pastes.length
+		const index = application.pastes.length
 		application.pastes.push(meshPaste)
 		recount(application)
-		//if (!meshPaste.matrixWorldNeedsUpdate) forward(meshPaste, index, application)
+		forward(meshPaste, index, application)
 	}
-
+	updated(scene: Scene, meshPaste: MeshPaste) {
+		const application = this.application(scene)
+		const pastes = application?.pastes
+		const index = pastes?.indexOf(meshPaste)
+		if (index === -1 || (!index && index !== 0))
+			throw new Error('Inconsistency: MeshPaste not registered')
+		forward(meshPaste, index, application)
+	}
 	unregister(meshPaste: MeshPaste, scene: Scene) {
 		const application = this.application(scene)
 		const pastes = application.pastes
@@ -116,7 +123,7 @@ export class MeshCopy implements GlobalPreRendered {
 		// move the last instance to fill the freed gap
 		if (index < pastes.length) {
 			pastes[index] = last
-			//if (!last.matrixWorldNeedsUpdate) forward(last, index, application)
+			forward(last, index, application)
 		}
 	}
 	prerender(scene: Scene) {
@@ -136,9 +143,11 @@ export class MeshCopy implements GlobalPreRendered {
  */
 export class MeshPaste extends Object3D {
 	private scene: Scene | undefined
+	private forwarding?: Promise<void>
+	private readonly loading: Promise<MeshCopy>
 	constructor(will: MeshCopy | Promise<MeshCopy>) {
 		super()
-		Promise.resolve(will).then((copy) => {
+		this.loading = Promise.resolve(will).then((copy) => {
 			this.addEventListener('added', () => {
 				if (this.scene) copy.unregister(this, this.scene)
 				this.scene = rootScene(this)
@@ -151,7 +160,15 @@ export class MeshPaste extends Object3D {
 			})
 			this.scene = rootScene(this)
 			if (this.scene) copy.register(this, this.scene)
+			return copy
 		})
 	}
-	// TODO: override updateWordMatrix instead of re-updating all each render
+	updateMatrix(): void {
+		super.updateMatrix()
+		if (!this.forwarding && this.scene)
+			this.forwarding = this.loading.then((copy) => {
+				if (this.scene) copy.updated(this.scene, this)
+				this.forwarding = undefined
+			})
+	}
 }
