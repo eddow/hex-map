@@ -93,10 +93,7 @@ export class ResourcefulLand<
 				const index = tiles[worldKey].usedBy.indexOf(sector)
 				if (index !== -1) tiles[worldKey].usedBy.splice(index, 1)
 				if (tiles[worldKey].usedBy.length === 0) {
-					if (tile.group) {
-						for (const mesh of [...tile.group.children]) mesh.removeFromParent()
-						this.resourcesGroup.remove(tile.group)
-					}
+					if (tile.group) this.resourcesGroup.remove(tile.group)
 					if (tiles[worldKey].dirty) tile.group = undefined
 					else delete tiles[worldKey]
 				}

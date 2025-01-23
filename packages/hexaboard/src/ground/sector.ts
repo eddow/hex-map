@@ -56,4 +56,8 @@ export default class Sector<Tile extends TileBase = TileBase> implements MouseRe
 	tileGen(aRef: AxialRef, ...otherArgs: (number | string)[]) {
 		return LCG(this.seed, 'tile', axial.index(aRef), ...otherArgs)
 	}
+
+	get key(): PropertyKey {
+		return 'sector'
+	}
 }

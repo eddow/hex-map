@@ -207,7 +207,7 @@ export class MouseControl {
 
 	// #region Event listeners book-keeping
 
-	constructor(private clampZ: { min: number; max: number }) {}
+	constructor(private clampCamZ: { min: number; max: number }) {}
 	listenTo(gameView: GameView) {
 		const canvas = gameView.canvas
 		const events = {
@@ -459,8 +459,8 @@ export class MouseControl {
 						const dist = camera.position.clone().sub(center.point)
 						dist.multiplyScalar(mouseConfig.zoomSpeed ** delta[axis])
 						camera.position.copy(center.point).add(dist)
-						if (camera.position.z > this.clampZ.max) camera.position.z = this.clampZ.max
-						else if (camera.position.z < this.clampZ.min) camera.position.z = this.clampZ.min
+						if (camera.position.z > this.clampCamZ.max) camera.position.z = this.clampCamZ.max
+						else if (camera.position.z < this.clampCamZ.min) camera.position.z = this.clampCamZ.min
 					}
 				} else
 					this.evolve({

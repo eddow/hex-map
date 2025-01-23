@@ -29,7 +29,8 @@ export function createGame(seed: number) {
 	//const landscape = new UniformLandscape(20)
 	type Terrain = ResourcefulTerrain & TexturedTerrain
 	type Tile = TileBase<Terrain>
-	const procedural = new NoiseProcedural<Tile>(16, terrainHeight, 73058, 20)
+	//const procedural = new NoiseProcedural<Tile>(16, terrainHeight, 73058, 50)
+	const procedural = new NoiseProcedural<Tile>(3, terrainHeight, 73058, 50)
 
 	const land = new WateredLand({
 		terrains,
@@ -37,7 +38,7 @@ export function createGame(seed: number) {
 		landscape,
 		seed,
 		tileRadius: 1,
-		seaLevel: 27,
+		seaLevel: terrainHeight / 2,
 	})
 
 	const game = new Game(land)
@@ -119,7 +120,8 @@ export function createGame(seed: number) {
 						component: 'selectionInfo',
 						title: m.selectInfo(),
 						params: {
-							//sector: tile.target,
+							game: 'GameX',
+							sector: tile.target.key,
 							hexIndex: tile.hexIndex,
 						},
 						floating: true,

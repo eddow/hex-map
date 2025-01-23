@@ -25,9 +25,11 @@ export class Game<Land extends LandBase = LandBase> extends MouseControl {
 	public readonly lights = new Group()
 	private _land: Land
 
-	constructor(land: Land) {
-		// TODO: calculate
-		super({ min: 50, max: 500 })
+	constructor(
+		land: Land,
+		{ clampCamZ = { min: 150, max: 500 } }: { clampCamZ?: { min: number; max: number } } = {}
+	) {
+		super(clampCamZ)
 		this._land = land
 		this.scene.add(this.lights, land.group, this.entitiesGroup)
 		this.lights.add(new AmbientLight(0x404040))

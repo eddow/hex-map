@@ -1,4 +1,11 @@
-import { InstancedMesh, type Mesh, Object3D, Quaternion, type Scene } from 'three'
+import {
+	InstancedMesh,
+	type Mesh,
+	Object3D,
+	type Object3DEventMap,
+	Quaternion,
+	type Scene,
+} from 'three'
 
 const generalMaxCount = 5000
 
@@ -11,9 +18,8 @@ export function prerenderGlobals(scene: Scene) {
 }
 
 function rootScene(obj3d: Object3D) {
-	let browser = obj3d
-	while (browser.parent) browser = browser.parent
-	const scene = browser as Scene
+	while (obj3d.parent) obj3d = obj3d.parent
+	const scene = obj3d as Scene
 	return scene.isScene ? scene : undefined
 }
 
@@ -128,6 +134,7 @@ export class MeshCopy implements GlobalPreRendered {
 	}
 	prerender(scene: Scene) {
 		// Now updating on matrix update - kill me when sure
+		// Note: it's really tough to determine when to call the `forward`, even overriding `updateMatrixWorld` is not enough
 		// cost: 1.23 ms/frame
 		const application = this.applications.get(scene)
 		if (!application) return
@@ -140,31 +147,25 @@ export class MeshCopy implements GlobalPreRendered {
 	}
 }
 
-/**
- * Book keeping: MeshPaste should not be added to orphan objects and should always be linked in their tree to a scene
- */
-export class MeshPaste extends Object3D {
+export class MeshPaste extends Object3D<Object3DTreeEventMap> {
 	private scene: Scene | undefined
-	private forwarding?: Promise<void>
-	private readonly loading: Promise<MeshCopy>
 	constructor(will: MeshCopy | Promise<MeshCopy>) {
 		super()
-		this.loading = Promise.resolve(will).then((copy) => {
-			this.addEventListener('added', () => {
-				if (this.scene) copy.unregister(this, this.scene)
-				this.scene = rootScene(this)
-				if (!this.scene) throw new Error('MeshPaste must be added to a scene')
-				copy.register(this, this.scene)
+		Promise.resolve(will).then((copy) => {
+			this.addEventListener('changedScene', ({ scene }) => {
+				if (this.scene && this.scene !== scene) copy.unregister(this, this.scene)
+				this.scene = scene
+				if (scene) copy.register(this, scene)
 			})
-			this.addEventListener('removed', () => {
-				if (this.scene) copy.unregister(this, this.scene)
-				this.scene = undefined
-			})
+			// Usually, `changedScene` was not called as `addEventListener` was called after the add (Promise stuff)
 			this.scene = rootScene(this)
 			if (this.scene) copy.register(this, this.scene)
 			return copy
 		})
 	}
+	/*
+	private forwarding?: Promise<void> = Promise.resolve(will).then...
+	private readonly loading: Promise<MeshCopy>
 	updateWorldMatrix(): void {
 		super.updateWorldMatrix
 		if (!this.forwarding && this.scene)
@@ -173,4 +174,42 @@ export class MeshPaste extends Object3D {
 				this.forwarding = undefined
 			})
 	}
+	*/
 }
+
+export interface Object3DTreeEventMap extends Object3DEventMap {
+	changedScene: { scene?: Scene }
+}
+
+/**
+ * Patch Object3D
+ */
+function patchObject3D() {
+	const prototype = Object3D.prototype
+	const original = {
+		add: prototype.add,
+		remove: prototype.remove,
+	}
+	Object.assign(prototype, {
+		add(this: Object3D, ...children: Object3D[]) {
+			const scene = rootScene(this)
+			for (const child of children) {
+				if (scene && rootScene(child) !== scene)
+					child.traverse((sub) =>
+						(sub as Object3D<Object3DTreeEventMap>).dispatchEvent({ type: 'changedScene', scene })
+					)
+				original.add.call(this, child)
+			}
+		},
+		remove(this: Object3D, ...children: Object3D[]) {
+			for (const child of children) {
+				if (this.children.includes(child) && rootScene(child))
+					child.traverse((sub) =>
+						(sub as Object3D<Object3DTreeEventMap>).dispatchEvent({ type: 'changedScene' })
+					)
+				original.remove.call(this, child)
+			}
+		},
+	})
+}
+patchObject3D()

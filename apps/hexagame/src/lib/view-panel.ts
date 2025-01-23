@@ -17,7 +17,7 @@ export class GameViewRenderer implements IContentRenderer {
 		const { game } = parameters.params
 		this.gv = games[game]?.createView(this.canvas)
 		const { camera } = this.gv
-		camera.position.set(0, 0, 100)
+		camera.position.set(0, 0, 200)
 		camera.lookAt(0, 0, 0)
 		this.gv.game.running = true
 	}

@@ -41,7 +41,9 @@
 			"performance": {
 				"noAccumulatingSpread": "off"
 			},
-			"complexity": {},
+			"complexity": {
+				"noBannedTypes": "off"
+			},
 			"security": {},
 			"correctness": {
 				"noUnusedImports": { "level": "info", "fix": "safe" }

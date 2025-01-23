@@ -3,7 +3,11 @@
 	import { DockviewApi } from 'dockview-core'
 	import { DockView } from 'dockview-svelte'
 	import { Toolbar, ToolbarButton, ToolbarGroup } from 'flowbite-svelte'
-	import { AdjustmentsHorizontalOutline, FloppyDiskAltOutline } from 'flowbite-svelte-icons'
+	import {
+		AdjustmentsHorizontalOutline,
+		FloppyDiskAltOutline,
+		BugOutline
+	} from 'flowbite-svelte-icons'
 	import * as m from '$lib/paraglide/messages'
 	import { onMount } from 'svelte'
 	import createGameViewRenderer from '$lib/view-panel'
@@ -20,7 +24,7 @@
 	function gotApi(api: DockviewApi) {
 		dockview.api = api
 	}
-	function showSystem(widget: 'configuration' | 'games') {
+	function showSystem(widget: 'configuration' | 'games' | 'debug') {
 		return () => {
 			const id = `system.${widget}`
 			let panel = api.getPanel(id)
@@ -69,6 +73,9 @@
 			</ToolbarButton>
 			<ToolbarButton onclick={showSystem('games')} title={m.games()}>
 				<FloppyDiskAltOutline class="w-6 h-6" />
+			</ToolbarButton>
+			<ToolbarButton onclick={showSystem('debug')} title={m.games()}>
+				<BugOutline class="w-6 h-6" />
 			</ToolbarButton>
 		</ToolbarGroup>
 	</Toolbar>

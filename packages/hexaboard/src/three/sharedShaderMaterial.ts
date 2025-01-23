@@ -18,6 +18,12 @@ export class SharedShaderMaterial {
 			material.needsUpdate = true
 		}
 	}
+	/**
+	 * Equivalent of "new Mesh(geometry, this.material[`withUniforms: ${uniforms}`])"
+	 * @param geometry Geometry of the mesh to create
+	 * @param uniforms Uniform values to use for this particular mesh
+	 * @returns
+	 */
 	createMesh(geometry: BufferGeometry, uniforms: Record<string, unknown>) {
 		const mesh = new Mesh(geometry, this.material)
 		const valued = Object.fromEntries(Object.entries(uniforms).map(([k, v]) => [k, { value: v }]))

@@ -1,15 +1,20 @@
 <script lang="ts">
 	import { games } from '$lib/globals.svelte'
 	import { terrainTypes } from '$lib/world/terrain'
-	import type { Game, HeightPowGen, HexSector, MonoSectorLand } from 'hexaboard'
+	import type { PuzzleLand } from 'hexaboard'
 
 	// TODO: to give the sector as argument hangs in an infinite loop
-	let { hexIndex }: { hexIndex?: number } = $props()
-	const land = games.GameX.land as MonoSectorLand
-	const sector = land.sector as HeightPowGen
-	let point = sector.tiles[hexIndex!]
+	let {
+		game: gameKey,
+		sector: sectorKey,
+		hexIndex
+	}: { game?: string; sector?: string; hexIndex?: number } = $props()
+	const game = games[gameKey!]
+	const land = game.land as PuzzleLand
+	const sector = land.sector(sectorKey!)
+	let tile = sector.tiles[hexIndex!]
 	let terrainTypeName = $derived(
-		point ? Object.entries(terrainTypes).find(([k, v]) => v === point.type)?.[0] : 'unknown'
+		tile ? Object.entries(terrainTypes).find(([k, v]) => v === tile.terrain)?.[0] : 'unknown'
 	)
 </script>
 

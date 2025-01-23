@@ -47,7 +47,8 @@ export class LandBase<
 	 * Called when the views have moved
 	 * @param cameras List of camera positions
 	 */
-	updateViews(cameras: Vector3[]) {
-		// Make sure all sectors in a certain radius are visible
+	updateViews(cameras: Vector3[]) {}
+	sector(...args: any[]): Sector<Tile> {
+		throw new Error('Not implemented')
 	}
 }

@@ -12,7 +12,7 @@ import {
 import type { TileBase } from '../sector'
 import Sector from '../sector'
 import type { TerrainBase } from '../terrain'
-import { LandBase } from './land'
+import { LandBase, type LandInit } from './land'
 
 function sector2tile(aRef: AxialRef, radius = 1) {
 	const { q, r } = axial.coords(aRef)
@@ -43,16 +43,30 @@ export class PuzzleSector<Tile extends TileBase = TileBase> extends Sector<Tile>
 		const { q, r } = axial.coords(aRef)
 		return { q: qs + q, r: rs + r }
 	}
+	get key(): PropertyKey {
+		return axial.key(this.center)
+	}
 }
 
-const viewDist = 1200
-
+export type PuzzleInit<
+	Terrain extends TerrainBase = TerrainBase,
+	Tile extends TileBase<Terrain> = TileBase<Terrain>,
+> = LandInit<Terrain, Tile> & {
+	/**
+	 * View distance - to generate sectors that are close to the camera
+	 */
+	viewDist?: number
+}
 export class PuzzleLand<
 	Terrain extends TerrainBase = TerrainBase,
 	Tile extends TileBase<Terrain> = TileBase<Terrain>,
 > extends LandBase<Terrain, Tile> {
 	private sectors: Record<string, Sector<Tile>> = {}
-
+	private readonly viewDist: number
+	constructor({ viewDist = 1200, ...init }: PuzzleInit<Terrain, Tile>) {
+		super(init)
+		this.viewDist = viewDist
+	}
 	createSector(tiles: Tile[], seed: number, axial: Axial, ...args: any[]) {
 		return new PuzzleSector(this, tiles, seed, axial)
 	}
@@ -84,7 +98,7 @@ export class PuzzleLand<
 		const tileSize = this.landscape.tileSize
 		const checked: Record<string, true> = {}
 		// Make sure all sectors in a certain radius are visible
-		const rings = 2 + Math.round(viewDist / (radius * tileSize * 4 * Math.sqrt(3)))
+		const rings = 2 + Math.round(this.viewDist / (radius * tileSize * 4 * Math.sqrt(3)))
 		for (const camera of cameras) {
 			const sector = tile2sector(fromCartesian(camera, tileSize), radius)
 			for (let dS = 0; dS < hexTiles(rings); dS++) {
@@ -96,7 +110,10 @@ export class PuzzleLand<
 					const sectorVec2 = new Vector2().copy(
 						cartesian(sector2tile(sectorCoords, radius), tileSize)
 					)
-					if (sectorVec2.sub(camera).length() < viewDist + radius * tileSize * 2 * Math.sqrt(3))
+					if (
+						sectorVec2.sub(camera).length() <
+						this.viewDist + radius * tileSize * 2 * Math.sqrt(3)
+					)
 						this.sector(sectorCoords)
 				}
 			}
@@ -107,7 +124,7 @@ export class PuzzleLand<
 				const sectorVec2 = new Vector2().copy(cartesian(sector2tile(key, radius), tileSize))
 				let aCameraIsNear = false
 				for (const camera of cameras)
-					if (sectorVec2.sub(camera).length() < viewDist + radius * tileSize * 3) {
+					if (sectorVec2.sub(camera).length() < this.viewDist + radius * tileSize * 3) {
 						aCameraIsNear = true
 						break
 					}

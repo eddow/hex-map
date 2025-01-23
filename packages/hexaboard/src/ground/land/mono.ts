@@ -8,20 +8,16 @@ export class MonoSectorLand<
 	Terrain extends TerrainBase = TerrainBase,
 	Tile extends TileBase<Terrain> = TileBase<Terrain>,
 > extends LandBase<Terrain, Tile> {
-	public readonly sector: Sector
+	public readonly unique: Sector<Tile>
 	constructor(init: LandInit<Terrain, Tile>) {
 		super(init)
-		this.sector = this.createSector(
+		this.unique = this.createSector(
 			this.procedural.listTiles(this, { gen: LCG(this.seed), center: { q: 0, r: 0 } }),
 			subSeed(this.seed, 'sector')
 		)
-		this.addedSector(this.sector)
+		this.addedSector(this.unique)
 	}
-
-	/**
-	 * @deprecated Should be replaced and see how it's needed
-	 */
-	get tileSize() {
-		return this.landscape.tileSize
+	sector() {
+		return this.unique
 	}
 }
