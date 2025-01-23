@@ -85,6 +85,7 @@ export const mouseConfig: MouseConfig = {
 	lockButtons: {
 		pan: { buttons: MouseButtons.Right | MouseButtons.Left, modifiers: modKeysComb.none },
 		turn: { buttons: MouseButtons.Middle, modifiers: modKeysComb.none },
+		lookAt: { buttons: MouseButtons.Right, modifiers: modKeysComb.none },
 	},
 	zoomWheel: { axis: 'y', modifiers: modKeysComb.none },
 	zoomSpeed: 1.2,
@@ -173,8 +174,10 @@ export class MouseControl {
 	}
 
 	*evolutions() {
+		// Used to cache position->handle in order to avoid casting intersections when not needed
 		let lastPosition: MousePosition | undefined
 		let lastHandle: MouseHandle | undefined
+
 		const rv = this.lastEvolutions
 		this.lastEvolutions = []
 		for (const e of rv) {
@@ -191,8 +194,10 @@ export class MouseControl {
 				}
 			}
 			yield e
+			// These evolutions invalidate the cached position/handle
+			if (['lock', 'unlock'].includes(e.type)) lastHandle = lastPosition = undefined
 			if (
-				!!this.hoveredHandle !== !!lastHandle ||
+				('position' in eP && !!this.hoveredHandle !== !!lastHandle) ||
 				(this.hoveredHandle && lastHandle && !this.hoveredHandle.equals(lastHandle))
 			) {
 				this.hoveredHandle = lastHandle
@@ -277,6 +282,8 @@ export class MouseControl {
 				this.hovered = undefined
 				this.evolve({ type: 'lock', target: shouldLock })
 				this.lockedGV = shouldLock
+				this.evolve({ type: 'hover', target: shouldLock, handle: undefined })
+				this.hoveredHandle = undefined
 			}
 		}
 	})
@@ -413,7 +420,7 @@ export class MouseControl {
 				type: 'click',
 				button: event.button,
 				modKeyCombination: modKeysCombinations(event),
-				target: this.hovered!,
+				target: this.hovered,
 				position: { x: event.offsetX, y: event.offsetY },
 			})
 		this.lastButtonDown = undefined
@@ -423,7 +430,7 @@ export class MouseControl {
 				dragStartHandle: this.dragStartHandle,
 				button: event.button,
 				modKeyCombination: modKeysCombinations(event),
-				target: this.hovered!,
+				target: this.hovered,
 				position: { x: event.offsetX, y: event.offsetY },
 			})
 		}
@@ -432,7 +439,7 @@ export class MouseControl {
 			type: 'up',
 			button: event.button,
 			modKeyCombination: modKeysCombinations(event),
-			target: this.hovered!,
+			target: this.hovered,
 			position: { x: event.offsetX, y: event.offsetY },
 		})
 		this.reLock(event)

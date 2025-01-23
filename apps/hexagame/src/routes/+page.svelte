@@ -16,7 +16,10 @@
 
 	$effect(() => {
 		return () => {
-			for (const game of Object.values(games)) game.disengageAll()
+			for (const game of Object.values(games)) {
+				game.disengageAll()
+				game.running = false
+			}
 		}
 	})
 
