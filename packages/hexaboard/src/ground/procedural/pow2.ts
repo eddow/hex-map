@@ -9,17 +9,19 @@ export interface Pow2Terrain extends TerrainBase {
 	variance: number
 }
 
-export interface Pow2Tile extends TileBase {
-	terrain: Pow2Terrain
+export interface Pow2Tile<Terrain extends Pow2Terrain = Pow2Terrain> extends TileBase<Terrain> {
+	terrain: Terrain
 	seed: number
 }
 
 /**
+ * Test procedural that "divide triangles" - each triangle into 4 sub-triangles whose sides are half the sides of the divided triangle
+ * Doing such, the middle point can be varied in function of the scale of the triangle (whole sector/unit triangle) and other factors
  * @deprecated Not maintained
  */
 export abstract class Pow2Procedural<
-	Tile extends Pow2Tile = Pow2Tile,
 	Terrain extends Pow2Terrain = Pow2Terrain,
+	Tile extends Pow2Tile<Terrain> = Pow2Tile<Terrain>,
 > extends ProceduralBase<Tile> {
 	constructor(
 		public readonly scale: number,
@@ -27,7 +29,7 @@ export abstract class Pow2Procedural<
 	) {
 		super(1 + (1 << scale), terrainHeight)
 	}
-	listTiles(land: LandBase<Tile, Terrain>, { gen }: { gen: RandGenerator }): Tile[] {
+	listTiles(land: LandBase<Terrain, Tile>, { gen }: { gen: RandGenerator }): Tile[] {
 		const tiles = new Array(this.nbrTiles).fill(null)
 		const corners = hexSides.map((side) => axial.linear([1 << this.scale, side]))
 		this.initCorners(tiles, corners.map(axial.index), gen)
@@ -37,7 +39,7 @@ export abstract class Pow2Procedural<
 		return tiles
 	}
 
-	divTriangle(land: LandBase<Tile, Terrain>, tiles: Tile[], scale: number, ...triangle: Axial[]) {
+	divTriangle(land: LandBase<Terrain, Tile>, tiles: Tile[], scale: number, ...triangle: Axial[]) {
 		if (scale === 0) return
 
 		const points = triangle.map(axial.index)
@@ -59,7 +61,7 @@ export abstract class Pow2Procedural<
 	}
 
 	abstract initCorners(tiles: Tile[], corners: number[], gen: RandGenerator): void
-	insidePoint(land: LandBase<Tile, Terrain>, p1: Tile, p2: Tile, scale: number): Pow2Tile {
+	insidePoint(land: LandBase<Terrain, Tile>, p1: Tile, p2: Tile, scale: number): Pow2Tile {
 		const variance = (p1.terrain.variance + p2.terrain.variance) / 2
 		const randScale = ((1 << scale) / this.radius) * this.terrainHeight * variance
 		const seed = LCG(p1.seed, p2.seed)()

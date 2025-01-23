@@ -95,24 +95,10 @@ function lerp(a: number, b: number, t: number) {
 	return a + (b - a) * t
 }
 
-export function axialLerp(a: Axial, b: Axial, t: number) {
-	// epsilon to avoid straight mid-points (point exactly on the line between 2 hexagons)
-	return { q: lerp(a.q + 1e-6, b.q + 2e-6, t), r: lerp(a.r, b.r, t) }
-}
-
-export function axialRound({ q, r }: Axial) {
-	const v = [q, r, -q - r]
-	const round = v.map(Math.round)
-	const diff = v.map((v, i) => Math.abs(round[i] - v))
-	const [rq, rr, rs] = round
-
-	return [
-		{ q: -rr - rs, r: rr },
-		{ q: rq, r: -rq - rs },
-		{ q: rq, r: rr },
-	][diff.indexOf(Math.max(...diff))]
-}
-
+/**
+ * Generate uniformly a valid {s,u,v} position in a tile
+ * @returns {s,u,v}
+ */
 export function genTilePosition(gen: RandGenerator) {
 	let [u, v] = [gen(), gen()]
 	const s = Math.floor(gen(6))
@@ -120,6 +106,14 @@ export function genTilePosition(gen: RandGenerator) {
 	return { s, u, v }
 }
 
+/**
+ * Get a {s,u,v} position in a tile
+ * * s is the side index [0,6[
+ * * u,v are the coordinates in the triangle for that side
+ * @param aRef
+ * @param radius Specified virtual "radius" of the tile (subdivisions of the tile this function works with)
+ * @returns {s,u,v}
+ */
 export function posInTile(aRef: AxialRef, radius: number) {
 	if (axial.zero(aRef)) return { s: 0, u: 0, v: 0 }
 	const coords = axial.coords(aRef)
@@ -137,16 +131,22 @@ export function posInTile(aRef: AxialRef, radius: number) {
 	}[signs]!
 }
 
-/** Retrieves the tiles around a given tile (indexes) */
-export function pointsAround(aRef: AxialRef, nbrTiles: number) {
-	const coords = axial.coords(aRef)
+/**
+ * Retrieves the tiles around a given tile (indexes) that are within a limit index
+ * @returns number[]
+ */
+export function pointsAround(aRef: AxialRef, nbrTiles: number = Number.POSITIVE_INFINITY) {
 	return hexSides
-		.map((side) => indexAt(axial.linear([1, coords], [1, side])))
+		.map((side) => indexAt(axial.linear([1, aRef], [1, side])))
 		.filter((tile) => tile < nbrTiles)
 }
 
 export type AxialRef = number | Axial | string
 export const axial = {
+	/**
+	 * Get the axial-ref as an axial: an object `{q, r}`
+	 * @returns Axial
+	 */
 	coords(aRef: AxialRef) {
 		if (typeof aRef === 'string') {
 			const [q, r] = aRef.split(',')
@@ -154,6 +154,10 @@ export const axial = {
 		}
 		return typeof aRef === 'number' ? axialAt(aRef) : aRef
 	},
+	/**
+	 * Get the axial-ref as an index
+	 * @returns number
+	 */
 	index(aRef: AxialRef) {
 		if (typeof aRef === 'string') {
 			const [q, r] = aRef.split(',')
@@ -161,6 +165,10 @@ export const axial = {
 		}
 		return typeof aRef === 'number' ? aRef : indexAt(aRef)
 	},
+	/**
+	 * Get the axial-ref as a key
+	 * @returns string
+	 */
 	key(aRef: AxialRef) {
 		if (typeof aRef === 'number') {
 			const { q, r } = axialAt(aRef)
@@ -168,18 +176,47 @@ export const axial = {
 		}
 		return typeof aRef === 'string' ? aRef : `${aRef.q},${aRef.r}`
 	},
-	linear(...args: [number, AxialRef][]): Axial {
-		return args.reduce(
-			(acc, [coef, aRef]) => {
+	/**
+	 * Addition a list of axial coordinates optionally with a scalar coefficient
+	 * @param args [coef, AxialRef] Scalar coefficient and axial to multiply/add
+	 * @param args AxialRef Axial to add
+	 * @returns Axial
+	 */
+	linear(...args: ([number, AxialRef] | AxialRef)[]): Axial {
+		return args.reduce<Axial>(
+			(acc, term) => {
+				const [coef, aRef] = Array.isArray(term) ? term : [1, term]
 				const { q, r } = axial.coords(aRef)
 				return { q: acc.q + coef * q, r: acc.r + coef * r }
 			},
 			{ q: 0, r: 0 }
 		)
 	},
+	/**
+	 * Retrieves if the axial is at 0,0
+	 * @returns boolean
+	 */
 	zero(aRef: AxialRef) {
 		if (typeof aRef !== 'object') return [0, '0,0'].includes(aRef)
 		const { q, r } = axial.coords(aRef)
 		return q === 0 && r === 0
+	},
+
+	lerp(a: Axial, b: Axial, t: number) {
+		// epsilon to avoid straight mid-points (point exactly on the line between 2 hexagons)
+		return { q: lerp(a.q + 1e-6, b.q + 2e-6, t), r: lerp(a.r, b.r, t) }
+	},
+
+	round({ q, r }: Axial) {
+		const v = [q, r, -q - r]
+		const round = v.map(Math.round)
+		const diff = v.map((v, i) => Math.abs(round[i] - v))
+		const [rq, rr, rs] = round
+
+		return [
+			{ q: -rr - rs, r: rr },
+			{ q: rq, r: -rq - rs },
+			{ q: rq, r: rr },
+		][diff.indexOf(Math.max(...diff))]
 	},
 }

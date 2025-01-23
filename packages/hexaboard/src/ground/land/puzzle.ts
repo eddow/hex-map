@@ -4,7 +4,6 @@ import {
 	type Axial,
 	type AxialRef,
 	axial,
-	axialRound,
 	cartesian,
 	fromCartesian,
 	hexTiles,
@@ -22,7 +21,7 @@ function sector2tile(aRef: AxialRef, radius = 1) {
 	}
 }
 function tile2sector(aRef: AxialRef, radius = 1) {
-	return axialRound(sector2tile(aRef, 1 / (3 * radius)))
+	return axial.round(sector2tile(aRef, 1 / (3 * radius)))
 }
 export class PuzzleSector<Tile extends TileBase = TileBase> extends Sector<Tile> {
 	constructor(
@@ -63,7 +62,7 @@ export class PuzzleLand<
 > extends LandBase<Terrain, Tile> {
 	private sectors: Record<string, Sector<Tile>> = {}
 	private readonly viewDist: number
-	constructor({ viewDist = 1200, ...init }: PuzzleInit<Terrain, Tile>) {
+	constructor({ viewDist = 3500, ...init }: PuzzleInit<Terrain, Tile>) {
 		super(init)
 		this.viewDist = viewDist
 	}

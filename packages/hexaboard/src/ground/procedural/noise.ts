@@ -5,6 +5,10 @@ import type { LandBase } from '../land'
 import type { TileBase } from '../sector'
 import { ProceduralBase } from './procedural'
 
+/**
+ * Really simple Perlin noise procedural
+ * @todo Make a real terrain generator out of it
+ */
 export class NoiseProcedural<Tile extends TileBase = TileBase> extends ProceduralBase<Tile> {
 	readonly perlin: HeightMap
 	constructor(

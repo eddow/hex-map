@@ -85,7 +85,7 @@ export const mouseConfig: MouseConfig = {
 	lockButtons: {
 		pan: { buttons: MouseButtons.Right | MouseButtons.Left, modifiers: modKeysComb.none },
 		turn: { buttons: MouseButtons.Middle, modifiers: modKeysComb.none },
-		lookAt: { buttons: MouseButtons.Right, modifiers: modKeysComb.none },
+		//lookAt: { buttons: MouseButtons.Right, modifiers: modKeysComb.none },
 	},
 	zoomWheel: { axis: 'y', modifiers: modKeysComb.none },
 	zoomSpeed: 1.2,

@@ -1,8 +1,11 @@
 import type { Object3D, Vector3 } from 'three'
 import { GameEntity } from '~/game/game'
 import type Sector from '~/ground/sector'
-import { axialRound, fromCartesian, indexAt } from '~/utils/axial'
+import sector from '~/ground/sector'
+import { axial, fromCartesian } from '~/utils/axial'
 import { nextInPath } from './path'
+
+// TODO Redo without sectors
 
 export interface CharacterPlan {
 	next(character: Character): CharacterAction | undefined
@@ -34,8 +37,8 @@ class Walk implements CharacterAction {
 		character.o3d.position.add(direction.normalize().multiplyScalar(dt * velocity))
 	}
 	cancel(character: Character) {
-		character.tile = indexAt(
-			axialRound(fromCartesian(character.o3d.position, character.sector.tileSize))
+		character.tile = axial.index(
+			axial.round(fromCartesian(character.o3d.position, character.sector.tileSize))
 		)
 	}
 }
@@ -49,7 +52,7 @@ class GoToPlan implements CharacterPlan {
 	) {}
 	next(character: Character) {
 		if (character.sector === this.sector && character.tile === this.tile) return
-		const next = indexAt(nextInPath(character.sector, character.tile, this.sector, this.tile))
+		const next = axial.index(nextInPath(character.sector, character.tile, this.sector, this.tile))
 		return new Walk(character.sector.tileCenter(next), this, () => {
 			character.tile = next
 		})
@@ -60,7 +63,6 @@ export class Character extends GameEntity {
 	public action: CharacterAction = idle
 
 	constructor(
-		public sector: Sector,
 		public tile: number,
 		o3d: Object3D
 	) {

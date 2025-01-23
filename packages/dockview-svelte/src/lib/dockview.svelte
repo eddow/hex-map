@@ -22,7 +22,7 @@
 		class: className = '',
 		...props
 	}: DockviewOptions & {
-		widgets?: Record<string, Component>
+		widgets?: Record<string, Component<any>>
 		snippets?: Record<string, Snippet<any>>
 		renderers?: Record<string, (id: string) => IContentRenderer>
 		class?: string

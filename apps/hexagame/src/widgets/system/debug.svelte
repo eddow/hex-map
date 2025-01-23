@@ -3,6 +3,7 @@
 	import { Table, TableBody, TableBodyCell, TableBodyRow, TableHeadCell } from 'flowbite-svelte'
 
 	function debugged(value: any) {
+		if (typeof value === 'number') return value.toFixed(2)
 		if (typeof value !== 'object') return value
 		return Object.entries(value)
 			.map(([k, v]): string => `${k}: ${debugged(v)}`)

@@ -3,12 +3,11 @@
 	import { terrainTypes } from '$lib/world/terrain'
 	import type { PuzzleLand } from 'hexaboard'
 
-	// TODO: to give the sector as argument hangs in an infinite loop
 	let {
 		game: gameKey,
 		sector: sectorKey,
 		hexIndex
-	}: { game?: string; sector?: string; hexIndex?: number } = $props()
+	}: { game: string; sector: string; hexIndex: number } = $props()
 	const game = games[gameKey!]
 	const land = game.land as PuzzleLand
 	const sector = land.sector(sectorKey!)

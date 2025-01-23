@@ -1,4 +1,4 @@
-# Hexa game
+# Hexa-game
 
 Sand-boxing tool for strategical hexagonal board games.
 

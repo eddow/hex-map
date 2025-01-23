@@ -29,8 +29,7 @@ export function createGame(seed: number) {
 	//const landscape = new UniformLandscape(20)
 	type Terrain = ResourcefulTerrain & TexturedTerrain
 	type Tile = TileBase<Terrain>
-	//const procedural = new NoiseProcedural<Tile>(16, terrainHeight, 73058, 50)
-	const procedural = new NoiseProcedural<Tile>(3, terrainHeight, 73058, 50)
+	const procedural = new NoiseProcedural<Tile>(16, terrainHeight, 73058, 50)
 
 	const land = new WateredLand({
 		terrains,

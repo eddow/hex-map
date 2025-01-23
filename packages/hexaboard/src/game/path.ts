@@ -1,21 +1,12 @@
 import type Sector from '~/ground/sector'
-import {
-	type Axial,
-	axial,
-	axialAt,
-	axialDistance,
-	axialLerp,
-	axialRound,
-	hexSides,
-	indexAt,
-} from '~/utils/axial'
+import { type Axial, axial, axialAt, axialDistance, hexSides, indexAt } from '~/utils/axial'
 
 export function nextInPath(fromSector: Sector, fromTile: number, toSector: Sector, toTile: number) {
 	if (fromSector !== toSector)
 		throw new Error('from and to sectors must be the same: not implemented yet')
 	const from = axialAt(fromTile)
 	const to = axialAt(toTile)
-	return axialRound(axialLerp(from, to, 1 / axialDistance(from, to)))
+	return axial.round(axial.lerp(from, to, 1 / axialDistance(from, to)))
 }
 
 export function straightPath(
@@ -30,7 +21,7 @@ export function straightPath(
 	const to = axialAt(toTile)
 	const rv: Axial[] = []
 	const dist = axialDistance(from, to)
-	for (let i = 0; i < dist; i++) rv.push(axialRound(axialLerp(from, to, (i + 1) / dist)))
+	for (let i = 0; i < dist; i++) rv.push(axial.round(axial.lerp(from, to, (i + 1) / dist)))
 	return rv
 }
 

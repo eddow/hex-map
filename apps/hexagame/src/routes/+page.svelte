@@ -17,6 +17,7 @@
 	$effect(() => {
 		return () => {
 			for (const game of Object.values(games)) {
+				// TODO: Not enough done: hmr does not free the resources
 				game.disengageAll()
 				game.running = false
 			}
