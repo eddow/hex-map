@@ -128,6 +128,7 @@ export abstract class LandscapeBase<
 
 	/**
 	 * Retrieves a point (xyz) inside a rendered tile
+	 * In case of border tiles, positions involving a tile outside of the sector return `null`
 	 * Reference: tile
 	 * @returns
 	 */

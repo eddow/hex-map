@@ -53,10 +53,24 @@
 			}
 		}
 	}
-	const layoutJson = localStorage.getItem('layout')
+	const layoutJson = '' //localStorage.getItem('layout')
 	onMount(() => {
 		if (layoutJson) api.fromJSON(JSON.parse(layoutJson))
-		else showSystem('configuration')()
+		else {
+			showSystem('configuration')()
+
+			dockview.api.addPanel({
+				id: `game.${crypto.randomUUID()}`,
+				component: 'gameView',
+				title: 'Game X',
+				params: {
+					game: 'GameX'
+				},
+				position: {
+					direction: 'right'
+				}
+			})
+		}
 	})
 	$effect(() => {
 		const disposable = api.onDidLayoutChange(() => {

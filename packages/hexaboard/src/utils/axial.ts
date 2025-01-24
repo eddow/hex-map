@@ -102,10 +102,10 @@ function lerp(a: number, b: number, t: number) {
  * Generate uniformly a valid {s,u,v} position in a tile
  * @returns {s,u,v}
  */
-export function genTilePosition(gen: RandGenerator) {
-	let [u, v] = [gen(), gen()]
+export function genTilePosition(gen: RandGenerator, radius = 1) {
+	let [u, v] = [gen(radius), gen(radius)]
 	const s = Math.floor(gen(6))
-	if (u + v > 1) [u, v] = [1 - u, 1 - v]
+	if (u + v > radius) [u, v] = [radius - u, radius - v]
 	return { s, u, v }
 }
 

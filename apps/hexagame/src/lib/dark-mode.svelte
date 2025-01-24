@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { Button } from 'flowbite-svelte'
 	import { SunSolid, MoonSolid } from 'flowbite-svelte-icons'
-	let { darkMode = $bindable(false) } = $props()
+	let {
+		darkMode = $bindable(false),
+		class: className = ''
+	}: { darkMode?: boolean; class?: string } = $props()
 </script>
 
 <Button
-	class="inline-flex items-center p-2 text-gray-500 rounded-lg dark:text-gray-400 bg-gray-700 dark:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700"
+	class="{className} p-2 text-gray-500 rounded-lg dark:text-gray-400 bg-gray-700 dark:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700"
 	aria-label="Toggle dark mode"
 	type="button"
 	onclick={() => (darkMode = !darkMode)}

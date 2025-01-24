@@ -1,13 +1,7 @@
 import type { Object3D } from 'three'
-import type { TerrainBase } from '~/ground/terrain'
-import { hexTiles } from '~/utils/axial'
+import type { ResourceDistribution, TerrainBase } from '~/ground'
 import { meshAsset } from '~/utils/meshes'
 import type { RandGenerator } from '~/utils/numbers'
-
-/**
- * Number of hexagonal "circles" around the center of sub-tiles that can contain something
- */
-export const terrainContentRadius = 1
 
 /**
  * Any thing that can be placed on the map and interacted with by the characters (resources, trees, rocks, artifacts, etc.)
@@ -27,22 +21,24 @@ export abstract class Handelable {
 	}
 }
 
-interface Characteristics {
+interface HandelableAllure {
 	model: number
 	rotation: number
 }
+
+export interface ResourcefulTerrain extends TerrainBase {
+	resourceDistribution: ResourceDistribution[]
+}
 export class Resource extends Handelable {
-	characteristics: Characteristics
-	constructor(characteristics: Characteristics)
+	allure: HandelableAllure
+	constructor(allure: HandelableAllure)
 	constructor(gen: RandGenerator, terrain: ResourcefulTerrain)
-	constructor(characteristics: Characteristics | RandGenerator, terrainType?: ResourcefulTerrain) {
+	constructor(allure: HandelableAllure | RandGenerator, terrainType?: ResourcefulTerrain) {
 		super()
-		this.characteristics =
-			typeof characteristics === 'function'
-				? this.generate(characteristics as RandGenerator, terrainType!)
-				: characteristics
+		this.allure =
+			typeof allure === 'function' ? this.generate(allure as RandGenerator, terrainType!) : allure
 	}
-	generate(gen: RandGenerator, terrain: ResourcefulTerrain): Characteristics {
+	generate(gen: RandGenerator, terrain: ResourcefulTerrain): HandelableAllure {
 		return { model: Math.floor(gen(this.nbrModels)) + 1, rotation: gen(Math.PI * 2) }
 	}
 	get path(): string {
@@ -52,33 +48,10 @@ export class Resource extends Handelable {
 		throw new Error('Not implemented')
 	}
 	createMesh() {
-		const mesh = meshAsset(
-			this.path.replace('#', this.characteristics.model.toString())
-		) as Object3D
+		const mesh = meshAsset(this.path.replace('#', this.allure.model.toString())) as Object3D
 		//mesh.rotateZ(this.characteristics.rotation)
 		return mesh
 	}
-}
-
-export interface ResourcefulTerrain extends TerrainBase {
-	resourceDistribution: ResourceDistribution[]
-}
-
-export type ResourceGenerator = new (gen: RandGenerator, terrain: ResourcefulTerrain) => Resource
-export type ResourceDistribution = [typeof Resource, number]
-export function generateResource(gen: RandGenerator, terrain: ResourcefulTerrain) {
-	const resources = terrain.resourceDistribution
-	const repeat = hexTiles(terrainContentRadius + 1)
-	if (!resources.length) return
-	let choice = gen()
-	for (let [resource, chance] of resources) {
-		chance /= repeat
-		if (choice < chance) return new resource(gen, terrain)
-		choice -= chance
-	}
-}
-export function* generateResources(gen: RandGenerator, terrain: ResourcefulTerrain, n: number) {
-	for (let i = 0; i < n; i++) yield generateResource(gen, terrain)
 }
 
 // Supplies -> wood, hammer, meat
