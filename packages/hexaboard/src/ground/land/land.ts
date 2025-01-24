@@ -1,4 +1,5 @@
 import { Group, type Vector3 } from 'three'
+import type { AxialRef } from '~/utils'
 import type { LandscapeBase } from '../landscape'
 import type { ProceduralBase } from '../procedural'
 import type { TileBase } from '../sector'
@@ -32,8 +33,8 @@ export class LandBase<
 		this.landscape = init.landscape
 		this.seed = init.seed
 	}
-	createSector(tiles: Tile[], seed: number, ...args: any[]) {
-		return new Sector(this, tiles, seed)
+	createSector(center: AxialRef, tiles: Tile[], seed: number, ...args: any[]) {
+		return new Sector(center, this, tiles, seed)
 	}
 	progress(dt: number) {}
 	addedSector(sector: Sector) {
@@ -51,4 +52,10 @@ export class LandBase<
 	sector(...args: any[]): Sector<Tile> {
 		throw new Error('Not implemented')
 	}
+	sectorAt(aRef: AxialRef): Sector<Tile> | null {
+		throw new Error('Not implemented')
+	}
+	/* TODO: tileHandle(aRef: AxialRef) {
+		return new TileHandle(this, this.sectorAt(aRef)!, this.landscape.hexIndex(aRef))
+	}*/
 }

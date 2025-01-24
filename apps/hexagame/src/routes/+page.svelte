@@ -61,7 +61,6 @@
 	$effect(() => {
 		const disposable = api.onDidLayoutChange(() => {
 			const layout = api.toJSON()
-			console.log('saving layout')
 			localStorage.setItem('layout', JSON.stringify(layout))
 		})
 

@@ -1,6 +1,6 @@
 import { Group, type Object3D } from 'three'
-import type { TileHandle } from '~/utils/mouseControl'
 import { GameEntity } from './game'
+import type { TileSpec } from './mouseHandles'
 
 export class TileCursor extends GameEntity {
 	private shown = false
@@ -8,11 +8,11 @@ export class TileCursor extends GameEntity {
 		super(new Group())
 	}
 
-	private _tile?: TileHandle
-	get tile(): TileHandle | undefined {
+	private _tile?: TileSpec
+	get tile(): TileSpec | undefined {
 		return this._tile
 	}
-	set tile(value: TileHandle | undefined) {
+	set tile(value: TileSpec | undefined) {
 		this._tile = value
 		const group = this.o3d as Group
 		if (value) {
@@ -20,7 +20,7 @@ export class TileCursor extends GameEntity {
 				this.shown = true
 				group.add(this.mesh)
 			}
-			group.position.copy(value.target.tileCenter(value.hexIndex))
+			group.position.copy(value.center)
 		} else if (this.shown) {
 			this.shown = false
 			group.remove(this.mesh)

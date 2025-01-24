@@ -1,7 +1,7 @@
 import { DoubleSide, Mesh, MeshBasicMaterial, type Object3D, Shape, ShapeGeometry } from 'three'
 import type {} from '~/game'
 import type { ResourcefulTerrain } from '~/game/handelable'
-import type { Axial } from '~/utils'
+import type { AxialRef } from '~/utils'
 import type { TileBase } from '../sector'
 import { PuzzleSector } from './puzzle'
 import { type ResourcefulInit, ResourcefulLand } from './resourceful'
@@ -62,7 +62,7 @@ export class WateredLand<
 		super(init)
 		this.seaLevel = init.seaLevel
 	}
-	createSector(tiles: Tile[], seed: number, axial: Axial, ...args: any[]): PuzzleSector<Tile> {
-		return new WateredSector<Tile>(this, tiles, seed, axial)
+	createSector(center: AxialRef, tiles: Tile[], seed: number, ...args: any[]): PuzzleSector<Tile> {
+		return new WateredSector<Tile>(center, this, tiles, seed)
 	}
 }

@@ -1,7 +1,9 @@
 import { type Face, Group, type Intersection, type Object3D, type Object3DEventMap } from 'three'
+import type { Game } from '~/game/game'
+import { TileHandle, TileSpec } from '~/game/mouseHandles'
 import { type AxialRef, axial } from '~/main'
 import { LCG } from '~/utils'
-import { type MouseReactive, TileHandle } from '~/utils/mouseControl'
+import type { MouseReactive } from '~/utils/mouseControl'
 import type { LandBase } from './land/land'
 import type { TerrainBase } from './terrain'
 
@@ -12,6 +14,7 @@ export interface TileBase<Terrain extends TerrainBase = TerrainBase> {
 
 export default class Sector<Tile extends TileBase = TileBase> implements MouseReactive {
 	constructor(
+		public readonly center: AxialRef,
 		public readonly land: LandBase,
 		public readonly tiles: Tile[],
 		public readonly seed: number
@@ -19,12 +22,15 @@ export default class Sector<Tile extends TileBase = TileBase> implements MouseRe
 	group: Group = new Group()
 	ground?: Object3D
 
-	mouseHandle(intersection: Intersection<Object3D<Object3DEventMap>>): TileHandle {
+	mouseHandle(game: Game, intersection: Intersection<Object3D<Object3DEventMap>>): TileHandle {
 		const baryArr = intersection.barycoord!.toArray()
 		const facePt = baryArr.indexOf(Math.max(...baryArr))
 		const geomPt = intersection.face!['abc'[facePt] as keyof Face] as number
 		// TODO: It should be calculated and therefore not reference this.land.landscape
-		return new TileHandle(this, this.land.landscape.hexIndex(geomPt))
+		return new TileHandle(
+			game,
+			new TileSpec(undefined, undefined, this, this.land.landscape.hexIndex(geomPt))
+		)
 	}
 
 	/**

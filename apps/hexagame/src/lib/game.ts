@@ -5,11 +5,13 @@ import {
 	MouseButton,
 	type MouseButtonEvolution,
 	type MouseHoverEvolution,
+	NoiseProcedural,
 	type ResourcefulTerrain,
 	TexturedLandscape,
 	type TexturedTerrain,
 	type TileBase,
 	TileCursor,
+	TileHandle,
 	WateredLand,
 	axial,
 	cartesian,
@@ -18,9 +20,8 @@ import {
 	numbers,
 	pointsAround,
 } from 'hexaboard'
-import { NoiseProcedural } from 'hexaboard'
 import { CatmullRomCurve3, Mesh, MeshBasicMaterial, type Object3D, TubeGeometry } from 'three'
-import { debugInfo, dockview } from './globals.svelte'
+import { debugInfo, dockview, games } from './globals.svelte'
 import terrains, { terrainHeight } from './world/terrain'
 
 export function createGame(seed: number) {
@@ -58,13 +59,13 @@ export function createGame(seed: number) {
 	}
 	let pathTube: Object3D | undefined
 	game.onMouse('hover', (ev: MouseHoverEvolution) => {
-		cursor.tile = ev.handle?.tile
+		if (ev.handle instanceof TileHandle) {
+			cursor.tile = ev.handle?.spec
 
-		if (pathTube) {
-			game.scene.remove(pathTube)
-			pathTube = undefined
-		}
-		if (cursor.tile) {
+			if (pathTube) {
+				game.scene.remove(pathTube)
+				pathTube = undefined
+			}
 			//if (pawn.tile !== cursor.tile.hexIndex) {
 			/* straight path
 				const path = [
@@ -100,33 +101,37 @@ export function createGame(seed: number) {
 				game.scene.add(pathTube)
 			}
 			//}
-			debugInfo.tile = cursor.tile.target.worldTile(cursor.tile.hexIndex)
+			debugInfo.tile = cursor.tile?.axial
 			debugInfo.tilePos = cartesian(debugInfo.tile, 20)
 		} else {
 			debugInfo.tilePos = debugInfo.tile = 'none'
+			cursor.tile = undefined
 		}
 	})
 	game.onMouse('click', (ev: MouseButtonEvolution) => {
-		const tile = ev.handle?.tile
-		if (tile)
-			switch (ev.button) {
-				case MouseButton.Left:
-					//pawn.goTo(tile.target, tile.hexIndex)
-					break
-				case MouseButton.Right:
-					dockview.api.addPanel({
-						id: `selectionInfo.${crypto.randomUUID()}`,
-						component: 'selectionInfo',
-						title: m.selectInfo(),
-						params: {
-							game: 'GameX',
-							sector: tile.target.key,
-							hexIndex: tile.hexIndex,
-						},
-						floating: true,
-					})
-					break
-			}
+		if (ev.handle instanceof TileHandle) {
+			const tile = ev.handle?.spec
+			const game = ev.handle?.game
+			if (tile)
+				switch (ev.button) {
+					case MouseButton.Left:
+						//pawn.goTo(tile.target, tile.hexIndex)
+						break
+					case MouseButton.Right:
+						dockview.api.addPanel({
+							id: `selectionInfo.${crypto.randomUUID()}`,
+							component: 'selectionInfo',
+							title: m.selectInfo(),
+							params: {
+								game: Object.entries(games).find(([k, v]) => v === game)?.[0],
+								sector: tile.sector.key,
+								hexIndex: tile.hexIndex,
+							},
+							floating: true,
+						})
+						break
+				}
+		}
 	})
 	game.addEntity(cursor)
 

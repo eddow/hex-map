@@ -8,34 +8,14 @@ import {
 	Vector3,
 } from 'three'
 import type { GameView } from '~/game/game'
-import type Sector from '~/ground/sector'
 import { LockSemaphore } from './lockSemaphore'
-// TODO: Still some cursor show/hide behavior inconsistency when 2-buttons + hover is null when taking canvas in reLock, &c
-export interface MouseReactive {
-	mouseHandle(intersection: Intersection<Object3D<Object3DEventMap>>): MouseHandle
+
+export interface MouseReactive<Handle = MouseHandle> {
+	mouseHandle(sender: MouseControl, intersection: Intersection<Object3D<Object3DEventMap>>): Handle
 }
-export abstract class MouseHandle<Target = any> {
-	constructor(public readonly target: Target) {}
-	abstract readonly tile: TileHandle
+
+export abstract class MouseHandle {
 	abstract equals(other: MouseHandle): boolean
-}
-
-export class TileHandle extends MouseHandle<Sector> {
-	readonly tile = this
-
-	constructor(
-		target: Sector,
-		public readonly hexIndex: number
-	) {
-		super(target)
-	}
-	equals(other: MouseHandle) {
-		return (
-			other instanceof TileHandle &&
-			other.target === this.target &&
-			other.hexIndex === this.hexIndex
-		)
-	}
 }
 
 export enum MouseButton {
@@ -263,7 +243,7 @@ export class MouseControl {
 			const target = intersection.object?.userData?.mouseTarget as MouseReactive
 			return {
 				intersection,
-				handle: target.mouseHandle(intersection),
+				handle: target.mouseHandle(this, intersection),
 			}
 		}
 	}
