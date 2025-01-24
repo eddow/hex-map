@@ -4,8 +4,9 @@
 
 	function createGame() {
 		dockview.api.addPanel({
-			id: `game.GameX`,
+			id: `game.${crypto.randomUUID()}`,
 			component: 'gameView',
+			title: 'Game X',
 			params: {
 				game: 'GameX'
 			},
@@ -16,4 +17,4 @@
 	}
 </script>
 
-<Button onclick={createGame}>New game</Button>
+<Button onclick={createGame}>New view</Button>

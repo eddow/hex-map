@@ -1,5 +1,6 @@
-import { Group, type Vector3 } from 'three'
-import type { AxialRef } from '~/utils'
+import { Group, type Vector2Like, type Vector3 } from 'three'
+import { TileSpec } from '~/game'
+import { type AxialRef, axial, fromCartesian } from '~/utils'
 import type { LandscapeBase } from '../landscape'
 import type { ProceduralBase } from '../procedural'
 import type { TileBase } from '../sector'
@@ -55,7 +56,12 @@ export class LandBase<
 	sectorAt(aRef: AxialRef): Sector<Tile> | null {
 		throw new Error('Not implemented')
 	}
-	/* TODO: tileHandle(aRef: AxialRef) {
-		return new TileHandle(this, this.sectorAt(aRef)!, this.landscape.hexIndex(aRef))
-	}*/
+	tile(aRef: AxialRef | Vector2Like) {
+		return new TileSpec(
+			this,
+			typeof aRef === 'object' && 'x' in aRef
+				? fromCartesian(aRef, this.landscape.tileSize)
+				: axial.coords(aRef)
+		)
+	}
 }

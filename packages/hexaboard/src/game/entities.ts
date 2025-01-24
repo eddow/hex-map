@@ -1,6 +1,6 @@
 import { Group, type Object3D } from 'three'
 import { GameEntity } from './game'
-import type { TileSpec } from './mouseHandles'
+import type { TileSpec } from './tile'
 
 export class TileCursor extends GameEntity {
 	private shown = false

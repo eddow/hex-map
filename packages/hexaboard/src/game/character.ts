@@ -1,11 +1,22 @@
 import type { Object3D, Vector3 } from 'three'
 import { GameEntity } from '~/game/game'
-import type Sector from '~/ground/sector'
-import sector from '~/ground/sector'
-import { axial, fromCartesian } from '~/utils/axial'
-import { nextInPath } from './path'
+import { type AxialRef, axial } from '~/utils/axial'
+import { costingPath } from './path'
+import type { TileSpec } from './tile'
 
-// TODO Redo without sectors
+// TODO: Test the whole and write terrainCost
+function terrainCost(from: string, to: string) {
+	return 1
+}
+
+export class ImpossibleMoveError extends Error {
+	constructor(
+		public readonly from: AxialRef,
+		public readonly to: AxialRef
+	) {
+		super('impossible move')
+	}
+}
 
 export interface CharacterPlan {
 	next(character: Character): CharacterAction | undefined
@@ -21,8 +32,8 @@ export const idle = { advance: () => 0, plan: { next: () => idle } }
 
 class Walk implements CharacterAction {
 	constructor(
-		public destination: Vector3,
 		public plan: CharacterPlan,
+		public destination: Vector3,
 		public done?: (character: Character) => void
 	) {}
 	advance(character: Character, dt: number) {
@@ -37,23 +48,26 @@ class Walk implements CharacterAction {
 		character.o3d.position.add(direction.normalize().multiplyScalar(dt * velocity))
 	}
 	cancel(character: Character) {
-		character.tile = axial.index(
-			axial.round(fromCartesian(character.o3d.position, character.sector.tileSize))
-		)
+		character.tile = character.tile.land.tile(character.o3d.position)
 	}
 }
 
-// TODO: Cache the path and reevaluate if something changed
 class GoToPlan implements CharacterPlan {
+	private path: AxialRef[]
 	constructor(
-		public sector: Sector,
-		public tile: number,
-		public plan: CharacterPlan
-	) {}
+		public plan: CharacterPlan,
+		from: AxialRef,
+		public destination: AxialRef
+	) {
+		const destKey = axial.key(destination)
+		const path = costingPath(axial.key(from), terrainCost, (target) => target === destKey)
+		if (!path) throw new Error('no path')
+		this.path = path
+	}
 	next(character: Character) {
-		if (character.sector === this.sector && character.tile === this.tile) return
-		const next = axial.index(nextInPath(character.sector, character.tile, this.sector, this.tile))
-		return new Walk(character.sector.tileCenter(next), this, () => {
+		if (!this.path.length) return
+		const next = character.tile.land.tile(this.path.unshift())
+		return new Walk(this, next.center, () => {
 			character.tile = next
 		})
 	}
@@ -63,11 +77,11 @@ export class Character extends GameEntity {
 	public action: CharacterAction = idle
 
 	constructor(
-		public tile: number,
+		public tile: TileSpec,
 		o3d: Object3D
 	) {
 		super(o3d)
-		o3d.position.copy(sector.tileCenter(tile).add(sector.group.position))
+		o3d.position.copy(tile.center)
 	}
 
 	progress(dt: number) {
@@ -85,8 +99,8 @@ export class Character extends GameEntity {
 		}
 	}
 
-	goTo(sector: Sector, hexIndex: number) {
-		const plan = new GoToPlan(sector, hexIndex, idle.plan)
+	goTo(destination: AxialRef) {
+		const plan = new GoToPlan(idle.plan, this.tile.key, destination)
 		const next = plan.next(this)
 		this.action.cancel?.(this)
 		for (
@@ -98,7 +112,7 @@ export class Character extends GameEntity {
 		if (next) {
 			if (this.action instanceof Walk && this.action.destination.equals(next.destination))
 				this.action = next
-			else this.action = new Walk(this.sector.tileCenter(this.tile), plan)
+			else this.action = new Walk(plan, this.tile.center)
 		}
 	}
 }

@@ -5,7 +5,7 @@ export class Tree extends Resource {
 		return 3
 	}
 	get path() {
-		return '/assets/resource/tree#.glb'
+		return './assets/resource/tree#.glb'
 	}
 }
 
@@ -14,6 +14,6 @@ export class Rock extends Resource {
 		return 3
 	}
 	get path() {
-		return '/assets/resource/rock#.glb'
+		return './assets/resource/rock#.glb'
 	}
 }

@@ -73,6 +73,10 @@ export class TileSpec<
 	get center(): Vector3 {
 		return this.sector.tileCenter(this.hexIndex)
 	}
+
+	get key(): string {
+		return axial.key(this.axial)
+	}
 }
 
 export class TileHandle<Tile extends TileBase = TileBase> extends GameMouseHandle<Tile> {

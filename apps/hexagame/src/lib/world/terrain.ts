@@ -5,7 +5,7 @@ import { Rock, Tree } from './handelable'
 
 const textureLoader = new TextureLoader()
 function terrainTexture(type: string) {
-	const texture = textureLoader.load(`/assets/terrain/${type}.png`)
+	const texture = textureLoader.load(`./assets/terrain/${type}.png`)
 	texture.wrapS = texture.wrapT = RepeatWrapping
 	return texture
 }

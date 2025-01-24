@@ -1,6 +1,9 @@
+/**
+ * @link https://www.redblobgames.com/grids/hexagons/
+ */
+import type { Vector2Like } from 'three'
 import type { RandGenerator } from '~/utils/numbers'
 
-// https://www.redblobgames.com/grids/hexagons/
 export interface Axial {
 	q: number
 	r: number
@@ -81,7 +84,7 @@ export function cartesian(aRef: AxialRef, size = 1) {
 	return { x: A * q + B * r, y: C * r }
 }
 
-export function fromCartesian({ x, y }: { x: number; y: number }, size: number) {
+export function fromCartesian({ x, y }: Vector2Like, size: number) {
 	const A = Math.sqrt(3) * size
 	const B = (Math.sqrt(3) / 2) * size
 	const C = (3 / 2) * size

@@ -28,12 +28,11 @@ type MapTuple<T extends any[], U> = {
 	[K in keyof T]: U
 }
 
+type Terrain = ResourcefulTerrain & TexturedTerrain
+type Tile = TileBase<Terrain>
+
 export function createGame(seed: number) {
-	//const land = new MonoSectorLand(new Island(new Vector3(0, 0, 0), 10, 6, terrains))
 	const landscape = new TexturedLandscape(20, terrains.textures)
-	//const landscape = new UniformLandscape(20)
-	type Terrain = ResourcefulTerrain & TexturedTerrain
-	type Tile = TileBase<Terrain>
 	const procedural = new NoiseProcedural<Tile>(16, terrainHeight, 73058, 50)
 	const seaLevel = terrainHeight / 2
 	const land = new WateredLand({
@@ -96,7 +95,6 @@ export function createGame(seed: number) {
 				cursor.tile.axial,
 				tiled(
 					(from, to) =>
-						0.01 + // This is a constant "cost" for every tile - avoid `0` cost. The bigger the value, the "straighter" the rivers
 						Math.max(0, to.tile.z - from.tile.z) ** 2 +
 						// The fact to not take the strongest down slope
 						to.tile.z -

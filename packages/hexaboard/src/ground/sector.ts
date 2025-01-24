@@ -1,6 +1,6 @@
 import { type Face, Group, type Intersection, type Object3D, type Object3DEventMap } from 'three'
 import type { Game } from '~/game/game'
-import { TileHandle, TileSpec } from '~/game/mouseHandles'
+import { TileHandle, TileSpec } from '~/game/tile'
 import { type AxialRef, axial } from '~/main'
 import { type Axial, LCG } from '~/utils'
 import type { MouseReactive } from '~/utils/mouseControl'
