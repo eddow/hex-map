@@ -53,7 +53,7 @@
 			}
 		}
 	}
-	const layoutJson = '' //localStorage.getItem('layout')
+	const layoutJson = localStorage.getItem('layout')
 	onMount(() => {
 		if (layoutJson) api.fromJSON(JSON.parse(layoutJson))
 		else {

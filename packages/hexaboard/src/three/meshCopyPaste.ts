@@ -7,7 +7,7 @@ import {
 	type Scene,
 } from 'three'
 
-const generalMaxCount = 5000
+const generalMaxCount = 15000
 
 interface GlobalPreRendered {
 	prerender: (scene: Scene) => void
@@ -36,7 +36,6 @@ function obj3dToInstancedMeshes(obj3d: Object3D, maxCount: number) {
 		)
 		cm.count = 0
 		rv = cm
-		cm.frustumCulled = false
 	}
 	const recursion = [...obj3d.children]
 	for (const child of recursion) {
@@ -60,8 +59,13 @@ function gatherIMs(obj3d: Object3D) {
 	})
 	return rv
 }
+let hasCount = 0
 function recount(application: MeshCopySceneApplication) {
 	const count = application.pastes.length
+	if (count > hasCount) {
+		//console.log('count', count)
+		hasCount = count + 1
+	}
 	for (const instance of application.instances) instance.count = count
 }
 function forward(meshPaste: MeshPaste, index: number, application: MeshCopySceneApplication) {
@@ -128,9 +132,9 @@ export class MeshCopy implements GlobalPreRendered {
 		}
 	}
 	prerender(scene: Scene) {
-		// Now updating on matrix update - kill me when sure
+		// TODO: Now should be updating on matrix update - kill me when sure
 		// Note: it's really tough to determine when to call the `forward`, even overriding `updateMatrixWorld` is not enough
-		// cost: 1.23 ms/frame
+		// cost: 18 ms/frame (1/4 of time allocated to render)
 		const application = this.applications.get(scene)
 		if (!application) return
 		for (let i = 0; i < application.pastes.length; i++) {
@@ -138,7 +142,11 @@ export class MeshCopy implements GlobalPreRendered {
 			if (paste.matrixWorldNeedsUpdate) paste.updateMatrixWorld()
 			forward(paste, i, application)
 		}
-		for (const instance of application.instances) instance.instanceMatrix.needsUpdate = true
+		for (const instance of application.instances) {
+			instance.instanceMatrix.needsUpdate = true
+			instance.computeBoundingBox()
+			instance.computeBoundingSphere()
+		}
 	}
 }
 

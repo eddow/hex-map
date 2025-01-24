@@ -62,7 +62,7 @@ export class PuzzleLand<
 > extends LandBase<Terrain, Tile> {
 	private sectors: Record<string, Sector<Tile>> = {}
 	private readonly viewDist: number
-	constructor({ viewDist = 3500, ...init }: PuzzleInit<Terrain, Tile>) {
+	constructor({ viewDist = 5000, ...init }: PuzzleInit<Terrain, Tile>) {
 		super(init)
 		this.viewDist = viewDist
 	}
@@ -92,6 +92,7 @@ export class PuzzleLand<
 		}
 		return this.sectors[key]
 	}
+	private readonly generating: Record<string, Promise<void>> = {}
 	updateViews(cameras: Vector3[]) {
 		const radius = this.procedural.radius - 1
 		const tileSize = this.landscape.tileSize
@@ -109,11 +110,23 @@ export class PuzzleLand<
 					const sectorVec2 = new Vector2().copy(
 						cartesian(sector2tile(sectorCoords, radius), tileSize)
 					)
+					const key = axial.key(sectorCoords)
 					if (
 						sectorVec2.sub(camera).length() <
-						this.viewDist + radius * tileSize * 2 * Math.sqrt(3)
-					)
+							this.viewDist + radius * tileSize * 2 * Math.sqrt(3) &&
+						!this.generating[key]
+					) {
+						/*this.generating[key] = new Promise((resolve) => {
+							try {
+								this.sector(sectorCoords)
+							} catch (e) {
+								console.error(e)
+							}
+							delete this.generating[key]
+							resolve()
+						})*/
 						this.sector(sectorCoords)
+					}
 				}
 			}
 		}

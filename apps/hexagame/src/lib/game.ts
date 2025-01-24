@@ -7,6 +7,7 @@ import {
 	type MouseHoverEvolution,
 	NoiseProcedural,
 	type ResourcefulTerrain,
+	SectorNotGeneratedError,
 	TexturedLandscape,
 	type TexturedTerrain,
 	type TileBase,
@@ -33,7 +34,7 @@ type Tile = TileBase<Terrain>
 
 export function createGame(seed: number) {
 	const landscape = new TexturedLandscape(20, terrains.textures)
-	const procedural = new NoiseProcedural<Tile>(16, terrainHeight, 73058, 50)
+	const procedural = new NoiseProcedural<Tile>(32, terrainHeight, 73058, 50)
 	const seaLevel = terrainHeight / 2
 	const land = new WateredLand({
 		terrains,
@@ -79,35 +80,40 @@ export function createGame(seed: number) {
 				pathTube = undefined
 			}
 			//if (pawn.tile !== cursor.tile.hexIndex) {
-			/* straight path
+			try {
+				/* straight path
 				const path = [
 					axialAt(pawn.tile),
 					...straightPath(pawn.sector, pawn.tile, cursor.tile.target, cursor.tile.hexIndex),
 				]*/
-			/* no height path (0 height diff still has horizontal mvt not counted)
+				/* no height path (0 height diff still has horizontal mvt not counted)
 				const path = costingPath(
 					cursor.tile.hexIndex,
 					(from, to) =>
 						to < sector.nbrTiles ? (sector.points[from].z - sector.points[to].z) ** 2 : Number.NaN,
 					(hexIndex) => hexIndex < sector.nbrTiles && pawn.tile === hexIndex
 				)*/
-			const path = costingPath(
-				cursor.tile.axial,
-				tiled(
-					(from, to) =>
-						Math.max(0, to.tile.z - from.tile.z) ** 2 +
-						// The fact to not take the strongest down slope
-						to.tile.z -
-						Math.min(...pointsAround(from.axial).map((p) => tileSpec(p).tile.z))
-				),
-				(aRef) => tileSpec(aRef).tile.z < seaLevel
-			)
-			if (path && path.length > 1) {
-				const pathCurve = new CatmullRomCurve3(path.map((p) => axialV3(p)))
-				const pathGeometry = new TubeGeometry(pathCurve, path.length * 5, 2, 8, false)
-				const pathMaterial = new MeshBasicMaterial({ color: 0xffff00, wireframe: true })
-				pathTube = new Mesh(pathGeometry, pathMaterial)
-				game.scene.add(pathTube)
+				const path = costingPath(
+					cursor.tile.axial,
+					tiled(
+						(from, to) =>
+							Math.max(0, to.tile.z - from.tile.z) ** 2 +
+							// The fact to not take the strongest down slope
+							to.tile.z -
+							Math.min(...pointsAround(from.axial).map((p) => tileSpec(p).tile.z))
+					),
+					(aRef) => tileSpec(aRef).tile.z < seaLevel
+				)
+				if (path && path.length > 1) {
+					const pathCurve = new CatmullRomCurve3(path.map((p) => axialV3(p)))
+					const pathGeometry = new TubeGeometry(pathCurve, path.length * 5, 2, 8, false)
+					const pathMaterial = new MeshBasicMaterial({ color: 0xffff00, wireframe: true })
+					pathTube = new Mesh(pathGeometry, pathMaterial)
+					game.scene.add(pathTube)
+				}
+			} catch (e) {
+				// Ignore SectorNotGeneratedError
+				if (!(e instanceof SectorNotGeneratedError)) throw e
 			}
 			//}
 			debugInfo.tile = cursor.tile?.axial

@@ -34,6 +34,15 @@ export class PerlinNoise {
 		return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v)
 	}
 
+	private grad3: Float32Array = new Float32Array([
+		1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 0, 1, 1, 0, -1,
+		1, 0, 1, -1, 0, -1, -1,
+	])
+	private dot(g: number, x: number, y: number, z: number): number {
+		const gi = (g % 12) * 3
+		return this.grad3[gi] * x + this.grad3[gi + 1] * y + this.grad3[gi + 2] * z
+	}
+
 	public noise(x: number, y = 0, z = 0): number {
 		const X = Math.floor(x) & 255
 		const Y = Math.floor(y) & 255
@@ -58,20 +67,28 @@ export class PerlinNoise {
 			w,
 			this.lerp(
 				v,
-				this.lerp(u, this.grad(this.p[AA], x, y, z), this.grad(this.p[BA], x - 1, y, z)),
-				this.lerp(u, this.grad(this.p[AB], x, y - 1, z), this.grad(this.p[BB], x - 1, y - 1, z))
+				this.lerp(
+					u,
+					this.dot(this.permutation[AA], x, y, z),
+					this.dot(this.permutation[BA], x - 1, y, z)
+				),
+				this.lerp(
+					u,
+					this.dot(this.permutation[AB], x, y - 1, z),
+					this.dot(this.permutation[BB], x - 1, y - 1, z)
+				)
 			),
 			this.lerp(
 				v,
 				this.lerp(
 					u,
-					this.grad(this.p[AA + 1], x, y, z - 1),
-					this.grad(this.p[BA + 1], x - 1, y, z - 1)
+					this.dot(this.permutation[AA + 1], x, y, z - 1),
+					this.dot(this.permutation[BA + 1], x - 1, y, z - 1)
 				),
 				this.lerp(
 					u,
-					this.grad(this.p[AB + 1], x, y - 1, z - 1),
-					this.grad(this.p[BB + 1], x - 1, y - 1, z - 1)
+					this.dot(this.permutation[AB + 1], x, y - 1, z - 1),
+					this.dot(this.permutation[BB + 1], x - 1, y - 1, z - 1)
 				)
 			)
 		)

@@ -12,6 +12,11 @@ export abstract class GameMouseHandle<Tile extends TileBase = TileBase> extends 
 		super()
 	}
 }
+export class SectorNotGeneratedError extends Error {
+	constructor(public readonly axial: Axial) {
+		super('sector not generated')
+	}
+}
 
 export class TileSpec<
 	Terrain extends TerrainBase = TerrainBase,
@@ -41,7 +46,7 @@ export class TileSpec<
 	@cached<Sector<Tile>>('land', 'axial')
 	get sector(): Sector<Tile> {
 		const sector = this.land.sectorAt(this.axial)
-		if (!sector) throw new Error('Sector not generated')
+		if (!sector) throw new SectorNotGeneratedError(this.axial)
 		return sector
 	}
 	/**
