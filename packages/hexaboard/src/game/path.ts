@@ -1,5 +1,5 @@
 import type Sector from '~/ground/sector'
-import { type Axial, axial, axialAt, axialDistance, hexSides, indexAt } from '~/utils/axial'
+import { type Axial, type AxialRef, axial, axialAt, axialDistance, hexSides } from '~/utils/axial'
 
 export function nextInPath(fromSector: Sector, fromTile: number, toSector: Sector, toTile: number) {
 	if (fromSector !== toSector)
@@ -25,49 +25,51 @@ export function straightPath(
 	return rv
 }
 
-export type IsFound = (hexIndex: number) => boolean
-export type Cost = (from: number, to: number) => number
+export type IsFound = (aRef: AxialRef) => boolean
+export type Cost = (from: AxialRef, to: AxialRef) => number
 
-type HexCost<O = number> = { hexIndex: O; cost: number }
+type HexCost<O = string> = { key: O; cost: number }
 
-export function costingPath(fromTile: number, cost: Cost, isFound: IsFound) {
+// TODO: add list of shortcuts like train-stations
+export function costingPath(fromTile: AxialRef, cost: Cost, isFound: IsFound) {
 	if (isFound(fromTile)) return [fromTile]
-	const toStudy: HexCost[] = [{ hexIndex: fromTile, cost: 0 }]
-	const origins: { [hexIndex: number]: HexCost<number | null> } = {
-		[fromTile]: { hexIndex: null, cost: 0 },
+	const toStudy: HexCost[] = [{ key: axial.key(fromTile), cost: 0 }]
+	const origins: { [tile: string]: HexCost<string | null> } = {
+		[axial.key(fromTile)]: { key: null, cost: 0 },
 	}
-	let found: { hexIndex: number; cost: number } | undefined
+	let found: { tile: string; cost: number } | undefined
 	while (toStudy.length && (!found || found.cost > toStudy[0].cost)) {
 		const study = toStudy.shift()!
-		const coords = axialAt(study.hexIndex)
+		const coords = axial.coords(study.key)
 		for (const hexSide of hexSides) {
-			const hexIndex = indexAt(axial.linear([1, coords], [1, hexSide]))
-			if (hexIndex !== origins[study.hexIndex].hexIndex) {
-				const nextCost = cost(study.hexIndex, hexIndex)
+			const next = axial.key(axial.linear([1, coords], [1, hexSide]))
+			if (next !== origins[study.key].key) {
+				const nextCost = cost(study.key, next)
 				if (Number.isNaN(nextCost)) continue
+				if (nextCost <= 0) throw new Error('negative or null cost')
 				const pathCost = study.cost + nextCost
-				if (isFound(hexIndex) && (!found || found.cost > pathCost))
-					found = { hexIndex, cost: pathCost }
-				if (!origins[hexIndex] || origins[hexIndex].cost > pathCost) {
-					if (origins[hexIndex]) {
-						const tsIndex = toStudy.findIndex((ts) => ts.hexIndex === hexIndex)
+				if (isFound(next) && (!found || found.cost > pathCost))
+					found = { tile: next, cost: pathCost }
+				if (!origins[next] || origins[next].cost > pathCost) {
+					if (origins[next]) {
+						const tsIndex = toStudy.findIndex((ts) => ts.key === next)
 						if (tsIndex !== -1) toStudy.splice(tsIndex, 1)
 					}
-					origins[hexIndex] = { hexIndex: study.hexIndex, cost: pathCost }
+					origins[next] = { key: study.key, cost: pathCost }
 					// add in toStudy
 					let i: number
 					for (i = 0; i < toStudy.length; i++) if (toStudy[i].cost > pathCost) break
-					toStudy.splice(i, 0, { hexIndex, cost: pathCost })
+					toStudy.splice(i, 0, { key: next, cost: pathCost })
 				}
 			}
 		}
 	}
 	if (!found) return null
-	const path: number[] = [found.hexIndex]
-	let origin = origins[found.hexIndex]
-	while (origin.hexIndex !== null) {
-		path.push(origin.hexIndex)
-		origin = origins[origin.hexIndex]
+	const path: string[] = [found.tile]
+	let origin = origins[found.tile]
+	while (origin.key !== null) {
+		path.push(origin.key)
+		origin = origins[origin.key]
 	}
 	return path
 }

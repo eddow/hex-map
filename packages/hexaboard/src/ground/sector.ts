@@ -2,7 +2,7 @@ import { type Face, Group, type Intersection, type Object3D, type Object3DEventM
 import type { Game } from '~/game/game'
 import { TileHandle, TileSpec } from '~/game/mouseHandles'
 import { type AxialRef, axial } from '~/main'
-import { LCG } from '~/utils'
+import { type Axial, LCG } from '~/utils'
 import type { MouseReactive } from '~/utils/mouseControl'
 import type { LandBase } from './land/land'
 import type { TerrainBase } from './terrain'
@@ -14,13 +14,16 @@ export interface TileBase<Terrain extends TerrainBase = TerrainBase> {
 
 export default class Sector<Tile extends TileBase = TileBase> implements MouseReactive {
 	constructor(
-		public readonly center: AxialRef,
 		public readonly land: LandBase,
 		public readonly tiles: Tile[],
 		public readonly seed: number
 	) {}
 	group: Group = new Group()
 	ground?: Object3D
+	readonly key: string = 'sector'
+	get center(): Axial {
+		return { q: 0, r: 0 }
+	}
 
 	mouseHandle(game: Game, intersection: Intersection<Object3D<Object3DEventMap>>): TileHandle {
 		const baryArr = intersection.barycoord!.toArray()
@@ -61,9 +64,5 @@ export default class Sector<Tile extends TileBase = TileBase> implements MouseRe
 
 	tileGen(aRef: AxialRef, ...otherArgs: (number | string)[]) {
 		return LCG(this.seed, 'tile', axial.index(aRef), ...otherArgs)
-	}
-
-	get key(): PropertyKey {
-		return 'sector'
 	}
 }

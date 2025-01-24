@@ -13,7 +13,6 @@ export class MonoSectorLand<
 	constructor(init: LandInit<Terrain, Tile>) {
 		super(init)
 		this.unique = this.createSector(
-			0,
 			this.procedural.listTiles(this, { gen: LCG(this.seed), center: { q: 0, r: 0 } }),
 			subSeed(this.seed, 'sector')
 		)

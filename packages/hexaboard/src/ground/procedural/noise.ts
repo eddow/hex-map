@@ -5,6 +5,7 @@ import type { LandBase } from '../land'
 import type { TileBase } from '../sector'
 import { ProceduralBase } from './procedural'
 
+let generated = 0
 /**
  * Really simple Perlin noise procedural
  * @todo Make a real terrain generator out of it
@@ -21,6 +22,7 @@ export class NoiseProcedural<Tile extends TileBase = TileBase> extends Procedura
 		this.perlin = new HeightMap(worldSeed, scale, [0, terrainHeight])
 	}
 	listTiles(land: LandBase, { center }: { center: Axial }): Tile[] {
+		console.log(generated++)
 		return numbers(this.nbrTiles).map((hexIndex) => {
 			const { x, y } = cartesian(axial.linear([1, axial.coords(hexIndex)], [1, center]))
 			const z = this.perlin.getHeight(x, y)

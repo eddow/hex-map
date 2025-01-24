@@ -25,12 +25,12 @@ function tile2sector(aRef: AxialRef, radius = 1) {
 }
 export class PuzzleSector<Tile extends TileBase = TileBase> extends Sector<Tile> {
 	constructor(
-		center: AxialRef,
 		public readonly land: PuzzleLand,
 		tiles: Tile[],
-		seed: number
+		seed: number,
+		public readonly key: string
 	) {
-		super(center, land, tiles, seed)
+		super(land, tiles, seed)
 	}
 
 	tileGen(aRef: AxialRef) {
@@ -38,12 +38,12 @@ export class PuzzleSector<Tile extends TileBase = TileBase> extends Sector<Tile>
 		return LCG('puzzle-tile', q, r)
 	}
 	worldTile(aRef: AxialRef) {
-		const { q: qs, r: rs } = sector2tile(this.center, this.land.procedural.radius - 1)
+		const { q: qs, r: rs } = this.center
 		const { q, r } = axial.coords(aRef)
 		return { q: qs + q, r: rs + r }
 	}
-	get key(): PropertyKey {
-		return axial.key(this.center)
+	get center(): Axial {
+		return sector2tile(this.key, this.land.procedural.radius - 1)
 	}
 }
 
@@ -66,8 +66,8 @@ export class PuzzleLand<
 		super(init)
 		this.viewDist = viewDist
 	}
-	createSector(center: AxialRef, tiles: Tile[], seed: number, axial: Axial, ...args: any[]) {
-		return new PuzzleSector(center, this, tiles, seed)
+	createSector(tiles: Tile[], seed: number, key: string, ...args: any[]) {
+		return new PuzzleSector(this, tiles, seed, key)
 	}
 	sector(aRef: AxialRef): Sector<Tile> {
 		const key = axial.key(aRef)
@@ -76,13 +76,12 @@ export class PuzzleLand<
 			const seed = subSeed(this.seed, 'key', axial.index(aRef))
 			const radius = this.procedural.radius - 1
 			const sector = this.createSector(
-				aRef,
 				this.procedural.listTiles(this, {
 					gen: LCG(seed),
 					center: axial.linear([radius, sectorCenter]),
 				}),
 				seed,
-				axial.coords(aRef)
+				key
 			)
 			this.sectors[key] = sector
 			sector.group.position.copy({

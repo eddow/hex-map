@@ -18,14 +18,14 @@ export const terrainTypes: Record<string, Terrain> = {
 	sand: {
 		color: { r: 0.8, g: 0.8, b: 0 },
 		texture: terrainTexture('sand'),
-		appearHeight: 0 * terrainHeight,
+		appearHeight: Number.NEGATIVE_INFINITY,
 		//variance: 0.1,
 		resourceDistribution: [[Rock, 0.1]],
 	},
 	grass: {
 		color: { r: 0.4, g: 0.8, b: 0.4 },
 		texture: terrainTexture('grass'),
-		appearHeight: 0.6 * terrainHeight,
+		appearHeight: 0.55 * terrainHeight,
 		//variance: 0.7,
 		resourceDistribution: [
 			[Rock, 0.2],

@@ -111,9 +111,6 @@ export class DynamicTexturedLandscape<
 		geometryAttributes.uvB.push(...B.uv(side, 4))
 		geometryAttributes.uvC.push(...C.uv(side, 2))
 	}
-	createGeometry(sector: Sector<Tile>): BufferGeometry {
-		return super.createGeometry(sector)
-	}
 	setGeometryAttributes(geometry: BufferGeometry, attributes: GeometryAttribute): void {
 		super.setGeometryAttributes(geometry, attributes)
 		geometry.setAttribute('barycentric', new Float32BufferAttribute(attributes.barycentric, 3))

@@ -76,6 +76,26 @@ export class PerlinNoise {
 			)
 		)
 	}
+	public symphony(
+		x: number,
+		y = 0,
+		z = 0,
+		octaves = 6,
+		persistence = 0.5,
+		lacunarity = 2.0
+	): number {
+		let result = 0.0
+		let frequency = 1.0
+		let amplitude = 1.0
+
+		for (let i = 0; i < octaves; i++) {
+			result += this.noise(x * frequency, y * frequency, z * frequency) * amplitude
+			frequency *= lacunarity
+			amplitude *= persistence
+		}
+
+		return result
+	}
 }
 export class HeightMap {
 	private perlin: PerlinNoise
@@ -88,13 +108,13 @@ export class HeightMap {
 		this.heightRange = heightRange
 	}
 
-	public getHeight(x: number, y: number): number {
+	public getHeight(x: number, y: number, octaves = 6): number {
 		// Scale the input coordinates
 		const nx = x / this.scale
 		const ny = y / this.scale
 
 		// Generate Perlin noise value (normalized to 0 to 1)
-		const noiseValue = (this.perlin.noise(nx, ny) + 1) / 2
+		const noiseValue = (this.perlin.symphony(nx, ny) + 1) / 2
 
 		// Map noise value to height range
 		const [minHeight, maxHeight] = this.heightRange

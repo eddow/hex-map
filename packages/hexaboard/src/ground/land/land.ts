@@ -33,8 +33,8 @@ export class LandBase<
 		this.landscape = init.landscape
 		this.seed = init.seed
 	}
-	createSector(center: AxialRef, tiles: Tile[], seed: number, ...args: any[]) {
-		return new Sector(center, this, tiles, seed)
+	createSector(tiles: Tile[], seed: number, ...args: any[]) {
+		return new Sector(this, tiles, seed)
 	}
 	progress(dt: number) {}
 	addedSector(sector: Sector) {

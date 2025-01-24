@@ -60,13 +60,8 @@ function gatherIMs(obj3d: Object3D) {
 	})
 	return rv
 }
-let hasCount = 0
 function recount(application: MeshCopySceneApplication) {
 	const count = application.pastes.length
-	if (count > hasCount) {
-		hasCount = count
-		//console.log('hasCount', count)
-	}
 	for (const instance of application.instances) instance.count = count
 }
 function forward(meshPaste: MeshPaste, index: number, application: MeshCopySceneApplication) {

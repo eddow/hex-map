@@ -12,6 +12,7 @@ import {
 	type TileBase,
 	TileCursor,
 	TileHandle,
+	TileSpec,
 	WateredLand,
 	axial,
 	cartesian,
@@ -23,6 +24,9 @@ import {
 import { CatmullRomCurve3, Mesh, MeshBasicMaterial, type Object3D, TubeGeometry } from 'three'
 import { debugInfo, dockview, games } from './globals.svelte'
 import terrains, { terrainHeight } from './world/terrain'
+type MapTuple<T extends any[], U> = {
+	[K in keyof T]: U
+}
 
 export function createGame(seed: number) {
 	//const land = new MonoSectorLand(new Island(new Vector3(0, 0, 0), 10, 6, terrains))
@@ -31,18 +35,27 @@ export function createGame(seed: number) {
 	type Terrain = ResourcefulTerrain & TexturedTerrain
 	type Tile = TileBase<Terrain>
 	const procedural = new NoiseProcedural<Tile>(16, terrainHeight, 73058, 50)
-
+	const seaLevel = terrainHeight / 2
 	const land = new WateredLand({
 		terrains,
 		procedural,
 		landscape,
 		seed,
 		tileRadius: 1,
-		seaLevel: terrainHeight / 2,
+		seaLevel,
 	})
 
+	function tileSpec(aRef: AxialRef) {
+		return new TileSpec(land, axial.coords(aRef))
+	}
+	function tiled<Args extends TileSpec[], Return>(
+		fct: (...tiles: Args) => Return
+	): (...aRefs: MapTuple<Args, AxialRef>) => Return {
+		// @ts-ignore
+		return (...aRefs: MapTuple<Args, AxialRef>) => fct(...aRefs.map(tileSpec))
+	}
+
 	const game = new Game(land)
-	const centralSector = game.land.sector(0)
 	for (const sn of numbers(2)) game.land.sector(sn)
 	//const pawn = new Character(land.sector, 0, sphere(2, { color: 0xff0000 }))
 	//const pawn = new Character(land.sector, 0, new Object3D())
@@ -55,7 +68,7 @@ export function createGame(seed: number) {
 	)
 
 	function axialV3(aRef: AxialRef) {
-		return game.land.landscape.worldTileCenter(centralSector, axial.coords(aRef))
+		return tileSpec(aRef).center
 	}
 	let pathTube: Object3D | undefined
 	game.onMouse('hover', (ev: MouseHoverEvolution) => {
@@ -80,18 +93,16 @@ export function createGame(seed: number) {
 					(hexIndex) => hexIndex < sector.nbrTiles && pawn.tile === hexIndex
 				)*/
 			const path = costingPath(
-				cursor.tile.hexIndex,
-				(from, to) =>
-					to < centralSector.nbrTiles
-						? // The fact to climb up
-							Math.max(0, centralSector.tiles[to].z - centralSector.tiles[from].z) ** 2 +
-							// The fact to not take the strongest down slope
-							centralSector.tiles[to].z -
-							Math.min(
-								...pointsAround(from, centralSector.nbrTiles).map((p) => centralSector.tiles[p].z)
-							)
-						: Number.NaN,
-				(hexIndex) => hexIndex < centralSector.nbrTiles && centralSector.tiles[hexIndex].z < 0
+				cursor.tile.axial,
+				tiled(
+					(from, to) =>
+						0.01 + // This is a constant "cost" for every tile - avoid `0` cost. The bigger the value, the "straighter" the rivers
+						Math.max(0, to.tile.z - from.tile.z) ** 2 +
+						// The fact to not take the strongest down slope
+						to.tile.z -
+						Math.min(...pointsAround(from.axial).map((p) => tileSpec(p).tile.z))
+				),
+				(aRef) => tileSpec(aRef).tile.z < seaLevel
 			)
 			if (path && path.length > 1) {
 				const pathCurve = new CatmullRomCurve3(path.map((p) => axialV3(p)))

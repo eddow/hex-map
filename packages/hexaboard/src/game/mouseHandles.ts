@@ -35,28 +35,40 @@ export class TileSpec<
 	get land(): LandBase<Terrain, Tile> {
 		return this.sector.land as LandBase<Terrain, Tile>
 	}
+	/**
+	 * The sector the tile is in
+	 */
 	@cached<Sector<Tile>>('land', 'axial')
 	get sector(): Sector<Tile> {
 		const sector = this.land.sectorAt(this.axial)
 		if (!sector) throw new Error('Sector not generated')
 		return sector
 	}
+	/**
+	 * The index of the tile in the sector
+	 */
 	@cached<number>('land', 'axial')
 	get hexIndex(): number {
-		const sector = this.sector
-		return axial.index(axial.linear(this.axial, [-1, sector.center]))
+		return axial.index(axial.linear(this.axial, [-1, this.sector.center]))
 	}
+	/**
+	 * The axial coordinates of the tile in the world
+	 */
 	@cached<Axial>('sector', 'hexIndex')
 	get axial(): Axial {
 		return this.sector.worldTile(this.hexIndex)
 	}
 
+	/**
+	 * The tile object associated with the spec
+	 */
 	@cached<Tile>()
 	get tile(): Tile {
-		const sector = this.land.sectorAt(this.axial)
-		if (!sector) throw new Error('Sector not generated')
 		return this.sector.tiles[this.hexIndex]
 	}
+	/**
+	 * The center of the tile as (x,y,z) world coordinate
+	 */
 	@cached<Vector3>()
 	get center(): Vector3 {
 		return this.sector.tileCenter(this.hexIndex)
