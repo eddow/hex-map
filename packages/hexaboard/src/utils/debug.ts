@@ -7,3 +7,7 @@ export class AssertionError extends Error {
 export function assert(condition: any, message: string): asserts condition {
 	if (!condition) throw new AssertionError(message)
 }
+export function defined<T>(value: T | undefined, message = 'Value is defined'): T {
+	assert(value !== undefined, message)
+	return value
+}

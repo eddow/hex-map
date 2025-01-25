@@ -1,4 +1,15 @@
-import { type BufferGeometry, Group, type Material, Mesh } from 'three'
+import {
+	type BufferGeometry,
+	type Face,
+	Group,
+	type Intersection,
+	type Material,
+	Mesh,
+	type Object3D,
+	type Object3DEventMap,
+} from 'three'
+import type { Game } from '~/game/game'
+import { MouseHandle, type MouseReactive } from '~/utils'
 import { type AxialRef, axial, hexSides } from '~/utils/axial'
 import { assert } from '~/utils/debug'
 import type { LandRenderer, Tile } from './land'
@@ -19,7 +30,7 @@ export interface RenderedTile<TileRender extends TileRenderBase = TileRenderBase
 	rendered?: TileRender
 }
 
-function* triangles(ref: AxialRef) {
+function* tileTriangles(ref: AxialRef) {
 	let last = axial.linear(ref, hexSides[5])
 	for (let side = 0; side < 6; side++) {
 		const hexSide = hexSides[side]
@@ -30,10 +41,10 @@ function* triangles(ref: AxialRef) {
 }
 
 export interface GeometryBuilder<TileRender extends TileRenderBase = TileRenderBase> {
-	tileRender(tile: Partial<TileRender>): TileRender
+	tileRender(tile: Partial<TileRender>, key: string): TileRender
 	createGeometry(
 		tiles: Map<string, RenderedTile<TileRender>>,
-		triangles: Set<RenderedTriangle>
+		triangles: RenderedTriangle[]
 	): BufferGeometry
 	get material(): Material
 }
@@ -44,14 +55,36 @@ interface GeometryPart<TileRender extends TileRenderBase> {
 	material?: Material
 }
 
-export class Landscape<TileRender extends TileRenderBase = TileRenderBase> implements LandRenderer {
+export class Tile1GHandle extends MouseHandle {
+	constructor(
+		public readonly aKey: TileKey,
+		public readonly tile: Tile
+	) {
+		super()
+	}
+	equals(other: Tile1GHandle): boolean {
+		return this.aKey === other.aKey
+	}
+}
+
+export class Landscape<TileRender extends TileRenderBase = TileRenderBase>
+	implements LandRenderer, MouseReactive
+{
 	private readonly geometryParts: GeometryPart<TileRender>[]
 	public readonly group = new Group()
+	private vertexKeys: string[] = []
 	constructor(
 		private readonly tiles: Map<string, RenderedTile<TileRender>>,
 		...geometryBuilders: GeometryBuilder<TileRender>[]
 	) {
 		this.geometryParts = geometryBuilders.map((builder) => ({ builder }))
+	}
+	mouseHandle(game: Game, intersection: Intersection<Object3D<Object3DEventMap>>): MouseHandle {
+		const baryArr = intersection.barycoord!.toArray()
+		const facePt = baryArr.indexOf(Math.max(...baryArr))
+		const geomPt = intersection.face!['abc'[facePt] as keyof Face] as number
+		const tileKey = this.vertexKeys[geomPt]
+		return new Tile1GHandle(tileKey, this.tiles.get(tileKey)!)
 	}
 
 	protected readonly triangles = new Set<RenderedTriangle>()
@@ -68,10 +101,10 @@ export class Landscape<TileRender extends TileRenderBase = TileRenderBase> imple
 			if (tile?.nature && !tile.rendered) {
 				let rendered: Partial<TileRender> = {}
 				rendered.triangles = new Set()
-				for (const part of this.geometryParts) rendered = part.builder.tileRender(rendered)
+				for (const part of this.geometryParts) rendered = part.builder.tileRender(rendered, key)
 				tile.rendered = rendered as TileRender
 				// Here, generate texture specs
-				for (const { next, last, side } of triangles(axial.coords(key))) {
+				for (const { next, last, side } of tileTriangles(axial.coords(key))) {
 					const nextKey = axial.key(next)
 					const lastKey = axial.key(last)
 					const nextTile = this.tiles.get(nextKey)
@@ -92,23 +125,25 @@ export class Landscape<TileRender extends TileRenderBase = TileRenderBase> imple
 
 		for (const key of removed) {
 			const tile = this.tiles.get(key)
-			assert(tile?.rendered, 'Consistency: un-rendered tile was rendered')
-			for (const triangle of tile.rendered.triangles) {
-				for (const tileKey of triangle.tilesKey) {
-					const tile = this.tiles.get(tileKey)
-					assert(tile?.rendered, 'Consistency: un-rendered tile was rendered')
-					tile.rendered.triangles.delete(triangle)
-					if (!tile.rendered.triangles.size) tile.rendered = undefined
+			if (tile?.rendered)
+				for (const triangle of tile.rendered.triangles) {
+					for (const tileKey of triangle.tilesKey) {
+						const tile = this.tiles.get(tileKey)
+						assert(tile?.rendered, 'Consistency: un-rendered tile was rendered')
+						tile.rendered.triangles.delete(triangle)
+						if (!tile.rendered.triangles.size) tile.rendered = undefined
+					}
+					this.triangles.delete(triangle)
 				}
-				this.triangles.delete(triangle)
-			}
 		}
 
 		// #endregion
 		// #region update geometry
-
+		const triangles = Array.from(this.triangles)
+		this.vertexKeys = []
+		for (const triangle of triangles) this.vertexKeys.push(...triangle.tilesKey)
 		for (const part of this.geometryParts) {
-			const geometry = part.builder.createGeometry(this.tiles, this.triangles)
+			const geometry = part.builder.createGeometry(this.tiles, triangles)
 			if (part.mesh) {
 				const mesh = part.mesh
 				mesh.geometry.dispose()
@@ -117,6 +152,7 @@ export class Landscape<TileRender extends TileRenderBase = TileRenderBase> imple
 				geometry.computeBoundingSphere()
 			} else {
 				part.mesh = new Mesh(geometry, part.builder.material)
+				part.mesh.userData = { mouseTarget: this }
 				this.group.add(part.mesh)
 			}
 		}

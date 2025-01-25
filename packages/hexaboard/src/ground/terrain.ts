@@ -7,12 +7,12 @@ export interface Terrain {
 }
 
 export class TerrainDefinition {
-	constructor(public readonly terrainTypes: Record<string, Terrain>) {}
+	constructor(public readonly types: Record<string, Terrain>) {}
 	terrainType(height: number): string {
 		let rvH: number | undefined
 		let rvT: undefined | string
-		for (const type in this.terrainTypes) {
-			const tType = this.terrainTypes[type as keyof typeof this.terrainTypes]
+		for (const type in this.types) {
+			const tType = this.types[type as keyof typeof this.types]
 			const thisH = tType.appearHeight
 			if (height >= thisH && (rvH === undefined || thisH > rvH)) {
 				rvH = thisH
@@ -22,6 +22,6 @@ export class TerrainDefinition {
 		return rvT!
 	}
 	get textures() {
-		return Object.values(this.terrainTypes).map((t) => t.texture)
+		return Object.values(this.types).map((t) => t.texture)
 	}
 }

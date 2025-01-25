@@ -12,31 +12,6 @@
 
 ## Grok Formulas
 
-### Hexagons within a distance
-
-```ts
-function hexagonsWithinDistance(P: [number, number], D: number): [number, number][] {
-    const [q, r] = P; // Axial coordinates of point P
-    const maxDistance = Math.ceil(D / Math.sqrt(3));
-    const hexagons: [number, number][] = [];
-
-    for (let dq = -maxDistance; dq <= maxDistance; dq++) {
-        // Optimize by only checking relevant dr values for each dq
-        const startDr = Math.max(-max_distance, -dq - maxDistance);
-        const endDr = Math.min(max_distance, -dq + maxDistance);
-        
-        for (let dr = startDr; dr <= endDr; dr++) {
-            // Check hexagonal distance only if within our Cartesian approximation
-            if (Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr)) <= maxDistance) {
-                hexagons.push([q + dq, r + dr]);
-            }
-        }
-    }
-    
-    return hexagons;
-}
-```
-
 ## Walking time
 
 ```ts

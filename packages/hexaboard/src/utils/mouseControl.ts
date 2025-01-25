@@ -297,7 +297,8 @@ export class MouseControl {
 				const upVector = new Vector3(0, 1, 0).applyQuaternion(camera.quaternion)
 				if (upVector.z < 0) camera.rotateX(-Math.asin(upVector.z))
 				const frontVector = new Vector3(0, 0, 1).applyQuaternion(camera.quaternion)
-				if (frontVector.z < 0) camera.rotateX(Math.asin(frontVector.z))
+				// clamp to "nearly horizontal"
+				if (frontVector.z < 0.1) camera.rotateX(Math.asin(frontVector.z - 0.1))
 				break
 			}
 			case 'pan': {

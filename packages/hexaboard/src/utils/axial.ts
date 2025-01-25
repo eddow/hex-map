@@ -9,6 +9,18 @@ export interface Axial {
 	r: number
 }
 
+/**
+ * Position in a triangle: side of the triangle and [u,v] where u+v<=1
+ */
+export interface Triangular {
+	/**
+	 * Side: [0..6[
+	 */
+	s: number
+	u: number
+	v: number
+}
+
 export function cube({ q, r }: Axial) {
 	return { q, r, s: -q - r }
 }
@@ -208,7 +220,8 @@ export const axial = {
 		return { q: lerp(a.q + 1e-6, b.q + 2e-6, t), r: lerp(a.r, b.r, t) }
 	},
 
-	round({ q, r }: Axial) {
+	round(aRef: AxialRef) {
+		const { q, r } = axial.coords(aRef)
 		const v = [q, r, -q - r]
 		const round = v.map(Math.round)
 		const diff = v.map((v, i) => Math.abs(round[i] - v))

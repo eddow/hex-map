@@ -8,6 +8,7 @@ function terrainTexture(type: string) {
 	texture.wrapS = texture.wrapT = RepeatWrapping
 	return texture
 }
+
 export const terrainHeight = 160
 export const waterTexture = terrainTexture('water')
 

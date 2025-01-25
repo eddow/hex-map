@@ -1,6 +1,5 @@
 import * as m from '$lib/paraglide/messages'
 import {
-	ColorGeometry,
 	Game,
 	Land,
 	Landscape,
@@ -8,8 +7,11 @@ import {
 	type MouseButtonEvolution,
 	type MouseHoverEvolution,
 	NatureGenerator,
+	TextureGeometry,
+	Tile1GHandle,
 	TileCursor,
 	TileHandle,
+	axial,
 	cartesian,
 	icosahedron,
 } from 'hexaboard'
@@ -46,17 +48,14 @@ export function createGame(seed: number) {
 		// @ts-ignore
 		return (...aRefs: MapTuple<Args, AxialRef>) => fct(...aRefs.map(tileSpec))
 	}*/
-
-	const natureGenerator = new NatureGenerator(terrainHeight, terrains, seed, 20)
+	const natureGenerator = new NatureGenerator(terrainHeight, terrains, seed, 20, 50)
 	const land = new Land(natureGenerator)
 
-	const terrain = new ColorGeometry()
+	const terrain = new TextureGeometry(terrains, seed)
 	const landscape = new Landscape(land.tiles, terrain)
 	land.addPart(landscape)
 
-	const game = new Game(land)
-
-	land.updateViews([])
+	const game = new Game(land, { clampCamZ: { min: 150, max: 1000 } })
 
 	//const pawn = new Character(land.sector, 0, sphere(2, { color: 0xff0000 }))
 	//const pawn = new Character(land.sector, 0, new Object3D())
@@ -73,8 +72,8 @@ export function createGame(seed: number) {
 	}*/
 	let pathTube: Object3D | undefined
 	game.onMouse('hover', (ev: MouseHoverEvolution) => {
-		if (ev.handle instanceof TileHandle) {
-			cursor.tile = ev.handle?.spec
+		if (ev.handle instanceof Tile1GHandle) {
+			cursor.tile = ev.handle
 
 			if (pathTube) {
 				game.scene.remove(pathTube)
@@ -117,7 +116,7 @@ export function createGame(seed: number) {
 				if (!(e instanceof SectorNotGeneratedError)) throw e
 			}*/
 			//}
-			debugInfo.tile = cursor.tile?.axial
+			debugInfo.tile = axial.coords(cursor.tile?.aKey)
 			debugInfo.tilePos = cartesian(debugInfo.tile, 20)
 		} else {
 			debugInfo.tilePos = debugInfo.tile = 'none'

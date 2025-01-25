@@ -1,6 +1,6 @@
 import { Group, type Object3D } from 'three'
+import type { Tile1GHandle } from '~/ground/landscape'
 import { GameEntity } from './game'
-import type { TileSpec } from './tile'
 
 export class TileCursor extends GameEntity {
 	private shown = false
@@ -8,11 +8,11 @@ export class TileCursor extends GameEntity {
 		super(new Group())
 	}
 
-	private _tile?: TileSpec
-	get tile(): TileSpec | undefined {
+	private _tile?: Tile1GHandle
+	get tile(): Tile1GHandle | undefined {
 		return this._tile
 	}
-	set tile(value: TileSpec | undefined) {
+	set tile(value: Tile1GHandle | undefined) {
 		this._tile = value
 		const group = this.o3d as Group
 		if (value) {
@@ -20,7 +20,7 @@ export class TileCursor extends GameEntity {
 				this.shown = true
 				group.add(this.mesh)
 			}
-			group.position.copy(value.center)
+			group.position.copy(value.tile.nature!.position)
 		} else if (this.shown) {
 			this.shown = false
 			group.remove(this.mesh)

@@ -1,4 +1,5 @@
 export * from './colorGeometry'
+export * from './textureGeometry'
 export * from './land'
 export * from './landscape'
 export * from './natureGenerator'

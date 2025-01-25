@@ -4,12 +4,19 @@ import type { RenderedTile } from './landscape'
 import type { GeometryBuilder, RenderedTriangle, TileRenderBase } from './landscape'
 
 export class ColorGeometry implements GeometryBuilder<TileRenderBase> {
+	public readonly material: Material
+	constructor() {
+		this.material = new MeshBasicMaterial({
+			vertexColors: true,
+			wireframe: true,
+		})
+	}
 	createGeometry(
 		tiles: Map<string, RenderedTile<TileRenderBase>>,
-		triangles: Set<RenderedTriangle>
+		triangles: RenderedTriangle[]
 	): BufferGeometry {
-		const positions = new Float32Array(triangles.size * 9)
-		const colors = new Float32Array(triangles.size * 9)
+		const positions = new Float32Array(triangles.length * 9)
+		const colors = new Float32Array(triangles.length * 9)
 		let index = 0
 		for (const triangle of triangles) {
 			const { tilesKey } = triangle
@@ -30,11 +37,5 @@ export class ColorGeometry implements GeometryBuilder<TileRenderBase> {
 	}
 	tileRender(tile: TileRenderBase): TileRenderBase {
 		return tile
-	}
-	get material(): Material {
-		return new MeshBasicMaterial({
-			vertexColors: true,
-			wireframe: true,
-		})
 	}
 }

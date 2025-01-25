@@ -1,4 +1,4 @@
-import { type AxialRef, LCG, axial, cartesian } from '~/utils'
+import { type AxialRef, axial, cartesian } from '~/utils'
 import { HeightMap } from '~/utils/perlin'
 import type { TileNature } from './land'
 import type { TerrainDefinition } from './terrain'
@@ -10,7 +10,7 @@ import type { TerrainDefinition } from './terrain'
 export class NatureGenerator {
 	readonly perlin: HeightMap
 	constructor(
-		terrainHeight: number,
+		public readonly terrainHeight: number,
 		public readonly terrains: TerrainDefinition,
 		public readonly worldSeed: number,
 		public readonly tileSize: number,
@@ -21,14 +21,14 @@ export class NatureGenerator {
 	getNature(tile: AxialRef): TileNature {
 		const { x, y } = cartesian(axial.coords(tile))
 		const z = this.perlin.getHeight(x, y)
-		const gen = LCG(this.worldSeed, 'color', x, y)
+		const h01 = Math.min(1, Math.max(0, z / this.terrainHeight))
 		return {
 			position: { x: x * this.tileSize, y: y * this.tileSize, z },
 			terrain: this.terrains.terrainType(z),
 			color: {
-				r: gen(),
-				g: gen(),
-				b: gen(),
+				r: 0,
+				g: h01,
+				b: 1 - h01,
 			},
 		}
 	}
