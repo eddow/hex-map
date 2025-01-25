@@ -16,14 +16,16 @@ import {
 	icosahedron,
 } from 'hexaboard'
 import type { Object3D } from 'three'
+import { OceanGeometry } from '~/ground/oceanGeometry'
 import { debugInfo, dockview, games } from './globals.svelte'
-import terrains, { terrainHeight } from './world/terrain'
+import terrains, { seaLevel, terrainHeight } from './world/terrain'
 type MapTuple<T extends any[], U> = {
 	[K in keyof T]: U
 }
 
 /*type Terrain = ResourcefulTerrain & TexturedTerrain
 type Tile = TileBase<Terrain>*/
+const tileSize = 20
 
 export function createGame(seed: number) {
 	/*
@@ -48,14 +50,17 @@ export function createGame(seed: number) {
 		// @ts-ignore
 		return (...aRefs: MapTuple<Args, AxialRef>) => fct(...aRefs.map(tileSpec))
 	}*/
-	const natureGenerator = new NatureGenerator(terrainHeight, terrains, seed, 20, 50)
+	const natureGenerator = new NatureGenerator(terrainHeight, terrains, seed, tileSize, 50)
 	const land = new Land(natureGenerator)
 
-	const terrain = new TextureGeometry(terrains, seed)
-	const landscape = new Landscape(land.tiles, terrain)
+	const landscape = new Landscape(
+		land.tiles,
+		new TextureGeometry(terrains, seed),
+		new OceanGeometry(seaLevel)
+	)
 	land.addPart(landscape)
 
-	const game = new Game(land, { clampCamZ: { min: 150, max: 1000 } })
+	const game = new Game(land, { clampCamZ: { min: 150, max: 700 } })
 
 	//const pawn = new Character(land.sector, 0, sphere(2, { color: 0xff0000 }))
 	//const pawn = new Character(land.sector, 0, new Object3D())

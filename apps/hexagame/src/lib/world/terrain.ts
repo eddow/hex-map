@@ -10,6 +10,7 @@ function terrainTexture(type: string) {
 }
 
 export const terrainHeight = 160
+export const seaLevel = terrainHeight / 2
 export const waterTexture = terrainTexture('water')
 
 export const terrainTypes: Record<

@@ -2,7 +2,9 @@ import { BufferAttribute, BufferGeometry, type Material, MeshBasicMaterial } fro
 import { assert } from '~/utils/debug'
 import type { RenderedTile } from './landscape'
 import type { GeometryBuilder, RenderedTriangle, TileRenderBase } from './landscape'
-
+/**
+ * For testing purpose
+ */
 export class ColorGeometry implements GeometryBuilder<TileRenderBase> {
 	public readonly material: Material
 	constructor() {

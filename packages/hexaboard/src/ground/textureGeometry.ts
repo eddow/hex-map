@@ -1,6 +1,6 @@
 import { BufferAttribute, BufferGeometry, type Material, ShaderMaterial, type Texture } from 'three'
 import { LCG, axial, numbers } from '~/utils'
-import { assert, defined } from '~/utils/debug'
+import { assert } from '~/utils/debug'
 import type { RenderedTile } from './landscape'
 import type { GeometryBuilder, RenderedTriangle, TileRenderBase } from './landscape'
 import type { TerrainDefinition } from './terrain'
@@ -62,18 +62,17 @@ export class TextureGeometry implements GeometryBuilder<TexturedTileRender> {
 		let index = 0
 		for (const triangle of triangles) {
 			const { tilesKey, side } = triangle
-			const [a, b, c] = tilesKey
-			const [A, B, C] = tilesKey.map((tileKey) => defined(tiles.get(tileKey)?.rendered))
+			const triangleTiles = tilesKey.map((tileKey) => tiles.get(tileKey)!)
+			const [A, B, C] = triangleTiles.map((tile) => tile.rendered!)
 			uvA.set(textureUVs(A.texturePosition, (side + 0) % 6, 0), index * 2)
 			uvB.set(textureUVs(B.texturePosition, (side + 0) % 6, 4), index * 2)
 			uvC.set(textureUVs(C.texturePosition, (side + 0) % 6, 2), index * 2)
 			// Texture Idx to add for each point
 			const textureIndexes = tilesKey.map(
-				(tileKey) => texturesIndex[defined(tiles.get(tileKey)?.nature?.terrain)]
+				(tileKey) => texturesIndex[tiles.get(tileKey)!.nature!.terrain]
 			)
 
-			for (const tileKey of tilesKey) {
-				const tile = tiles.get(tileKey)
+			for (const tile of triangleTiles) {
 				assert(tile?.nature, 'Rendered point has a nature')
 				const position = tile.nature.position
 
