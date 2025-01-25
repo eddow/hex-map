@@ -25,11 +25,6 @@ export class NatureGenerator {
 		return {
 			position: { x: x * this.tileSize, y: y * this.tileSize, z },
 			terrain: this.terrains.terrainType(z),
-			color: {
-				r: 0,
-				g: h01,
-				b: 1 - h01,
-			},
 		}
 	}
 }

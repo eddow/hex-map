@@ -54,11 +54,10 @@ export function createGame(seed: number) {
 	const land = new Land(natureGenerator)
 
 	const landscape = new Landscape(
-		land.tiles,
+		land,
 		new TextureGeometry(terrains, seed),
 		new OceanGeometry(seaLevel)
 	)
-	land.addPart(landscape)
 
 	const game = new Game(land, { clampCamZ: { min: 150, max: 700 } })
 

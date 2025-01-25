@@ -7,7 +7,7 @@
 
 ## Big optimizations
 
-- remove sectors concepts!!
+- Add sectors :"> - for ray tracing/hitboxes, LOD
 - No more "pre-render" for MeshPaste: keep the list up to date
 
 ## Grok Formulas

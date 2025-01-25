@@ -1,4 +1,4 @@
-import { Group, type Object3D, type PerspectiveCamera, type RGB, type Vector3Like } from 'three'
+import { Group, type Object3D, type PerspectiveCamera, type Vector3Like } from 'three'
 import type { Handelable } from '~/game'
 import { type AxialRef, axial, cartesian, fromCartesian } from '~/utils'
 import type { TileKey } from './landscape'
@@ -8,8 +8,7 @@ export interface TilePart {
 	dirty?: true
 }
 
-export interface TileNature {
-	color: RGB
+export interface TileNature extends TilePart {
 	position: Vector3Like
 	terrain: string
 }

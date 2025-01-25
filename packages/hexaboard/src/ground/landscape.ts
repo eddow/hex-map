@@ -11,22 +11,25 @@ import {
 import type { Game } from '~/game/game'
 import { MouseHandle, type MouseReactive } from '~/utils'
 import { type AxialRef, axial, hexSides } from '~/utils/axial'
-import { assert } from '~/utils/debug'
-import type { LandRenderer, Tile } from './land'
+import { assert, complete } from '~/utils/debug'
+import type { Land, LandRenderer, Tile, TileNature } from './land'
 
 export type TileKey = string
 
-export interface RenderedTriangle {
+export interface TriangleBase {
 	side: number
 	tilesKey: [TileKey, TileKey, TileKey]
 }
 
-export interface TileRenderBase {
-	triangles: Set<RenderedTriangle>
+export interface TileRenderBase<Triangle extends TriangleBase = TriangleBase> {
+	triangles: Set<Triangle>
 	// TODO: pos&direction in texture
 }
 
-export interface RenderedTile<TileRender extends TileRenderBase = TileRenderBase> extends Tile {
+export interface RenderedTile<
+	Triangle extends TriangleBase,
+	TileRender extends TileRenderBase<Triangle>,
+> extends Tile {
 	rendered?: TileRender
 }
 
@@ -39,19 +42,26 @@ function* tileTriangles(ref: AxialRef) {
 		last = next
 	}
 }
-
-export interface GeometryBuilder<TileRender extends TileRenderBase = TileRenderBase> {
-	tileRender(tile: Partial<TileRender>, key: string): TileRender
+export type Triplet<T> = [T, T, T]
+export interface GeometryBuilder<
+	Triangle extends TriangleBase,
+	TileRender extends TileRenderBase<Triangle>,
+> {
+	tileRender?(render: Partial<TileRender>, key: string, nature: TileNature): TileRender
+	triangle?(
+		triangle: Partial<Triangle>,
+		tiles: Triplet<RenderedTile<Triangle, TileRender>>
+	): Triangle
 	readonly mouseReactive: boolean
 	createGeometry(
-		tiles: Map<string, RenderedTile<TileRender>>,
-		triangles: RenderedTriangle[]
+		tiles: Map<string, RenderedTile<Triangle, TileRender>>,
+		triangles: Triangle[]
 	): BufferGeometry
 	get material(): Material
 }
 
-interface GeometryPart<TileRender extends TileRenderBase> {
-	builder: GeometryBuilder<TileRender>
+interface GeometryPart<Triangle extends TriangleBase, TileRender extends TileRenderBase<Triangle>> {
+	builder: GeometryBuilder<Triangle, TileRender>
 	mesh?: Mesh
 	material?: Material
 }
@@ -68,17 +78,23 @@ export class Tile1GHandle extends MouseHandle {
 	}
 }
 
-export class Landscape<TileRender extends TileRenderBase = TileRenderBase>
-	implements LandRenderer, MouseReactive
+export class Landscape<
+	Triangle extends TriangleBase = TriangleBase,
+	TileRender extends TileRenderBase<Triangle> = TileRenderBase<Triangle>,
+> implements LandRenderer, MouseReactive
 {
-	private readonly geometryParts: GeometryPart<TileRender>[]
-	public readonly group = new Group()
+	private readonly geometryParts: GeometryPart<Triangle, TileRender>[]
+	public readonly rendered = new Group()
 	private vertexKeys: string[] = []
 	constructor(
-		private readonly tiles: Map<string, RenderedTile<TileRender>>,
-		...geometryBuilders: GeometryBuilder<TileRender>[]
+		private readonly land: Land,
+		...geometryBuilders: GeometryBuilder<Triangle, TileRender>[]
 	) {
 		this.geometryParts = geometryBuilders.map((builder) => ({ builder }))
+		land.addPart(this)
+	}
+	get tiles() {
+		return this.land.tiles as Map<string, RenderedTile<Triangle, TileRender>>
 	}
 	mouseHandle(game: Game, intersection: Intersection<Object3D<Object3DEventMap>>): MouseHandle {
 		const baryArr = intersection.barycoord!.toArray()
@@ -88,11 +104,7 @@ export class Landscape<TileRender extends TileRenderBase = TileRenderBase>
 		return new Tile1GHandle(tileKey, this.tiles.get(tileKey)!)
 	}
 
-	protected readonly triangles = new Set<RenderedTriangle>()
-
-	get rendered() {
-		return this.group
-	}
+	protected readonly triangles = new Set<Triangle>()
 
 	invalidate(added: string[], removed: string[]): void {
 		// #region add points
@@ -102,7 +114,8 @@ export class Landscape<TileRender extends TileRenderBase = TileRenderBase>
 			if (tile?.nature && !tile.rendered) {
 				let rendered: Partial<TileRender> = {}
 				rendered.triangles = new Set()
-				for (const part of this.geometryParts) rendered = part.builder.tileRender(rendered, key)
+				for (const part of this.geometryParts)
+					rendered = part.builder.tileRender?.(rendered, key, tile.nature) ?? rendered
 				tile.rendered = rendered as TileRender
 				// Here, generate texture specs
 				for (const { next, last, side } of tileTriangles(axial.coords(key))) {
@@ -111,7 +124,12 @@ export class Landscape<TileRender extends TileRenderBase = TileRenderBase>
 					const nextTile = this.tiles.get(nextKey)
 					const lastTile = this.tiles.get(lastKey)
 					if (nextTile?.rendered && lastTile?.rendered) {
-						const triangle: RenderedTriangle = { side, tilesKey: [key, nextKey, lastKey] }
+						let triangle: Partial<Triangle> = {}
+						triangle.side = side
+						triangle.tilesKey = [key, nextKey, lastKey]
+						for (const part of this.geometryParts)
+							triangle = part.builder.triangle?.(triangle, [tile, nextTile, lastTile]) ?? triangle
+						complete(triangle)
 						nextTile.rendered.triangles.add(triangle)
 						lastTile.rendered.triangles.add(triangle)
 						tile.rendered.triangles.add(triangle)
@@ -126,16 +144,16 @@ export class Landscape<TileRender extends TileRenderBase = TileRenderBase>
 
 		for (const key of removed) {
 			const tile = this.tiles.get(key)
-			if (tile?.rendered)
-				for (const triangle of tile.rendered.triangles) {
-					for (const tileKey of triangle.tilesKey) {
-						const tile = this.tiles.get(tileKey)
-						assert(tile?.rendered, 'Consistency: un-rendered tile was rendered')
-						tile.rendered.triangles.delete(triangle)
-						if (!tile.rendered.triangles.size) tile.rendered = undefined
-					}
-					this.triangles.delete(triangle)
+			assert(tile?.rendered, 'Consistency: un-rendered tile was rendered')
+			for (const triangle of tile.rendered.triangles) {
+				for (const tileKey of triangle.tilesKey) {
+					const tile = this.tiles.get(tileKey)
+					assert(tile?.rendered, 'Consistency: un-rendered tile was rendered')
+					tile.rendered.triangles.delete(triangle)
 				}
+				this.triangles.delete(triangle)
+			}
+			tile.rendered = undefined
 		}
 
 		// #endregion
@@ -154,7 +172,7 @@ export class Landscape<TileRender extends TileRenderBase = TileRenderBase>
 			} else {
 				part.mesh = new Mesh(geometry, part.builder.material)
 				if (part.builder.mouseReactive) part.mesh.userData = { mouseTarget: this }
-				this.group.add(part.mesh)
+				this.rendered.add(part.mesh)
 			}
 		}
 

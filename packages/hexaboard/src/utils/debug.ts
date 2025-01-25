@@ -11,3 +11,5 @@ export function defined<T>(value: T | undefined, message = 'Value is defined'): 
 	assert(value !== undefined, message)
 	return value
 }
+
+export function complete<T>(value: Partial<T>): asserts value is T {}

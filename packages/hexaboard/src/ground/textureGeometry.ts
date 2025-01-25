@@ -1,8 +1,8 @@
 import { BufferAttribute, BufferGeometry, type Material, ShaderMaterial, type Texture } from 'three'
 import { LCG, axial, numbers } from '~/utils'
 import { assert } from '~/utils/debug'
-import type { RenderedTile } from './landscape'
-import type { GeometryBuilder, RenderedTriangle, TileRenderBase } from './landscape'
+import type { RenderedTile, Triplet } from './landscape'
+import type { GeometryBuilder, TileRenderBase, TriangleBase } from './landscape'
 import type { TerrainDefinition } from './terrain'
 
 interface TexturePosition {
@@ -10,8 +10,15 @@ interface TexturePosition {
 	center: { u: number; v: number }
 }
 
-interface TexturedTileRender extends TileRenderBase {
+interface TexturedTileRender extends TileRenderBase<TexturedTriangle> {
 	texturePosition: TexturePosition
+}
+
+interface TexturedTriangle extends TriangleBase {
+	uvA: number[]
+	uvB: number[]
+	uvC: number[]
+	textureIdx: number[]
 }
 
 // Textures are images virtually of 1x1 - this is the size of the part of the picture taken by tiles
@@ -41,20 +48,30 @@ export function textureUVs(texture: TexturePosition, side: number, rot: number) 
 	}
 }
 
-export class TextureGeometry implements GeometryBuilder<TexturedTileRender> {
+export class TextureGeometry implements GeometryBuilder<TexturedTriangle, TexturedTileRender> {
 	public readonly material: Material
 	public readonly mouseReactive = true
 	private readonly textures: Texture[]
+	private texturesIndex: Record<string, number>
+
 	constructor(
 		private readonly terrainDefinition: TerrainDefinition,
 		private readonly seed: number
 	) {
 		this.textures = terrainDefinition.textures
 		this.material = threeTexturedMaterial(terrainDefinition.textures)
+
+		// Index of all the textures by terrain type name
+		this.texturesIndex = Object.fromEntries(
+			Object.entries(this.terrainDefinition.types).map(([k, v]) => [
+				k,
+				this.textures.indexOf(v.texture),
+			])
+		)
 	}
 	createGeometry(
-		tiles: Map<string, RenderedTile<TexturedTileRender>>,
-		triangles: RenderedTriangle[]
+		tiles: Map<string, RenderedTile<TexturedTriangle, TexturedTileRender>>,
+		triangles: TexturedTriangle[]
 	): BufferGeometry {
 		const positions = new Float32Array(triangles.length * 3 * 3)
 		const textureIdx = new Uint8Array(triangles.length * 3 * 3)
@@ -67,33 +84,20 @@ export class TextureGeometry implements GeometryBuilder<TexturedTileRender> {
 		for (let multiplier = 1; multiplier < triangles.length; multiplier <<= 1)
 			((m) => barycentric.copyWithin(m, 0, m))(multiplier * 9)
 
-		// Index of all the textures by terrain type name
-		const texturesIndex = Object.fromEntries(
-			Object.entries(this.terrainDefinition.types).map(([k, v]) => [
-				k,
-				this.textures.indexOf(v.texture),
-			])
-		)
-
 		let index = 0
 		for (const triangle of triangles) {
-			const { tilesKey, side } = triangle
-			const triangleTiles = tilesKey.map((tileKey) => tiles.get(tileKey)!)
-			const [A, B, C] = triangleTiles.map((tile) => tile.rendered!)
-			uvA.set(textureUVs(A.texturePosition, side, 0), index * 2)
-			uvB.set(textureUVs(B.texturePosition, side, 4), index * 2)
-			uvC.set(textureUVs(C.texturePosition, side, 2), index * 2)
-			// Texture Idx to add for each point
-			const textureIndexes = tilesKey.map(
-				(tileKey) => texturesIndex[tiles.get(tileKey)!.nature!.terrain]
-			)
+			const { tilesKey } = triangle
+			uvA.set(triangle.uvA, index * 2)
+			uvB.set(triangle.uvB, index * 2)
+			uvC.set(triangle.uvC, index * 2)
+			textureIdx.set(triangle.textureIdx, index * 3)
 
-			for (const tile of triangleTiles) {
+			for (const tileKey of tilesKey) {
+				const tile = tiles.get(tileKey)
 				assert(tile?.nature, 'Rendered point has a nature')
 				const position = tile.nature.position
 
 				positions.set([position.x, position.y, position.z], index * 3)
-				textureIdx.set(textureIndexes, index * 3)
 
 				index++
 			}
@@ -110,11 +114,11 @@ export class TextureGeometry implements GeometryBuilder<TexturedTileRender> {
 		geometry.setAttribute('position', new BufferAttribute(positions, 3))
 		return geometry
 	}
-	tileRender(tile: TileRenderBase, key: string): TexturedTileRender {
+	tileRender(render: TileRenderBase<TexturedTriangle>, key: string): TexturedTileRender {
 		const { q, r } = axial.coords(key)
 		const gen = LCG(this.seed, 'ttr', q, r)
 		return {
-			...tile,
+			...render,
 			texturePosition: {
 				alpha: gen(Math.PI * 2),
 				center: {
@@ -122,6 +126,21 @@ export class TextureGeometry implements GeometryBuilder<TexturedTileRender> {
 					v: gen(),
 				},
 			},
+		}
+	}
+	triangle(
+		triangle: TriangleBase,
+		tiles: Triplet<RenderedTile<TexturedTriangle, TexturedTileRender>>
+	): TexturedTriangle {
+		const textureIdx = tiles.map((tile) => this.texturesIndex[tile.nature!.terrain])
+		const [A, B, C] = tiles.map((tile) => tile.rendered!.texturePosition)
+		const side = triangle.side
+		return {
+			...triangle,
+			textureIdx: [...textureIdx, ...textureIdx, ...textureIdx],
+			uvA: textureUVs(A, side, 0),
+			uvB: textureUVs(B, side, 4),
+			uvC: textureUVs(C, side, 2),
 		}
 	}
 }

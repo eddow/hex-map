@@ -1,11 +1,11 @@
 import { BufferGeometry, Float32BufferAttribute, type Material, ShaderMaterial } from 'three'
 import { assert } from '~/utils/debug'
 import type { RenderedTile } from './landscape'
-import type { GeometryBuilder, RenderedTriangle, TileRenderBase } from './landscape'
+import type { GeometryBuilder, TileRenderBase, TriangleBase } from './landscape'
 /**
  * For testing purpose
  */
-export class OceanGeometry implements GeometryBuilder<TileRenderBase> {
+export class OceanGeometry implements GeometryBuilder<TriangleBase, TileRenderBase> {
 	public readonly material: Material
 	public readonly mouseReactive = false
 	constructor(private readonly seaLevel: number) {
@@ -16,33 +16,31 @@ export class OceanGeometry implements GeometryBuilder<TileRenderBase> {
 				shoreOpacity: { value: 0.1 },
 			},
 			vertexShader: `
-		attribute float opacity;
-		varying float alpha;
+attribute float opacity;
+varying float alpha;
 
-		void main() {
-			alpha = opacity;
-			gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-		}
-						`,
+void main() {
+	alpha = opacity;
+	gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+				`,
 			fragmentShader: `
-		uniform vec3 color;
-		uniform float shoreOpacity;
-		varying float alpha;
-		
-		void main() {
-		
-			// Apply the weights to the colors
-			gl_FragColor = vec4(color, clamp(shoreOpacity + alpha * (1.0-shoreOpacity), shoreOpacity, 1.0));
-		}
+uniform vec3 color;
+uniform float shoreOpacity;
+varying float alpha;
+
+void main() {
+
+	// Apply the weights to the colors
+	if(alpha < 0.00) discard;
+	gl_FragColor = vec4(color, clamp(shoreOpacity + alpha * (1.0-shoreOpacity), shoreOpacity, 1.0));
+}
 						`,
 		})
 	}
-	tileRender(tile: TileRenderBase): TileRenderBase {
-		return tile
-	}
 	createGeometry(
-		tiles: Map<string, RenderedTile<TileRenderBase>>,
-		triangles: RenderedTriangle[]
+		tiles: Map<string, RenderedTile<TriangleBase, TileRenderBase>>,
+		triangles: TriangleBase[]
 	): BufferGeometry {
 		const positions: number[] = []
 		const opacities: number[] = []
