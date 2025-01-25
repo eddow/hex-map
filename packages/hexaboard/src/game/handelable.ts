@@ -1,5 +1,5 @@
 import type { Object3D } from 'three'
-import type { ResourceDistribution, TerrainBase } from '~/ground'
+import type { ResourceDistribution, TerrainBase } from '~/sectored'
 import { meshAsset } from '~/utils/meshes'
 import type { RandGenerator } from '~/utils/numbers'
 

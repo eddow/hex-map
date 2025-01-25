@@ -1,8 +1,5 @@
-export * from './landscape'
-export * from './procedural'
+export * from './colorGeometry'
 export * from './land'
+export * from './landscape'
+export * from './natureGenerator'
 export * from './terrain'
-
-export * from './sector'
-import Sector from './sector'
-export { Sector as HexSector }

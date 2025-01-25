@@ -1,38 +1,30 @@
 import * as m from '$lib/paraglide/messages'
 import {
-	type AxialRef,
+	ColorGeometry,
 	Game,
+	Land,
+	Landscape,
 	MouseButton,
 	type MouseButtonEvolution,
 	type MouseHoverEvolution,
-	NoiseProcedural,
-	type ResourcefulTerrain,
-	SectorNotGeneratedError,
-	TexturedLandscape,
-	type TexturedTerrain,
-	type TileBase,
+	NatureGenerator,
 	TileCursor,
 	TileHandle,
-	TileSpec,
-	WateredLand,
-	axial,
 	cartesian,
-	costingPath,
 	icosahedron,
-	numbers,
-	pointsAround,
 } from 'hexaboard'
-import { CatmullRomCurve3, Mesh, MeshBasicMaterial, type Object3D, TubeGeometry } from 'three'
+import type { Object3D } from 'three'
 import { debugInfo, dockview, games } from './globals.svelte'
 import terrains, { terrainHeight } from './world/terrain'
 type MapTuple<T extends any[], U> = {
 	[K in keyof T]: U
 }
 
-type Terrain = ResourcefulTerrain & TexturedTerrain
-type Tile = TileBase<Terrain>
+/*type Terrain = ResourcefulTerrain & TexturedTerrain
+type Tile = TileBase<Terrain>*/
 
 export function createGame(seed: number) {
+	/*
 	const landscape = new TexturedLandscape(20, terrains.textures)
 	const procedural = new NoiseProcedural<Tile>(32, terrainHeight, 73058, 50)
 	const seaLevel = terrainHeight / 2
@@ -43,8 +35,8 @@ export function createGame(seed: number) {
 		seed,
 		tileRadius: 1,
 		seaLevel,
-	})
-
+	})*/
+	/*
 	function tileSpec(aRef: AxialRef) {
 		return new TileSpec(land, axial.coords(aRef))
 	}
@@ -53,23 +45,32 @@ export function createGame(seed: number) {
 	): (...aRefs: MapTuple<Args, AxialRef>) => Return {
 		// @ts-ignore
 		return (...aRefs: MapTuple<Args, AxialRef>) => fct(...aRefs.map(tileSpec))
-	}
+	}*/
+
+	const natureGenerator = new NatureGenerator(terrainHeight, terrains, seed, 20)
+	const land = new Land(natureGenerator)
+
+	const terrain = new ColorGeometry()
+	const landscape = new Landscape(land.tiles, terrain)
+	land.addPart(landscape)
 
 	const game = new Game(land)
-	for (const sn of numbers(2)) game.land.sector(sn)
+
+	land.updateViews([])
+
 	//const pawn = new Character(land.sector, 0, sphere(2, { color: 0xff0000 }))
 	//const pawn = new Character(land.sector, 0, new Object3D())
 	//game.addEntity(pawn)
 	const cursor = new TileCursor(
-		icosahedron(landscape.tileSize, {
+		icosahedron(20, {
 			color: 0xffffff,
 			wireframe: true,
 		})
 	)
 
-	function axialV3(aRef: AxialRef) {
+	/*function axialV3(aRef: AxialRef) {
 		return tileSpec(aRef).center
-	}
+	}*/
 	let pathTube: Object3D | undefined
 	game.onMouse('hover', (ev: MouseHoverEvolution) => {
 		if (ev.handle instanceof TileHandle) {
@@ -80,20 +81,20 @@ export function createGame(seed: number) {
 				pathTube = undefined
 			}
 			//if (pawn.tile !== cursor.tile.hexIndex) {
-			try {
+			/*try {
 				/* straight path
 				const path = [
 					axialAt(pawn.tile),
 					...straightPath(pawn.sector, pawn.tile, cursor.tile.target, cursor.tile.hexIndex),
 				]*/
-				/* no height path (0 height diff still has horizontal mvt not counted)
+			/* no height path (0 height diff still has horizontal mvt not counted)
 				const path = costingPath(
 					cursor.tile.hexIndex,
 					(from, to) =>
 						to < sector.nbrTiles ? (sector.points[from].z - sector.points[to].z) ** 2 : Number.NaN,
 					(hexIndex) => hexIndex < sector.nbrTiles && pawn.tile === hexIndex
 				)*/
-				const path = costingPath(
+			/*const path = costingPath(
 					cursor.tile.axial,
 					tiled(
 						(from, to) =>
@@ -110,11 +111,11 @@ export function createGame(seed: number) {
 					const pathMaterial = new MeshBasicMaterial({ color: 0xffff00, wireframe: true })
 					pathTube = new Mesh(pathGeometry, pathMaterial)
 					game.scene.add(pathTube)
-				}
+				}* /
 			} catch (e) {
 				// Ignore SectorNotGeneratedError
 				if (!(e instanceof SectorNotGeneratedError)) throw e
-			}
+			}*/
 			//}
 			debugInfo.tile = cursor.tile?.axial
 			debugInfo.tilePos = cartesian(debugInfo.tile, 20)

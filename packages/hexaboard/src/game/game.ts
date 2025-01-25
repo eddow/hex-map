@@ -8,9 +8,9 @@ import {
 	type Vector3Like,
 	WebGLRenderer,
 } from 'three'
+import type { Land } from '~/ground/land'
 import { prerenderGlobals } from '~/three/meshCopyPaste'
 import { MouseControl, type MouseEvolution } from '~/utils/mouseControl'
-import type { LandBase } from '../ground/land/land'
 
 export type MouseEvolutionEvent<Evolution extends MouseEvolution = MouseEvolution> = (
 	evolution: Evolution
@@ -21,7 +21,7 @@ export abstract class GameEntity {
 	progress(dt: number) {}
 }
 
-export class Game<Land extends LandBase = LandBase> extends MouseControl {
+export class Game extends MouseControl {
 	public readonly lights = new Group()
 	private _land: Land
 
@@ -106,7 +106,7 @@ export class Game<Land extends LandBase = LandBase> extends MouseControl {
 			}
 		}
 		if (movedViews.length)
-			this.land.updateViews(Array.from(this.views.values().map((v) => v.camera.position)))
+			this.land.updateViews(Array.from(this.views.values().map((v) => v.camera)))
 	}
 
 	// #endregion

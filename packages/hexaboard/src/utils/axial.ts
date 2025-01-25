@@ -135,13 +135,11 @@ export function posInTile(aRef: AxialRef, radius: number) {
 }
 
 /**
- * Retrieves the tiles around a given tile (indexes) that are within a limit index
- * @returns number[]
+ * Retrieves the tiles around a given tile
+ * @returns Axial[]
  */
-export function pointsAround(aRef: AxialRef, nbrTiles: number = Number.POSITIVE_INFINITY) {
-	return hexSides
-		.map((side) => indexAt(axial.linear([1, aRef], [1, side])))
-		.filter((tile) => tile < nbrTiles)
+export function neighbors(aRef: AxialRef) {
+	return hexSides.map((side) => axial.linear(aRef, side))
 }
 
 export type AxialRef = number | Axial | string

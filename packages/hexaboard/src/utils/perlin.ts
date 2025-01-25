@@ -2,11 +2,10 @@ import { LCG } from './numbers'
 
 export class PerlinNoise {
 	private permutation: number[] = []
-	private p: number[] = []
 
 	constructor(seed: number) {
-		this.permutation = this.generatePermutation(seed)
-		this.p = [...this.permutation, ...this.permutation]
+		const permutation = this.generatePermutation(seed)
+		this.permutation = [...permutation, ...permutation]
 	}
 
 	private generatePermutation(seed: number): number[] {
@@ -56,12 +55,12 @@ export class PerlinNoise {
 		const v = this.fade(y)
 		const w = this.fade(z)
 
-		const A = this.p[X] + Y
-		const AA = this.p[A] + Z
-		const AB = this.p[A + 1] + Z
-		const B = this.p[X + 1] + Y
-		const BA = this.p[B] + Z
-		const BB = this.p[B + 1] + Z
+		const A = this.permutation[X] + Y
+		const AA = this.permutation[A] + Z
+		const AB = this.permutation[A + 1] + Z
+		const B = this.permutation[X + 1] + Y
+		const BA = this.permutation[B] + Z
+		const BB = this.permutation[B + 1] + Z
 
 		return this.lerp(
 			w,
