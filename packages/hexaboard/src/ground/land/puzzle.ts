@@ -38,9 +38,7 @@ export class PuzzleSector<Tile extends TileBase = TileBase> extends Sector<Tile>
 		return LCG('puzzle-tile', q, r)
 	}
 	worldTile(aRef: AxialRef) {
-		const { q: qs, r: rs } = this.center
-		const { q, r } = axial.coords(aRef)
-		return { q: qs + q, r: rs + r }
+		return axial.linear(this.center, aRef)
 	}
 	get center(): Axial {
 		return sector2tile(this.key, this.land.procedural.radius - 1)
