@@ -7,6 +7,7 @@ import type { GeometryBuilder, RenderedTriangle, TileRenderBase } from './landsc
  */
 export class OceanGeometry implements GeometryBuilder<TileRenderBase> {
 	public readonly material: Material
+	public readonly mouseReactive = false
 	constructor(private readonly seaLevel: number) {
 		this.material = new ShaderMaterial({
 			transparent: true,

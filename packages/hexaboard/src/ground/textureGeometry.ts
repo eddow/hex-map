@@ -10,24 +10,40 @@ interface TexturePosition {
 	center: { u: number; v: number }
 }
 
-// Textures are images virtually of 1x1 - this is the size of the part of the picture taken by tiles
-const inTextureRadius = 0.2
-export function textureUVs(texture: TexturePosition, side: number, rot: number) {
-	const { u, v } = texture.center
-	const outP = (side: number) => [
-		u + inTextureRadius * Math.cos(texture.alpha + ((side + rot) * Math.PI) / 3),
-		v + inTextureRadius * Math.sin(texture.alpha + ((side + rot) * Math.PI) / 3),
-	]
-	const arr = [u, v, ...outP(side + 1), ...outP(side)]
-	return arr.slice(rot, 6).concat(arr.slice(0, rot))
-}
-
 interface TexturedTileRender extends TileRenderBase {
 	texturePosition: TexturePosition
 }
 
+// Textures are images virtually of 1x1 - this is the size of the part of the picture taken by tiles
+const inTextureRadius = 0.2
+export function textureUVs(texture: TexturePosition, side: number, rot: number) {
+	const { u, v } = texture.center
+	const rotationAngle = (rot * Math.PI) / 3 // Pre-calculate rotation angle
+
+	// Helper function to compute coordinates
+	const computePoint = (offset: number) => [
+		u + inTextureRadius * Math.cos(texture.alpha + rotationAngle + (offset * Math.PI) / 3),
+		v + inTextureRadius * Math.sin(texture.alpha + rotationAngle + (offset * Math.PI) / 3),
+	]
+
+	const basePoints = [[u, v], computePoint(1), computePoint(0)]
+
+	// Since rot will be 0, 2, or 4, we can directly adjust the array without slicing:
+	switch (rot) {
+		case 0:
+			return basePoints.flat()
+		case 2:
+			return [basePoints[1], basePoints[2], basePoints[0]].flat()
+		case 4:
+			return [basePoints[2], basePoints[0], basePoints[1]].flat()
+		default:
+			throw new Error('Invalid rotation value')
+	}
+}
+
 export class TextureGeometry implements GeometryBuilder<TexturedTileRender> {
 	public readonly material: Material
+	public readonly mouseReactive = true
 	private readonly textures: Texture[]
 	constructor(
 		private readonly terrainDefinition: TerrainDefinition,
@@ -64,9 +80,9 @@ export class TextureGeometry implements GeometryBuilder<TexturedTileRender> {
 			const { tilesKey, side } = triangle
 			const triangleTiles = tilesKey.map((tileKey) => tiles.get(tileKey)!)
 			const [A, B, C] = triangleTiles.map((tile) => tile.rendered!)
-			uvA.set(textureUVs(A.texturePosition, (side + 0) % 6, 0), index * 2)
-			uvB.set(textureUVs(B.texturePosition, (side + 0) % 6, 4), index * 2)
-			uvC.set(textureUVs(C.texturePosition, (side + 0) % 6, 2), index * 2)
+			uvA.set(textureUVs(A.texturePosition, side, 0), index * 2)
+			uvB.set(textureUVs(B.texturePosition, side, 4), index * 2)
+			uvC.set(textureUVs(C.texturePosition, side, 2), index * 2)
 			// Texture Idx to add for each point
 			const textureIndexes = tilesKey.map(
 				(tileKey) => texturesIndex[tiles.get(tileKey)!.nature!.terrain]

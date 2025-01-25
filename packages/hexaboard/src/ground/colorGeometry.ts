@@ -7,6 +7,7 @@ import type { GeometryBuilder, RenderedTriangle, TileRenderBase } from './landsc
  */
 export class ColorGeometry implements GeometryBuilder<TileRenderBase> {
 	public readonly material: Material
+	public readonly mouseReactive = true
 	constructor() {
 		this.material = new MeshBasicMaterial({
 			vertexColors: true,

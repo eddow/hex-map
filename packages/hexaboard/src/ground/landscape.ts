@@ -42,6 +42,7 @@ function* tileTriangles(ref: AxialRef) {
 
 export interface GeometryBuilder<TileRender extends TileRenderBase = TileRenderBase> {
 	tileRender(tile: Partial<TileRender>, key: string): TileRender
+	readonly mouseReactive: boolean
 	createGeometry(
 		tiles: Map<string, RenderedTile<TileRender>>,
 		triangles: RenderedTriangle[]
@@ -152,7 +153,7 @@ export class Landscape<TileRender extends TileRenderBase = TileRenderBase>
 				geometry.computeBoundingSphere()
 			} else {
 				part.mesh = new Mesh(geometry, part.builder.material)
-				part.mesh.userData = { mouseTarget: this }
+				if (part.builder.mouseReactive) part.mesh.userData = { mouseTarget: this }
 				this.group.add(part.mesh)
 			}
 		}
