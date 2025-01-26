@@ -18,6 +18,7 @@ export class NatureGenerator {
 	) {
 		this.perlin = new HeightMap(worldSeed, scale, [0, terrainHeight])
 	}
+
 	getNature(tile: AxialRef): TileNature {
 		const { x, y } = cartesian(axial.coords(tile))
 		const z = this.perlin.getHeight(x, y)

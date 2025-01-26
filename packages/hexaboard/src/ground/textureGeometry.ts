@@ -1,9 +1,10 @@
 import { BufferAttribute, BufferGeometry, type Material, ShaderMaterial, type Texture } from 'three'
-import { LCG, axial, numbers } from '~/utils'
+import { LCG, numbers } from '~/utils'
 import { assert } from '~/utils/debug'
 import type { RenderedTile, Triplet } from './landscape'
 import type { GeometryBuilder, TileRenderBase, TriangleBase } from './landscape'
 import type { TerrainDefinition } from './terrain'
+import { performanceMeasured } from '~/utils/decorators'
 
 interface TexturePosition {
 	alpha: number
@@ -11,7 +12,8 @@ interface TexturePosition {
 }
 
 interface TexturedTileRender extends TileRenderBase<TexturedTriangle> {
-	texturePosition: TexturePosition
+	textureCenter: { u: number; v: number }
+	uvCache: number[][]
 }
 
 interface TexturedTriangle extends TriangleBase {
@@ -21,28 +23,41 @@ interface TexturedTriangle extends TriangleBase {
 	textureIdx: number[]
 }
 
-// Textures are images virtually of 1x1 - this is the size of the part of the picture taken by tiles
-const inTextureRadius = 0.2
-export function textureUVs(texture: TexturePosition, side: number, rot: number) {
+const scSummits: { cos: number; sin: number }[] = []
+for (let i = 0; i < 6; i++) {
+	scSummits.push({ cos: Math.cos((i * Math.PI) / 3), sin: Math.sin((i * Math.PI) / 3) })
+}
+
+function uvCache(texture: TexturePosition) {
 	const { u, v } = texture.center
-	const rotationAngle = (rot * Math.PI) / 3 // Pre-calculate rotation angle
+	const scAlpha = {
+		cos: inTextureRadius * Math.cos(texture.alpha),
+		sin: inTextureRadius * Math.sin(texture.alpha),
+	}
+	return numbers(6).map((side) => [
+		u + scAlpha.cos * scSummits[side].cos - scAlpha.sin * scSummits[side].sin,
+		v + scAlpha.cos * scSummits[side].sin + scAlpha.sin * scSummits[side].cos,
+	])
+}
 
-	// Helper function to compute coordinates
-	const computePoint = (offset: number) => [
-		u + inTextureRadius * Math.cos(texture.alpha + rotationAngle + (offset * Math.PI) / 3),
-		v + inTextureRadius * Math.sin(texture.alpha + rotationAngle + (offset * Math.PI) / 3),
-	]
-
-	const basePoints = [[u, v], computePoint(1), computePoint(0)]
-
+// Textures are images virtually of size 1x1 - this is the size of the part of the picture taken by tiles
+const inTextureRadius = 0.2
+export function textureUVs(
+	{ u, v }: { u: number; v: number },
+	uvCache: number[][],
+	side: number,
+	rot: number
+) {
+	const [bp1u, bp1v] = uvCache[(rot + side + 1) % 6]
+	const [bp2u, bp2v] = uvCache[(rot + side) % 6]
 	// Since rot will be 0, 2, or 4, we can directly adjust the array without slicing:
 	switch (rot) {
 		case 0:
-			return basePoints.flat()
+			return [u, v, bp1u, bp1v, bp2u, bp2v]
 		case 2:
-			return [basePoints[1], basePoints[2], basePoints[0]].flat()
+			return [bp1u, bp1v, bp2u, bp2v, u, v]
 		case 4:
-			return [basePoints[2], basePoints[0], basePoints[1]].flat()
+			return [bp2u, bp2v, u, v, bp1u, bp1v]
 		default:
 			throw new Error('Invalid rotation value')
 	}
@@ -69,6 +84,8 @@ export class TextureGeometry implements GeometryBuilder<TexturedTriangle, Textur
 			])
 		)
 	}
+
+	@performanceMeasured('texture geometry')
 	createGeometry(
 		tiles: Map<string, RenderedTile<TexturedTriangle, TexturedTileRender>>,
 		triangles: TexturedTriangle[]
@@ -90,14 +107,17 @@ export class TextureGeometry implements GeometryBuilder<TexturedTriangle, Textur
 			uvA.set(triangle.uvA, index * 2)
 			uvB.set(triangle.uvB, index * 2)
 			uvC.set(triangle.uvC, index * 2)
-			textureIdx.set(triangle.textureIdx, index * 3)
-
+			//textureIdx.set(triangle.textureIdx, index * 3)
+			const textureIndexes = tilesKey.map(
+				(tileKey) => this.texturesIndex[tiles.get(tileKey)!.nature!.terrain]
+			)
 			for (const tileKey of tilesKey) {
 				const tile = tiles.get(tileKey)
 				assert(tile?.nature, 'Rendered point has a nature')
 				const position = tile.nature.position
 
 				positions.set([position.x, position.y, position.z], index * 3)
+				textureIdx.set(textureIndexes, index * 3)
 
 				index++
 			}
@@ -115,17 +135,20 @@ export class TextureGeometry implements GeometryBuilder<TexturedTriangle, Textur
 		return geometry
 	}
 	tileRender(render: TileRenderBase<TexturedTriangle>, key: string): TexturedTileRender {
-		const { q, r } = axial.coords(key)
-		const gen = LCG(this.seed, 'ttr', q, r)
+		//const { q, r } = axial.coords(key)
+		//const gen = LCG(this.seed, 'ttr', q, r)
+		const gen = LCG(this.seed, 'ttr', key)
+		const texturePosition = {
+			alpha: gen(Math.PI * 2),
+			center: {
+				u: gen(),
+				v: gen(),
+			},
+		}
 		return {
 			...render,
-			texturePosition: {
-				alpha: gen(Math.PI * 2),
-				center: {
-					u: gen(),
-					v: gen(),
-				},
-			},
+			textureCenter: texturePosition.center,
+			uvCache: uvCache(texturePosition),
 		}
 	}
 	triangle(
@@ -133,14 +156,14 @@ export class TextureGeometry implements GeometryBuilder<TexturedTriangle, Textur
 		tiles: Triplet<RenderedTile<TexturedTriangle, TexturedTileRender>>
 	): TexturedTriangle {
 		const textureIdx = tiles.map((tile) => this.texturesIndex[tile.nature!.terrain])
-		const [A, B, C] = tiles.map((tile) => tile.rendered!.texturePosition)
+		const [A, B, C] = tiles.map((tile) => tile.rendered!)
 		const side = triangle.side
 		return {
 			...triangle,
 			textureIdx: [...textureIdx, ...textureIdx, ...textureIdx],
-			uvA: textureUVs(A, side, 0),
-			uvB: textureUVs(B, side, 4),
-			uvC: textureUVs(C, side, 2),
+			uvA: textureUVs(A.textureCenter, A.uvCache, side, 0),
+			uvB: textureUVs(B.textureCenter, B.uvCache, side, 4),
+			uvC: textureUVs(C.textureCenter, C.uvCache, side, 2),
 		}
 	}
 }

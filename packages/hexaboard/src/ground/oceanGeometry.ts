@@ -54,7 +54,7 @@ void main() {
 			for (const tile of triangleTiles) {
 				assert(tile?.nature, 'Rendered point has a nature')
 				const position = tile.nature.position
-				const opacity = (seaLevel - position.z) / seaLevel
+				const opacity = (seaLevel - position.z) / (seaLevel * 2)
 				positions.push(position.x, position.y, seaLevel)
 				opacities.push(opacity)
 			}

@@ -12,7 +12,7 @@
 
 ## Grok Formulas
 
-## Walking time
+### Walking time
 
 ```ts
 /**
@@ -44,3 +44,7 @@ function calculateWalkingTimeWithSlope(H: number, T: number, dH: number): number
     return totalTime; // total time in minutes
 }
 ```
+
+## Rivers algorithms
+
+All local maximum have 1/x chances of being a source - rely on "wide enough" generation not to see rivers appearing

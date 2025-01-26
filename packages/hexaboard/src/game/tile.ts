@@ -3,7 +3,7 @@ import type { LandBase, TerrainBase } from '~/sectored'
 import type Sector from '~/sectored/sector'
 import type { TileBase } from '~/sectored/sector'
 import { type Axial, axial } from '~/utils'
-import { cache, cached } from '~/utils/cached'
+import { cache, cached } from '~/utils/decorators'
 import { MouseHandle } from '~/utils/mouseControl'
 import type { Game } from '.'
 

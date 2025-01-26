@@ -12,6 +12,7 @@ import type { Game } from '~/game/game'
 import { MouseHandle, type MouseReactive } from '~/utils'
 import { type AxialRef, axial, hexSides } from '~/utils/axial'
 import { assert, complete } from '~/utils/debug'
+import { performanceMeasured } from '~/utils/decorators'
 import type { Land, LandRenderer, Tile, TileNature } from './land'
 
 export type TileKey = string
@@ -78,6 +79,8 @@ export class Tile1GHandle extends MouseHandle {
 	}
 }
 
+const nbrInvalidate = 0
+
 export class Landscape<
 	Triangle extends TriangleBase = TriangleBase,
 	TileRender extends TileRenderBase<Triangle> = TileRenderBase<Triangle>,
@@ -106,9 +109,8 @@ export class Landscape<
 
 	protected readonly triangles = new Set<Triangle>()
 
-	invalidate(added: string[], removed: string[]): void {
-		// #region add points
-
+	@performanceMeasured('add')
+	addTiles(added: string[]): void {
 		for (const key of added) {
 			const tile = this.tiles.get(key)
 			if (tile?.nature && !tile.rendered) {
@@ -118,7 +120,7 @@ export class Landscape<
 					rendered = part.builder.tileRender?.(rendered, key, tile.nature) ?? rendered
 				tile.rendered = rendered as TileRender
 				// Here, generate texture specs
-				for (const { next, last, side } of tileTriangles(axial.coords(key))) {
+				for (const { next, last, side } of tileTriangles(tile.coords)) {
 					const nextKey = axial.key(next)
 					const lastKey = axial.key(last)
 					const nextTile = this.tiles.get(nextKey)
@@ -138,26 +140,28 @@ export class Landscape<
 				}
 			}
 		}
+	}
 
-		// #endregion
-		// #region remove points
-
+	@performanceMeasured('remove')
+	removeTiles(removed: string[]): void {
 		for (const key of removed) {
 			const tile = this.tiles.get(key)
-			assert(tile?.rendered, 'Consistency: un-rendered tile was rendered')
-			for (const triangle of tile.rendered.triangles) {
-				for (const tileKey of triangle.tilesKey) {
-					const tile = this.tiles.get(tileKey)
-					assert(tile?.rendered, 'Consistency: un-rendered tile was rendered')
-					tile.rendered.triangles.delete(triangle)
+			if (tile?.rendered) {
+				for (const triangle of tile.rendered.triangles) {
+					for (const tileKey of triangle.tilesKey) {
+						const tile = this.tiles.get(tileKey)
+						assert(tile?.rendered, 'Consistency: un-rendered tile was rendered')
+						tile.rendered.triangles.delete(triangle)
+					}
+					this.triangles.delete(triangle)
 				}
-				this.triangles.delete(triangle)
+				tile.rendered = undefined
 			}
-			tile.rendered = undefined
 		}
+	}
 
-		// #endregion
-		// #region update geometry
+	@performanceMeasured('render')
+	render() {
 		const triangles = Array.from(this.triangles)
 		this.vertexKeys = []
 		for (const triangle of triangles) this.vertexKeys.push(...triangle.tilesKey)
@@ -175,6 +179,23 @@ export class Landscape<
 				this.rendered.add(part.mesh)
 			}
 		}
+	}
+
+	@performanceMeasured('invalidate')
+	invalidate(added: string[], removed: string[]): void {
+		// #region add points
+
+		this.addTiles(added)
+
+		// #endregion
+		// #region remove points
+
+		this.removeTiles(removed)
+
+		// #endregion
+		// #region update geometry
+
+		this.render()
 
 		// #endregion
 	}

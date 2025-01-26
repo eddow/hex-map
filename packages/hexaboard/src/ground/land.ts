@@ -1,6 +1,7 @@
 import { Group, type Object3D, type PerspectiveCamera, type Vector3Like } from 'three'
 import type { Handelable } from '~/game'
-import { type AxialRef, axial, cartesian, fromCartesian } from '~/utils'
+import { type Axial, type AxialRef, axial, cartesian, fromCartesian } from '~/utils'
+import { logPerformances, resetPerformances } from '~/utils/decorators'
 import type { TileKey } from './landscape'
 import type { NatureGenerator } from './natureGenerator'
 
@@ -18,7 +19,8 @@ export interface TileContent extends TilePart {
 }
 
 export interface Tile {
-	nature?: TileNature
+	coords: Axial
+	nature: TileNature
 	content?: TileContent
 }
 
@@ -76,6 +78,7 @@ export class Land {
 		const removed = new Set(this.tiles.keys())
 		const added: TileKey[] = []
 		const camera = cameras[0]
+		resetPerformances()
 		// TODO: Don't remove directly, let a margin unseen but not removed
 		for (const toSee of hexagonsWithinCartesianDistance(
 			fromCartesian(camera.position, 20),
@@ -86,11 +89,16 @@ export class Land {
 			const key = axial.key(toSee)
 			if (!removed.delete(key)) added.push(key)
 		}
-		for (const a of added)
-			this.tiles.set(axial.key(a), { nature: this.natureGenerator.getNature(axial.coords(a)) })
+		const addedTiles: Record<string, Tile> = {}
+		for (const a of added) {
+			const coords = axial.coords(a)
+			this.tiles.set(a, { nature: this.natureGenerator.getNature(coords), coords })
+		}
 		if (removed.size || added.length)
 			for (const part of this.parts) part.invalidate(added, Array.from(removed))
 		for (const tileKey of removed) this.tiles.delete(tileKey)
+
+		logPerformances()
 	}
 
 	addPart(part: LandRenderer) {
