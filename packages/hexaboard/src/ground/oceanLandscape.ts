@@ -1,11 +1,17 @@
-import { BufferGeometry, Float32BufferAttribute, type Material, ShaderMaterial } from 'three'
-import { assert } from '~/utils/debug'
-import type { RenderedTile } from './landscaper'
-import type { Landscape, TileRenderBase, TriangleBase } from './landscaper'
+import {
+	BufferGeometry,
+	Float32BufferAttribute,
+	type Material,
+	Mesh,
+	type Object3D,
+	ShaderMaterial,
+} from 'three'
+import type { Sector, TileBase } from './land'
+import type { Landscape, Triangle } from './landscaper'
 /**
  * For testing purpose
  */
-export class OceanGeometry implements Landscape<TriangleBase, TileRenderBase> {
+export class OceanLandscape implements Landscape<TileBase> {
 	public readonly material: Material
 	public readonly mouseReactive = false
 	constructor(private readonly seaLevel: number) {
@@ -38,22 +44,17 @@ void main() {
 						`,
 		})
 	}
-	createGeometry(
-		tiles: Map<string, RenderedTile<TriangleBase, TileRenderBase>>,
-		triangles: TriangleBase[]
-	): BufferGeometry {
+	render(tiles: TileBase[], triangles: Triangle[], sector: Sector<TileBase>): Object3D {
 		const positions: number[] = []
 		const opacities: number[] = []
 		const seaLevel = this.seaLevel
 		const index = 0
 		for (const triangle of triangles) {
-			const { tilesKey } = triangle
-			//if (tilesKey.includes('0,0')) debugger
-			const triangleTiles = tilesKey.map((tileKey) => tiles.get(tileKey)!)
-			if (!triangleTiles.some((tile) => tile.nature!.position.z < seaLevel)) continue
+			const { indexes } = triangle
+			const triangleTiles = indexes.map((tileIndex) => tiles[tileIndex])
+			if (!triangleTiles.some((tile) => tile.position.z < seaLevel)) continue
 			for (const tile of triangleTiles) {
-				assert(tile?.nature, 'Rendered point has a nature')
-				const position = tile.nature.position
+				const position = tile.position
 				const opacity = (seaLevel - position.z) / (seaLevel * 2)
 				positions.push(position.x, position.y, seaLevel)
 				opacities.push(opacity)
@@ -62,6 +63,6 @@ void main() {
 		const geometry = new BufferGeometry()
 		geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
 		geometry.setAttribute('opacity', new Float32BufferAttribute(opacities, 1))
-		return geometry
+		return new Mesh(geometry, this.material)
 	}
 }

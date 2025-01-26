@@ -12,7 +12,7 @@ export interface Triangle {
 
 export interface Landscape<Tile extends TileBase> {
 	readonly mouseReactive: boolean
-	render(tiles: Tile[], triangles: Triangle[]): Object3D
+	render(tiles: Tile[], triangles: Triangle[], sector: Sector<Tile>): Object3D
 	refineTile?(tile: TileBase, coords: Axial): Tile
 }
 
@@ -88,7 +88,7 @@ export class Landscaper<Tile extends TileBase> implements LandPart<Tile> {
 	renderSector(sector: Sector<Tile>, tiles: Tile[]): void {
 		const mouseHandler = new SectorMouseHandler(this.land, this.geometryVertex, sector.center)
 		for (const landscape of this.landscapes) {
-			const o3d = landscape.render(tiles, this.triangles)
+			const o3d = landscape.render(tiles, this.triangles, sector)
 			if (landscape.mouseReactive) o3d.userData = { mouseHandler }
 			sector.group.add(o3d)
 		}

@@ -1,4 +1,4 @@
-import { LCG } from '~/utils'
+import { subSeed } from '~/utils'
 import { HeightMap } from '~/utils/perlin'
 import type { Land, LandPart, TileBase } from './land'
 
@@ -10,11 +10,11 @@ export class PerlinHeight implements LandPart<TileBase> {
 	readonly perlin: HeightMap
 	constructor(
 		land: Land<TileBase>,
-		public readonly terrainHeight: number,
-		public readonly seed: number,
+		private readonly terrainHeight: number,
+		private readonly seed: number,
 		scale = 10
 	) {
-		this.perlin = new HeightMap(LCG(seed, 'perlinH')(), scale, [0, terrainHeight])
+		this.perlin = new HeightMap(subSeed(seed, 'perlinH'), scale, [0, terrainHeight])
 		land.addPart(this)
 	}
 	refineTile(tile: TileBase): TileBase {

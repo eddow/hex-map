@@ -70,6 +70,9 @@ export class Sector<Tile extends TileBase> {
 		public readonly land: Land<Tile>,
 		public readonly center: Axial
 	) {}
+	tileCoords(aRef: AxialRef) {
+		return axial.linear(aRef, this.center)
+	}
 }
 
 function scaleAxial({ q, r }: Axial, scale: number) {

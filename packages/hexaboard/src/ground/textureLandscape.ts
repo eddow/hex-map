@@ -1,26 +1,20 @@
-import { BufferAttribute, BufferGeometry, type Material, ShaderMaterial, type Texture } from 'three'
+import {
+	BufferAttribute,
+	BufferGeometry,
+	type Material,
+	Mesh,
+	type Object3D,
+	ShaderMaterial,
+	type Texture,
+} from 'three'
 import { LCG, numbers } from '~/utils'
-import { assert } from '~/utils/debug'
-import { performanceMeasured } from '~/utils/decorators'
-import type { RenderedTile, Triplet } from './landscaper'
-import type { Landscape, TileRenderBase, TriangleBase } from './landscaper'
-import type { TerrainDefinition } from './terrain'
+import type { Sector } from './land'
+import type { Landscape, Triangle } from './landscaper'
+import type { TerrainDefinition, TerrainTile } from './terrain'
 
 interface TexturePosition {
 	alpha: number
 	center: { u: number; v: number }
-}
-
-interface TexturedTileRender extends TileRenderBase<TexturedTriangle> {
-	textureCenter: { u: number; v: number }
-	uvCache: number[][]
-}
-
-interface TexturedTriangle extends TriangleBase {
-	uvA: number[]
-	uvB: number[]
-	uvC: number[]
-	textureIdx: number[]
 }
 
 const scSummits: { cos: number; sin: number }[] = []
@@ -28,29 +22,25 @@ for (let i = 0; i < 6; i++) {
 	scSummits.push({ cos: Math.cos((i * Math.PI) / 3), sin: Math.sin((i * Math.PI) / 3) })
 }
 
-function uvCache(texture: TexturePosition) {
-	const { u, v } = texture.center
-	const scAlpha = {
-		cos: inTextureRadius * Math.cos(texture.alpha),
-		sin: inTextureRadius * Math.sin(texture.alpha),
-	}
-	return numbers(6).map((side) => [
-		u + scAlpha.cos * scSummits[side].cos - scAlpha.sin * scSummits[side].sin,
-		v + scAlpha.cos * scSummits[side].sin + scAlpha.sin * scSummits[side].cos,
-	])
-}
-
 // Textures are images virtually of size 1x1 - this is the size of the part of the picture taken by tiles
 const inTextureRadius = 0.2
 export function textureUVs(
-	{ u, v }: { u: number; v: number },
-	uvCache: number[][],
+	{ alpha, center: { u, v } }: TexturePosition,
 	side: number,
 	rot: number
 ) {
-	const [bp1u, bp1v] = uvCache[(rot + side + 1) % 6]
-	const [bp2u, bp2v] = uvCache[(rot + side) % 6]
-	// Since rot will be 0, 2, or 4, we can directly adjust the array without slicing:
+	const scAlpha = {
+		cos: inTextureRadius * Math.cos(alpha),
+		sin: inTextureRadius * Math.sin(alpha),
+	}
+	const rs = (rot + side) % 6
+	const rs1 = (rs + 1) % 6
+
+	// use `cos(a+b)=cos(a)*cos(b)-sin(a)*sin(b)` & `sin(a+b)=sin(a)*cos(b)+cos(a)*sin(b)`
+	const bp1u = u + scAlpha.cos * scSummits[rs1].cos - scAlpha.sin * scSummits[rs1].sin
+	const bp1v = v + scAlpha.cos * scSummits[rs1].sin + scAlpha.sin * scSummits[rs1].cos
+	const bp2u = u + scAlpha.cos * scSummits[rs].cos - scAlpha.sin * scSummits[rs].sin
+	const bp2v = v + scAlpha.cos * scSummits[rs].sin + scAlpha.sin * scSummits[rs].cos
 	switch (rot) {
 		case 0:
 			return [u, v, bp1u, bp1v, bp2u, bp2v]
@@ -63,7 +53,7 @@ export function textureUVs(
 	}
 }
 
-export class TextureGeometry implements Landscape<TexturedTriangle, TexturedTileRender> {
+export class TextureLandscape implements Landscape<TerrainTile> {
 	public readonly material: Material
 	public readonly mouseReactive = true
 	private readonly textures: Texture[]
@@ -84,12 +74,19 @@ export class TextureGeometry implements Landscape<TexturedTriangle, TexturedTile
 			])
 		)
 	}
+	render(tiles: TerrainTile[], triangles: Triangle[], sector: Sector<TerrainTile>): Object3D {
+		const textureUvCache = tiles.map((_, i) => {
+			const coords = sector.tileCoords(i)
+			const gen = LCG(this.seed, 'terrainTextures', coords.q, coords.r)
+			return {
+				alpha: gen(Math.PI * 2),
+				center: {
+					u: gen(),
+					v: gen(),
+				},
+			}
+		})
 
-	@performanceMeasured('texture geometry')
-	createGeometry(
-		tiles: Map<string, RenderedTile<TexturedTriangle, TexturedTileRender>>,
-		triangles: TexturedTriangle[]
-	): BufferGeometry {
 		const positions = new Float32Array(triangles.length * 3 * 3)
 		const textureIdx = new Uint8Array(triangles.length * 3 * 3)
 		const barycentric = new Float32Array(triangles.length * 3 * 3)
@@ -103,18 +100,16 @@ export class TextureGeometry implements Landscape<TexturedTriangle, TexturedTile
 
 		let index = 0
 		for (const triangle of triangles) {
-			const { tilesKey } = triangle
-			uvA.set(triangle.uvA, index * 2)
-			uvB.set(triangle.uvB, index * 2)
-			uvC.set(triangle.uvC, index * 2)
+			const { indexes, side } = triangle
+			const [A, B, C] = indexes.map((index) => textureUvCache[index])
+			uvA.set(textureUVs(A, side, 0), index * 2)
+			uvB.set(textureUVs(B, side, 4), index * 2)
+			uvC.set(textureUVs(C, side, 2), index * 2)
 			//textureIdx.set(triangle.textureIdx, index * 3)
-			const textureIndexes = tilesKey.map(
-				(tileKey) => this.texturesIndex[tiles.get(tileKey)!.nature!.terrain]
-			)
-			for (const tileKey of tilesKey) {
-				const tile = tiles.get(tileKey)
-				assert(tile?.nature, 'Rendered point has a nature')
-				const position = tile.nature.position
+			const textureIndexes = indexes.map((index) => this.texturesIndex[tiles[index].terrain])
+			for (const tileIndex of indexes) {
+				const tile = tiles[tileIndex]
+				const position = tile.position
 
 				positions.set([position.x, position.y, position.z], index * 3)
 				textureIdx.set(textureIndexes, index * 3)
@@ -132,39 +127,7 @@ export class TextureGeometry implements Landscape<TexturedTriangle, TexturedTile
 		geometry.setAttribute('textureIdx', new BufferAttribute(textureIdx, 3))
 		// per point
 		geometry.setAttribute('position', new BufferAttribute(positions, 3))
-		return geometry
-	}
-	tileRender(render: TileRenderBase<TexturedTriangle>, key: string): TexturedTileRender {
-		//const { q, r } = axial.coords(key)
-		//const gen = LCG(this.seed, 'ttr', q, r)
-		const gen = LCG(this.seed, 'ttr', key)
-		const texturePosition = {
-			alpha: gen(Math.PI * 2),
-			center: {
-				u: gen(),
-				v: gen(),
-			},
-		}
-		return {
-			...render,
-			textureCenter: texturePosition.center,
-			uvCache: uvCache(texturePosition),
-		}
-	}
-	triangle(
-		triangle: TriangleBase,
-		tiles: Triplet<RenderedTile<TexturedTriangle, TexturedTileRender>>
-	): TexturedTriangle {
-		const textureIdx = tiles.map((tile) => this.texturesIndex[tile.nature!.terrain])
-		const [A, B, C] = tiles.map((tile) => tile.rendered!)
-		const side = triangle.side
-		return {
-			...triangle,
-			textureIdx: [...textureIdx, ...textureIdx, ...textureIdx],
-			uvA: textureUVs(A.textureCenter, A.uvCache, side, 0),
-			uvB: textureUVs(B.textureCenter, B.uvCache, side, 4),
-			uvC: textureUVs(C.textureCenter, C.uvCache, side, 2),
-		}
+		return new Mesh(geometry, this.material)
 	}
 }
 

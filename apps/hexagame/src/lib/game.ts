@@ -1,13 +1,14 @@
 import * as m from '$lib/paraglide/messages'
 import {
-	ColorLandscape,
 	Game,
+	HeightTerrain,
 	Land,
 	Landscaper,
 	MouseButton,
 	type MouseButtonEvolution,
 	type MouseHoverEvolution,
 	PerlinHeight,
+	TextureLandscape,
 	Tile1GHandle,
 	TileCursor,
 	TileHandle,
@@ -16,8 +17,9 @@ import {
 	icosahedron,
 } from 'hexaboard'
 import type { Object3D } from 'three'
+import { OceanLandscape } from '~/ground/oceanLandscape'
 import { debugInfo, dockview, games } from './globals.svelte'
-import { terrainHeight } from './world/terrain'
+import terrains, { seaLevel, terrainHeight } from './world/terrain'
 type MapTuple<T extends any[], U> = {
 	[K in keyof T]: U
 }
@@ -27,36 +29,14 @@ type Tile = TileBase<Terrain>*/
 const tileSize = 20
 
 export function createGame(seed: number) {
-	/*
-	const landscape = new TexturedLandscape(20, terrains.textures)
-	const procedural = new NoiseProcedural<Tile>(32, terrainHeight, 73058, 50)
-	const seaLevel = terrainHeight / 2
-	const land = new WateredLand({
-		terrains,
-		procedural,
-		landscape,
-		seed,
-		tileRadius: 1,
-		seaLevel,
-	})*/
-	/*
-	function tileSpec(aRef: AxialRef) {
-		return new TileSpec(land, axial.coords(aRef))
-	}
-	function tiled<Args extends TileSpec[], Return>(
-		fct: (...tiles: Args) => Return
-	): (...aRefs: MapTuple<Args, AxialRef>) => Return {
-		// @ts-ignore
-		return (...aRefs: MapTuple<Args, AxialRef>) => fct(...aRefs.map(tileSpec))
-	}*/
-
 	const land = new Land(4, 20)
 	new PerlinHeight(land, terrainHeight, seed, 1000)
+	new HeightTerrain(land, terrainHeight / 10, seed, terrains, 1000)
 	new Landscaper(
 		land,
-		//new TextureGeometry(terrains, seed),
-		new ColorLandscape()
-		//new OceanGeometry(seaLevel)
+		//new ColorLandscape()
+		new TextureLandscape(terrains, seed),
+		new OceanLandscape(seaLevel)
 	)
 
 	const game = new Game(land, { clampCamZ: { min: 150, max: 700 } })

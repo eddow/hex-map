@@ -1,5 +1,5 @@
 export * from './colorLandscape'
-export * from './textureGeometry'
+export * from './textureLandscape'
 export * from './land'
 export * from './landscaper'
 export * from './perlinHeight'
