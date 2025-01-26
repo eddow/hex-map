@@ -1,11 +1,11 @@
 import { BufferGeometry, Float32BufferAttribute, type Material, ShaderMaterial } from 'three'
 import { assert } from '~/utils/debug'
-import type { RenderedTile } from './landscape'
-import type { GeometryBuilder, TileRenderBase, TriangleBase } from './landscape'
+import type { RenderedTile } from './landscaper'
+import type { Landscape, TileRenderBase, TriangleBase } from './landscaper'
 /**
  * For testing purpose
  */
-export class OceanGeometry implements GeometryBuilder<TriangleBase, TileRenderBase> {
+export class OceanGeometry implements Landscape<TriangleBase, TileRenderBase> {
 	public readonly material: Material
 	public readonly mouseReactive = false
 	constructor(private readonly seaLevel: number) {

@@ -4,6 +4,10 @@
 import type { Vector2Like } from 'three'
 import type { RandGenerator } from '~/utils/numbers'
 
+export type HexKey = string
+export type HexIndex = number
+export type AxialRef = HexIndex | HexKey | Axial
+
 export interface Axial {
 	q: number
 	r: number
@@ -154,7 +158,6 @@ export function neighbors(aRef: AxialRef) {
 	return hexSides.map((side) => axial.linear(aRef, side))
 }
 
-export type AxialRef = number | Axial | string
 export const axial = {
 	/**
 	 * Get the axial-ref as an axial: an object `{q, r}`
@@ -183,11 +186,9 @@ export const axial = {
 	 * @returns string
 	 */
 	key(aRef: AxialRef) {
-		if (typeof aRef === 'number') {
-			const { q, r } = axialAt(aRef)
-			return `${q},${r}`
-		}
-		return typeof aRef === 'string' ? aRef : `${aRef.q},${aRef.r}`
+		if (typeof aRef === 'string') return aRef
+		const { q, r } = typeof aRef === 'number' ? axialAt(aRef) : aRef
+		return `${q},${r}`
 	},
 	/**
 	 * Addition a list of axial coordinates optionally with a scalar coefficient

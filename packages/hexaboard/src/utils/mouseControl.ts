@@ -234,13 +234,13 @@ export class MouseControl {
 
 		const intersects = this.rayCaster.intersectObjects(this.scene.children)
 
-		const interact = intersects.findIndex((i) => i.object?.userData?.mouseTarget?.mouseHandle)
+		const interact = intersects.findIndex((i) => i.object?.userData?.mouseHandler?.mouseHandle)
 		if (interact > -1) return intersects[interact]
 	}
 	mouseInteract(eP: PositionedMouseEvolution) {
 		const intersection = this.mouseIntersection(eP)
 		if (intersection) {
-			const target = intersection.object?.userData?.mouseTarget as MouseReactive
+			const target = intersection.object?.userData?.mouseHandler as MouseReactive
 			return {
 				intersection,
 				handle: target.mouseHandle(this, intersection),

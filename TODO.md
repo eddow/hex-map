@@ -47,4 +47,6 @@ function calculateWalkingTimeWithSlope(H: number, T: number, dH: number): number
 
 ## Rivers algorithms
 
-All local maximum have 1/x chances of being a source - rely on "wide enough" generation not to see rivers appearing
+All points have 1/x chances of being a source - rely on "wide enough" generation not to see rivers appearing: rivers have a sectors boundary (cost -> NaN) for spreads of too many sectors
+
+Here: make "rivers" the first renderer

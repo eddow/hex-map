@@ -1,5 +1,5 @@
 import { Group, type Object3D } from 'three'
-import type { Tile1GHandle } from '~/ground/landscape'
+import type { Tile1GHandle } from '~/ground/landscaper'
 import { GameEntity } from './game'
 
 export class TileCursor extends GameEntity {
@@ -20,7 +20,7 @@ export class TileCursor extends GameEntity {
 				this.shown = true
 				group.add(this.mesh)
 			}
-			group.position.copy(value.tile.nature!.position)
+			group.position.copy(value.tile.position)
 		} else if (this.shown) {
 			this.shown = false
 			group.remove(this.mesh)

@@ -1,10 +1,10 @@
 import { BufferAttribute, BufferGeometry, type Material, ShaderMaterial, type Texture } from 'three'
 import { LCG, numbers } from '~/utils'
 import { assert } from '~/utils/debug'
-import type { RenderedTile, Triplet } from './landscape'
-import type { GeometryBuilder, TileRenderBase, TriangleBase } from './landscape'
-import type { TerrainDefinition } from './terrain'
 import { performanceMeasured } from '~/utils/decorators'
+import type { RenderedTile, Triplet } from './landscaper'
+import type { Landscape, TileRenderBase, TriangleBase } from './landscaper'
+import type { TerrainDefinition } from './terrain'
 
 interface TexturePosition {
 	alpha: number
@@ -63,7 +63,7 @@ export function textureUVs(
 	}
 }
 
-export class TextureGeometry implements GeometryBuilder<TexturedTriangle, TexturedTileRender> {
+export class TextureGeometry implements Landscape<TexturedTriangle, TexturedTileRender> {
 	public readonly material: Material
 	public readonly mouseReactive = true
 	private readonly textures: Texture[]

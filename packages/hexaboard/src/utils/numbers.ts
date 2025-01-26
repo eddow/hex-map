@@ -31,9 +31,9 @@ export function LCG(...seeds: (number | string)[]): RandGenerator {
 /**
  * Returns an array of numbers between min and maxP (without maxP)
  */
-export function numbers(maxP: number, min = 0) {
+export function numbers(maxP: number, min = 0, step = 1) {
 	const arr = []
-	for (let i = min; i < maxP; i++) arr.push(i)
+	for (let i = min; i < maxP; i += step) arr.push(i)
 	return arr
 }
 

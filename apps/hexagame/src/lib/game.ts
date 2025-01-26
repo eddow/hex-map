@@ -1,13 +1,13 @@
 import * as m from '$lib/paraglide/messages'
 import {
+	ColorLandscape,
 	Game,
 	Land,
-	Landscape,
+	Landscaper,
 	MouseButton,
 	type MouseButtonEvolution,
 	type MouseHoverEvolution,
-	NatureGenerator,
-	TextureGeometry,
+	PerlinHeight,
 	Tile1GHandle,
 	TileCursor,
 	TileHandle,
@@ -16,9 +16,8 @@ import {
 	icosahedron,
 } from 'hexaboard'
 import type { Object3D } from 'three'
-import { OceanGeometry } from '~/ground/oceanGeometry'
 import { debugInfo, dockview, games } from './globals.svelte'
-import terrains, { seaLevel, terrainHeight } from './world/terrain'
+import { terrainHeight } from './world/terrain'
 type MapTuple<T extends any[], U> = {
 	[K in keyof T]: U
 }
@@ -50,13 +49,14 @@ export function createGame(seed: number) {
 		// @ts-ignore
 		return (...aRefs: MapTuple<Args, AxialRef>) => fct(...aRefs.map(tileSpec))
 	}*/
-	const natureGenerator = new NatureGenerator(terrainHeight, terrains, seed, tileSize, 50)
-	const land = new Land(natureGenerator)
 
-	const landscape = new Landscape(
+	const land = new Land(4, 20)
+	new PerlinHeight(land, terrainHeight, seed, 1000)
+	new Landscaper(
 		land,
-		new TextureGeometry(terrains, seed),
-		new OceanGeometry(seaLevel)
+		//new TextureGeometry(terrains, seed),
+		new ColorLandscape()
+		//new OceanGeometry(seaLevel)
 	)
 
 	const game = new Game(land, { clampCamZ: { min: 150, max: 700 } })

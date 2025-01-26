@@ -97,7 +97,7 @@ export abstract class LandscapeBase<
 
 	createMesh(sector: Sector<Tile>) {
 		const mesh = new Mesh(this.createGeometry(sector), this.createMaterial(sector))
-		mesh.userData = { mouseTarget: sector }
+		mesh.userData = { mouseHandler: sector }
 		return mesh
 	}
 
