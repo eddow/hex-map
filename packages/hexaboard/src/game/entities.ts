@@ -1,5 +1,5 @@
 import { Group, type Object3D } from 'three'
-import type { Tile1GHandle } from '~/ground/landscaper'
+import type { TileHandle } from '~/ground/landscaper'
 import { GameEntity } from './game'
 
 export class TileCursor extends GameEntity {
@@ -8,11 +8,11 @@ export class TileCursor extends GameEntity {
 		super(new Group())
 	}
 
-	private _tile?: Tile1GHandle
-	get tile(): Tile1GHandle | undefined {
+	private _tile?: TileHandle
+	get tile(): TileHandle | undefined {
 		return this._tile
 	}
-	set tile(value: Tile1GHandle | undefined) {
+	set tile(value: TileHandle | undefined) {
 		this._tile = value
 		const group = this.o3d as Group
 		if (value) {

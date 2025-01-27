@@ -1,5 +1,5 @@
 import type { Object3D } from 'three'
-import type { ResourceDistribution, TerrainBase } from '~/sectored'
+import type { TerrainBase } from '~/ground'
 import { meshAsset } from '~/utils/meshes'
 import type { RandGenerator } from '~/utils/numbers'
 
@@ -26,19 +26,20 @@ interface HandelableAllure {
 	rotation: number
 }
 
+export type ResourceDistribution = [typeof Resource, number]
 export interface ResourcefulTerrain extends TerrainBase {
 	resourceDistribution: ResourceDistribution[]
 }
-export class Resource extends Handelable {
+export class Resource<Terrain extends ResourcefulTerrain = ResourcefulTerrain> extends Handelable {
 	allure: HandelableAllure
 	constructor(allure: HandelableAllure)
-	constructor(gen: RandGenerator, terrain: ResourcefulTerrain)
-	constructor(allure: HandelableAllure | RandGenerator, terrainType?: ResourcefulTerrain) {
+	constructor(gen: RandGenerator, terrain: Terrain)
+	constructor(allure: HandelableAllure | RandGenerator, terrain?: Terrain) {
 		super()
 		this.allure =
-			typeof allure === 'function' ? this.generate(allure as RandGenerator, terrainType!) : allure
+			typeof allure === 'function' ? this.generate(allure as RandGenerator, terrain!) : allure
 	}
-	generate(gen: RandGenerator, terrain: ResourcefulTerrain): HandelableAllure {
+	generate(gen: RandGenerator, terrain: Terrain): HandelableAllure {
 		return { model: Math.floor(gen(this.nbrModels)) + 1, rotation: gen(Math.PI * 2) }
 	}
 	get path(): string {
@@ -49,7 +50,7 @@ export class Resource extends Handelable {
 	}
 	createMesh() {
 		const mesh = meshAsset(this.path.replace('#', this.allure.model.toString())) as Object3D
-		//mesh.rotateZ(this.characteristics.rotation)
+		mesh.rotateZ(this.allure.rotation)
 		return mesh
 	}
 }

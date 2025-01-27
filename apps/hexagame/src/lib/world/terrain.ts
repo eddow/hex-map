@@ -1,4 +1,4 @@
-import { type Resource, type Terrain, TerrainDefinition } from 'hexaboard'
+import { TerrainDefinition, type ResourcefulTerrain, type TextureTerrain } from 'hexaboard'
 import { RepeatWrapping, TextureLoader } from 'three'
 import { Rock, Tree } from './handelable'
 
@@ -13,10 +13,7 @@ export const terrainHeight = 160
 export const seaLevel = terrainHeight / 2
 export const waterTexture = terrainTexture('water')
 
-export const terrainTypes: Record<
-	string,
-	Terrain & { resourceDistribution: [typeof Resource, number][] }
-> = {
+export const terrainTypes: Record<string, TextureTerrain & ResourcefulTerrain> = {
 	sand: {
 		color: { r: 0.8, g: 0.8, b: 0 },
 		texture: terrainTexture('sand'),

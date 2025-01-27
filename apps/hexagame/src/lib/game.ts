@@ -1,5 +1,6 @@
 import * as m from '$lib/paraglide/messages'
 import {
+	type ContentTile,
 	Game,
 	HeightTerrain,
 	Land,
@@ -8,8 +9,8 @@ import {
 	type MouseButtonEvolution,
 	type MouseHoverEvolution,
 	PerlinHeight,
+	Resourceful,
 	TextureLandscape,
-	Tile1GHandle,
 	TileCursor,
 	TileHandle,
 	axial,
@@ -24,12 +25,10 @@ type MapTuple<T extends any[], U> = {
 	[K in keyof T]: U
 }
 
-/*type Terrain = ResourcefulTerrain & TexturedTerrain
-type Tile = TileBase<Terrain>*/
-const tileSize = 20
+export type GameXLand = Land<ContentTile>
 
 export function createGame(seed: number) {
-	const land = new Land(4, 20)
+	const land = new Land<ContentTile>(4, 20)
 	new PerlinHeight(land, terrainHeight, seed, 1000)
 	new HeightTerrain(land, terrainHeight / 10, seed, terrains, 1000)
 	new Landscaper(
@@ -38,6 +37,7 @@ export function createGame(seed: number) {
 		new TextureLandscape(terrains, seed),
 		new OceanLandscape(seaLevel)
 	)
+	new Resourceful(land, terrains, seed, seaLevel)
 
 	const game = new Game(land, { clampCamZ: { min: 150, max: 700 } })
 
@@ -56,7 +56,7 @@ export function createGame(seed: number) {
 	}*/
 	let pathTube: Object3D | undefined
 	game.onMouse('hover', (ev: MouseHoverEvolution) => {
-		if (ev.handle instanceof Tile1GHandle) {
+		if (ev.handle instanceof TileHandle) {
 			cursor.tile = ev.handle
 
 			if (pathTube) {
@@ -100,7 +100,7 @@ export function createGame(seed: number) {
 				if (!(e instanceof SectorNotGeneratedError)) throw e
 			}*/
 			//}
-			debugInfo.tile = axial.coords(cursor.tile?.aKey)
+			debugInfo.tile = axial.coords(cursor.tile?.hKey)
 			debugInfo.tilePos = cartesian(debugInfo.tile, 20)
 		} else {
 			debugInfo.tilePos = debugInfo.tile = 'none'
@@ -109,7 +109,7 @@ export function createGame(seed: number) {
 	})
 	game.onMouse('click', (ev: MouseButtonEvolution) => {
 		if (ev.handle instanceof TileHandle) {
-			const tile = ev.handle?.spec
+			const tile = ev.handle?.hKey
 			const game = ev.handle?.game
 			if (tile)
 				switch (ev.button) {
@@ -123,8 +123,7 @@ export function createGame(seed: number) {
 							title: m.selectInfo(),
 							params: {
 								game: Object.entries(games).find(([k, v]) => v === game)?.[0],
-								sector: tile.sector.key,
-								hexIndex: tile.hexIndex,
+								hKey: tile,
 							},
 							floating: true,
 						})

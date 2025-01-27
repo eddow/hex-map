@@ -1,13 +1,15 @@
-import { Group, type PerspectiveCamera, type Vector3Like } from 'three'
+import { Group, type PerspectiveCamera, Vector3, type Vector3Like } from 'three'
 import {
 	assert,
 	type Axial,
 	type AxialRef,
+	type HexIndex,
 	type HexKey,
 	axial,
 	cartesian,
 	defined,
 	fromCartesian,
+	hexSides,
 	hexTiles,
 	numbers,
 } from '~/utils'
@@ -15,7 +17,7 @@ import { logPerformances, resetPerformances } from '~/utils/decorators'
 
 export interface TileBase {
 	position: Vector3Like
-	//terrain: string
+	// Number of sectors it has been generated in (find an alternative solution, many "1" to store)
 	sectors: number
 }
 
@@ -45,7 +47,7 @@ export function* hexagonsWithinCartesianDistance(
 	// Estimate the maximum axial distance. Since a hexagon's circumradius is sqrt(3) * side length,
 	// we use D / (sqrt(3) * size) as an upper bound for axial distance check.
 	const maxAxialDistance = Math.ceil(adjustedD / size)
-
+	// TODO: Browse with axialIndex now that we have maxAxialDistance
 	// Check all hexagons within this range
 	for (let dq = -maxAxialDistance; dq <= maxAxialDistance; dq++) {
 		for (
@@ -64,14 +66,53 @@ export function* hexagonsWithinCartesianDistance(
 	}
 }
 
+/**
+ * Represents the position of a point in a tile
+ */
+export interface PositionInTile {
+	/** Side [0..6[ */
+	s: number
+	/** 2D coordinate in side triangle */
+	u: number
+	/** 2D coordinate in side triangle */
+	v: number
+}
+
 export class Sector<Tile extends TileBase> {
 	readonly group = new Group()
 	constructor(
 		public readonly land: Land<Tile>,
 		public readonly center: Axial
 	) {}
+	cartesian(hexIndex: HexIndex, tiles?: Tile[]) {
+		return { ...cartesian(hexIndex, this.land.tileSize), z: tiles?.[hexIndex]?.position?.z ?? 0 }
+	}
 	tileCoords(aRef: AxialRef) {
 		return axial.linear(aRef, this.center)
+	}
+
+	/**
+	 * Retrieves a point (xyz) inside a rendered tile
+	 * In case of border tiles, positions involving a tile outside of the sector return `null`
+	 * Reference: tile
+	 * @returns
+	 */
+	inTile(tiles: Tile[], aRef: AxialRef, { s, u, v }: PositionInTile) {
+		const coords = axial.coords(aRef)
+		const next1 = axial.index(axial.linear(coords, hexSides[s]))
+		const next2 = axial.index(axial.linear(coords, hexSides[(s + 1) % 6]))
+		const nbrTiles = tiles.length
+		if (next1 >= nbrTiles || next2 >= nbrTiles) return null
+		const pos = new Vector3().copy(tiles[axial.index(aRef)].position)
+		const next1dir = new Vector3()
+			.copy(tiles[next1].position)
+			.sub(pos)
+			.multiplyScalar(u / 2)
+		const next2dir = new Vector3()
+			.copy(tiles[next2].position)
+			.sub(pos)
+			.multiplyScalar(v / 2)
+		return pos.add(next1dir).add(next2dir)
 	}
 }
 
@@ -82,12 +123,14 @@ function scaleAxial({ q, r }: Axial, scale: number) {
 	}
 }
 
-export class Land<Tile extends TileBase> {
+export class Land<Tile extends TileBase = TileBase> {
 	public readonly tiles = new Map<string, Tile>()
 	private readonly parts: LandPart<Tile>[] = []
 	public readonly group = new Group()
 	private readonly sectors = new Map<HexKey, Sector<Tile>>()
 	public readonly sectorRadius: number
+	public readonly sectorTiles: number
+
 	constructor(
 		public readonly sectorScale: number,
 		public readonly tileSize: number
@@ -95,6 +138,7 @@ export class Land<Tile extends TileBase> {
 		// Sectors share their border, so sectors of 1 tile cannot tile a world
 		assert(sectorScale > 0, 'sectorScale must be strictly > 0')
 		this.sectorRadius = 1 << sectorScale
+		this.sectorTiles = hexTiles(this.sectorRadius)
 	}
 
 	sector2tile(aRef: AxialRef) {

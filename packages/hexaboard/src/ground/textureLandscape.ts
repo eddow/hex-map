@@ -10,13 +10,15 @@ import {
 import { LCG, numbers } from '~/utils'
 import type { Sector } from './land'
 import type { Landscape, Triangle } from './landscaper'
-import type { TerrainDefinition, TerrainTile } from './terrain'
+import type { TerrainBase, TerrainDefinition, TerrainTile } from './terrain'
 
 interface TexturePosition {
 	alpha: number
 	center: { u: number; v: number }
 }
-
+export interface TextureTerrain extends TerrainBase {
+	texture: Texture
+}
 const scSummits: { cos: number; sin: number }[] = []
 for (let i = 0; i < 6; i++) {
 	scSummits.push({ cos: Math.cos((i * Math.PI) / 3), sin: Math.sin((i * Math.PI) / 3) })
@@ -60,11 +62,11 @@ export class TextureLandscape implements Landscape<TerrainTile> {
 	private texturesIndex: Record<string, number>
 
 	constructor(
-		private readonly terrainDefinition: TerrainDefinition,
+		private readonly terrainDefinition: TerrainDefinition<TextureTerrain>,
 		private readonly seed: number
 	) {
-		this.textures = terrainDefinition.textures
-		this.material = threeTexturedMaterial(terrainDefinition.textures)
+		this.textures = Object.values(terrainDefinition.types).map((t) => t.texture)
+		this.material = threeTexturedMaterial(this.textures)
 
 		// Index of all the textures by terrain type name
 		this.texturesIndex = Object.fromEntries(

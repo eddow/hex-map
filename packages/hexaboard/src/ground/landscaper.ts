@@ -16,22 +16,23 @@ export interface Landscape<Tile extends TileBase> {
 	refineTile?(tile: TileBase, coords: Axial): Tile
 }
 
-export class Tile1GHandle<Tile extends TileBase = TileBase> extends MouseHandle {
+export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
 	constructor(
+		public readonly game: Game,
 		public readonly land: Land<Tile>,
-		public readonly aKey: HexKey
+		public readonly hKey: HexKey
 	) {
 		super()
 	}
 	get tile() {
-		return this.land.getTile(this.aKey)
+		return this.land.getTile(this.hKey)
 	}
-	equals(other: Tile1GHandle): boolean {
-		return this.aKey === other.aKey
+	equals(other: TileHandle): boolean {
+		return this.hKey === other.hKey
 	}
 }
 
-class SectorMouseHandler<Tile extends TileBase> implements MouseReactive<Tile1GHandle<Tile>> {
+class SectorMouseHandler<Tile extends TileBase> implements MouseReactive<TileHandle<Tile>> {
 	constructor(
 		private readonly land: Land<Tile>,
 		private readonly geometryVertex: HexIndex[],
@@ -40,12 +41,12 @@ class SectorMouseHandler<Tile extends TileBase> implements MouseReactive<Tile1GH
 	mouseHandle(
 		game: Game,
 		intersection: Intersection<Object3D<Object3DEventMap>>
-	): Tile1GHandle<Tile> {
+	): TileHandle<Tile> {
 		const baryArr = intersection.barycoord!.toArray()
 		const facePt = baryArr.indexOf(Math.max(...baryArr))
 		const geomPt = intersection.face!['abc'[facePt] as keyof Face] as number
 		const tileRef = axial.linear(this.center, this.geometryVertex[geomPt])
-		return new Tile1GHandle(this.land, axial.key(tileRef))
+		return new TileHandle(game, this.land, axial.key(tileRef))
 	}
 }
 
@@ -69,6 +70,9 @@ function* sectorTriangles(radius: number) {
 	}
 }
 
+/**
+ * Provide triangle management for the landscape
+ */
 export class Landscaper<Tile extends TileBase> implements LandPart<Tile> {
 	private readonly landscapes: Landscape<Tile>[]
 	private readonly triangles: Triangle[] = []

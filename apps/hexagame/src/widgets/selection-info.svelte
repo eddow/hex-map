@@ -1,20 +1,12 @@
 <script lang="ts">
+	import type { GameXLand } from '$lib/game.ts'
 	import { games } from '$lib/globals.svelte'
-	import { terrainTypes } from '$lib/world/terrain'
-	import type { PuzzleLand } from 'hexaboard'
+	import type { HexKey } from 'hexaboard'
 
-	let {
-		game: gameKey,
-		sector: sectorKey,
-		hexIndex
-	}: { game: string; sector: string; hexIndex: number } = $props()
-	const game = games[gameKey!]
-	const land = game.land as PuzzleLand
-	const sector = land.sector(sectorKey!)
-	let tile = sector.tiles[hexIndex!]
-	let terrainTypeName = $derived(
-		tile ? Object.entries(terrainTypes).find(([k, v]) => v === tile.terrain)?.[0] : 'unknown'
-	)
+	let { game: gameKey, hKey }: { game: string; hKey: HexKey } = $props()
+	let land = $derived(games[gameKey].land) as GameXLand
+	let tile = $derived(land.getTile(hKey))
+	let terrainTypeName = $derived(tile.terrain)
 </script>
 
 <div class="tile-info">

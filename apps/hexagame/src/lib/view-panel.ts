@@ -15,7 +15,7 @@ export class GameViewRenderer implements IContentRenderer {
 	}
 	init(parameters: GroupPanelPartInitParameters): void {
 		const { game } = parameters.params
-		this.gv = games[game]?.createView(this.canvas, { near: 0.1, far: 3000 })
+		this.gv = games[game]?.createView(this.canvas, { near: 0.1, far: 2000 })
 		const { camera } = this.gv
 		camera.position.set(0, 0, 200)
 		camera.lookAt(0, 0, 0)

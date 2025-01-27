@@ -1,19 +1,23 @@
-import type { Texture } from 'three'
 import { subSeed } from '~/utils'
 import { HeightMap } from '~/utils/perlin'
 import type { Land, LandPart, TileBase } from './land'
 
-export interface Terrain {
+export type TerrainKey = string
+
+export interface TerrainBase {
 	color: { r: number; g: number; b: number }
 	appearHeight: number
-	texture: Texture
 }
 
-export class TerrainDefinition {
-	constructor(public readonly types: Record<string, Terrain>) {}
-	terrainType(height: number): string {
+export interface TerrainTile extends TileBase {
+	terrain: TerrainKey
+}
+
+export class TerrainDefinition<Terrain extends TerrainBase = TerrainBase> {
+	constructor(public readonly types: Record<TerrainKey, Terrain>) {}
+	terrainType(height: number): TerrainKey {
 		let rvH: number | undefined
-		let rvT: undefined | string
+		let rvT: undefined | TerrainKey
 		for (const type in this.types) {
 			const tType = this.types[type as keyof typeof this.types]
 			const thisH = tType.appearHeight
@@ -24,13 +28,6 @@ export class TerrainDefinition {
 		}
 		return rvT!
 	}
-	get textures() {
-		return Object.values(this.types).map((t) => t.texture)
-	}
-}
-
-export interface TerrainTile extends TileBase {
-	terrain: string
 }
 
 export class HeightTerrain implements LandPart<TerrainTile> {

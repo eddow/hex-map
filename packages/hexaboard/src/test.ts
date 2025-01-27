@@ -1,4 +1,4 @@
-import { axialAt, hexTiles } from './sectored'
+import { axialAt, hexTiles } from './utils'
 
 function* connections(radius: number) {
 	for (let ring = 1; ring < radius; ring++) {

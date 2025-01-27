@@ -1,11 +1,5 @@
-import {
-	InstancedMesh,
-	type Mesh,
-	Object3D,
-	type Object3DEventMap,
-	Quaternion,
-	type Scene,
-} from 'three'
+import { InstancedMesh, type Mesh, Object3D, Quaternion, type Scene } from 'three'
+import { assert } from '~/utils'
 
 const generalMaxCount = 15000
 
@@ -17,9 +11,13 @@ export function prerenderGlobals(scene: Scene) {
 	for (const g of globalPreRendered) g.prerender(scene)
 }
 
-function rootScene(obj3d: Object3D) {
+function rootObj3d(obj3d: Object3D) {
 	while (obj3d.parent) obj3d = obj3d.parent
-	const scene = obj3d as Scene
+	return obj3d
+}
+
+function rootScene(obj3d: Object3D) {
+	const scene = rootObj3d(obj3d) as Scene
 	return scene.isScene ? scene : undefined
 }
 
@@ -34,6 +32,7 @@ function obj3dToInstancedMeshes(obj3d: Object3D, maxCount: number) {
 			mesh.material,
 			maxCount
 		)
+		cm.frustumCulled = false
 		cm.count = 0
 		rv = cm
 	}
@@ -69,7 +68,10 @@ function recount(application: MeshCopySceneApplication) {
 	for (const instance of application.instances) instance.count = count
 }
 function forward(meshPaste: MeshPaste, index: number, application: MeshCopySceneApplication) {
-	for (const instance of application.instances) instance.setMatrixAt(index, meshPaste.matrixWorld)
+	for (const instance of application.instances) {
+		instance.setMatrixAt(index, meshPaste.matrixWorld)
+		instance.instanceMatrix.needsUpdate = true
+	}
 }
 
 type MeshCopySceneApplication = {
@@ -91,7 +93,7 @@ export class MeshCopy implements GlobalPreRendered {
 		//? dispose => globalPreRendered.delete
 	}
 	application(scene: Scene) {
-		if (!this.applications.has(scene)) throw new Error('Inconsistency: Scene not registered')
+		assert(this.applications.has(scene), 'Scene not registered')
 		return this.applications.get(scene)!
 	}
 	register(meshPaste: MeshPaste, scene: Scene) {
@@ -108,21 +110,22 @@ export class MeshCopy implements GlobalPreRendered {
 		const index = application.pastes.length
 		application.pastes.push(meshPaste)
 		recount(application)
-		forward(meshPaste, index, application)
+		meshPaste.updateMatrixWorld(true)
+		//forward(meshPaste, index, application)	// No need: this is called in `updateMatrixWorld`
 	}
 	updated(scene: Scene, meshPaste: MeshPaste) {
 		const application = this.application(scene)
 		const pastes = application?.pastes
 		const index = pastes?.indexOf(meshPaste)
-		if (index === -1 || (!index && index !== 0))
-			throw new Error('Inconsistency: MeshPaste not registered')
+
+		assert(index !== -1 || (!index && index !== 0), 'MeshPaste not registered')
 		forward(meshPaste, index, application)
 	}
 	unregister(meshPaste: MeshPaste, scene: Scene) {
 		const application = this.application(scene)
 		const pastes = application.pastes
 		const index = pastes.indexOf(meshPaste)
-		if (index < 0) throw new Error('Inconsistency: MeshPaste not registered')
+		assert(index >= 0, 'MeshPaste not registered')
 		const last = pastes.pop()!
 		recount(application)
 		// move the last instance to fill the freed gap
@@ -135,6 +138,7 @@ export class MeshCopy implements GlobalPreRendered {
 		// TODO: Now should be updating on matrix update - kill me when sure
 		// Note: it's really tough to determine when to call the `forward`, even overriding `updateMatrixWorld` is not enough
 		// cost: 18 ms/frame (1/4 of time allocated to render)
+		/*
 		const application = this.applications.get(scene)
 		if (!application) return
 		for (let i = 0; i < application.pastes.length; i++) {
@@ -146,42 +150,63 @@ export class MeshCopy implements GlobalPreRendered {
 			instance.instanceMatrix.needsUpdate = true
 			instance.computeBoundingBox()
 			instance.computeBoundingSphere()
-		}
+		}*/
 	}
 }
 
-export class MeshPaste extends Object3D<Object3DTreeEventMap> {
-	private scene: Scene | undefined
+let [added, removed] = [0, 0]
+
+export class MeshPaste extends Object3D {
+	private scene?: Scene
+	private from?: MeshCopy
 	constructor(will: MeshCopy | Promise<MeshCopy>) {
 		super()
-		Promise.resolve(will).then((copy) => {
-			this.addEventListener('changedScene', ({ scene }) => {
-				if (this.scene && this.scene !== scene) copy.unregister(this, this.scene)
-				this.scene = scene
-				if (scene) copy.register(this, scene)
-			})
-			// Usually, `changedScene` was not called as `addEventListener` was called after the add (Promise stuff)
+		const bindCopy = (copy: MeshCopy) => {
+			this.from = copy
 			this.scene = rootScene(this)
+			added++
 			if (this.scene) copy.register(this, this.scene)
-			return copy
+		}
+		if (will instanceof MeshCopy) bindCopy(will)
+		else will.then(bindCopy)
+		let parent = this.parent as RootKeeperObject3D | null
+		if (parent) parent.onRootChange(this)
+		this.addEventListener('added', () => {
+			if (parent !== this.parent) {
+				parent = this.parent as RootKeeperObject3D
+				parent.onRootChange(this)
+			}
+		})
+		this.addEventListener('removed', () => {
+			parent!.offRootChange(this)
+			parent = null
 		})
 	}
-	/*
-	private forwarding?: Promise<void> = Promise.resolve(will).then...
-	private readonly loading: Promise<MeshCopy>
-	updateWorldMatrix(): void {
-		super.updateWorldMatrix
-		if (!this.forwarding && this.scene)
-			this.forwarding = this.loading.then((copy) => {
-				if (this.scene) copy.updated(this.scene, this)
-				this.forwarding = undefined
-			})
+	changedRoot(root: Object3D) {
+		const scene = (root as Scene).isScene ? (root as Scene) : undefined
+		const copy = this.from
+		if (copy && this.scene !== scene) {
+			if (!this.scene && scene) added++
+			if (this.scene && !scene) removed++
+			//console.log('added', added, 'removed', removed)
+			if (this.scene) copy.unregister(this, this.scene)
+			this.scene = scene
+			if (scene) copy.register(this, scene)
+		}
 	}
-	*/
+	updateMatrixWorld(force?: boolean): void {
+		const needsUpdate = this.matrixWorldNeedsUpdate
+		super.updateMatrixWorld(force)
+		if (this.from && this.scene && (needsUpdate || force)) this.from.updated(this.scene, this)
+	}
 }
 
-export interface Object3DTreeEventMap extends Object3DEventMap {
-	changedScene: { scene?: Scene }
+interface RootKeeperObject3D extends Object3D {
+	rootListeners?: RootKeeperObject3D[]
+	parent: RootKeeperObject3D | null
+	changedRoot(root: Object3D): void
+	onRootChange(child: Object3D): void
+	offRootChange(child: Object3D): void
 }
 
 /**
@@ -194,23 +219,42 @@ function patchObject3D() {
 		remove: prototype.remove,
 	}
 	Object.assign(prototype, {
-		add(this: Object3D, ...children: Object3D[]) {
-			const scene = rootScene(this)
+		add(this: RootKeeperObject3D, ...children: RootKeeperObject3D[]) {
+			const root = rootObj3d(this)
 			for (const child of children) {
-				if (scene && rootScene(child) !== scene)
-					child.traverse((sub) =>
-						(sub as Object3D<Object3DTreeEventMap>).dispatchEvent({ type: 'changedScene', scene })
-					)
 				original.add.call(this, child)
+				if (child.rootListeners) {
+					child.changedRoot(root)
+					this.onRootChange(child)
+				}
 			}
 		},
-		remove(this: Object3D, ...children: Object3D[]) {
+		remove(this: RootKeeperObject3D, ...children: RootKeeperObject3D[]) {
 			for (const child of children) {
-				if (this.children.includes(child) && rootScene(child))
-					child.traverse((sub) =>
-						(sub as Object3D<Object3DTreeEventMap>).dispatchEvent({ type: 'changedScene' })
-					)
 				original.remove.call(this, child)
+				if (child.rootListeners) {
+					child.changedRoot(child)
+					this.offRootChange(child)
+				}
+			}
+		},
+		changedRoot(this: RootKeeperObject3D, root: RootKeeperObject3D) {
+			if (!this.rootListeners) return
+			for (const listener of this.rootListeners) listener.changedRoot(root)
+		},
+		onRootChange(this: RootKeeperObject3D, child: RootKeeperObject3D) {
+			this.rootListeners ??= []
+			this.rootListeners.push(child)
+			if (this.rootListeners.length === 1) this.parent?.onRootChange(this)
+		},
+		offRootChange(this: RootKeeperObject3D, child: RootKeeperObject3D) {
+			if (!this.rootListeners) return
+			const index = this.rootListeners.indexOf(child)
+			if (index === -1) return
+			this.rootListeners.splice(index, 1)
+			if (this.rootListeners.length === 0) {
+				this.rootListeners = undefined
+				this.parent?.offRootChange(this)
 			}
 		},
 	})
