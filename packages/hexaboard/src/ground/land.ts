@@ -30,23 +30,18 @@ export interface LandPart<Tile extends TileBase> {
 function distance(p1: { x: number; y: number }, p2: { x: number; y: number }): number {
 	return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2)
 }
-// This should be higher if triangles are seen being generated on the "coin of the eyes"
-const experimentalBufferSize = 0
 
-export function* hexagonsWithinCartesianDistance(
-	centerRef: AxialRef,
-	D: number,
-	cameraFOV: number,
-	size: number
-) {
+function cameraVision(camera: PerspectiveCamera): number {
+	return camera.far / Math.cos((camera.fov * Math.PI) / 360)
+}
+
+function* sectorsToRender(centerRef: AxialRef, camera: PerspectiveCamera, size: number) {
 	const center = axial.round(centerRef)
 	const centerCartesian = cartesian(center, size)
-	const hFOV = (cameraFOV * Math.PI) / 180 // Convert FOV to radians
-
-	const adjustedD = D / Math.cos(hFOV / 2) + experimentalBufferSize
 	// Estimate the maximum axial distance. Since a hexagon's circumradius is sqrt(3) * side length,
 	// we use D / (sqrt(3) * size) as an upper bound for axial distance check.
-	const maxAxialDistance = Math.ceil(adjustedD / size)
+	const vision = cameraVision(camera)
+	const maxAxialDistance = Math.ceil(vision / size + 0.5)
 	// TODO: Browse with axialIndex now that we have maxAxialDistance
 	// Check all hexagons within this range
 	for (let dq = -maxAxialDistance; dq <= maxAxialDistance; dq++) {
@@ -59,7 +54,7 @@ export function* hexagonsWithinCartesianDistance(
 			const currentCartesian = cartesian(currentHex, size)
 
 			// Check if the Cartesian distance is within D
-			if (distance(centerCartesian, currentCartesian) <= adjustedD) {
+			if (distance(centerCartesian, currentCartesian) <= vision) {
 				yield currentHex
 			}
 		}
@@ -150,46 +145,54 @@ export class Land<Tile extends TileBase = TileBase> {
 	updateViews(cameras: PerspectiveCamera[]) {
 		// At first, plan to remove all sectors
 		const removed = new Set(this.sectors.keys())
-		const camera = cameras[0]
 		resetPerformances()
 		const tileRefiners = this.parts.filter((part) => part.refineTile)
 		const sectorRenderers = this.parts.filter((part) => part.renderSector)
-		for (const toSee of hexagonsWithinCartesianDistance(
-			this.tile2sector(fromCartesian(camera.position, this.tileSize)),
-			camera.far,
-			camera.fov,
-			this.tileSize * this.sectorRadius
-		)) {
-			const key = axial.key(toSee)
-			// If we cannot cancel the deletion of a sector, it means we need to add it
-			if (!removed.delete(key)) {
-				const center = this.sector2tile(toSee)
-				const sector = new Sector(this, center)
-				this.sectors.set(key, sector)
-				const sectorTiles = numbers(hexTiles(this.sectorRadius)).map((hexIndex) => {
-					const coords = axial.linear(axial.coords(hexIndex), center)
-					const key = axial.key(coords)
-					let completeTile = this.tiles.get(key)
-					if (completeTile) {
-						completeTile.sectors++
+		for (const camera of cameras)
+			for (const toSee of sectorsToRender(
+				this.tile2sector(fromCartesian(camera.position, this.tileSize)),
+				camera,
+				this.tileSize * this.sectorRadius
+			)) {
+				const key = axial.key(toSee)
+				// If we cannot cancel the deletion of a sector, it means we need to add it
+				removed.delete(key)
+				if (!this.sectors.has(key)) {
+					const center = this.sector2tile(toSee)
+					const sector = new Sector(this, center)
+					this.sectors.set(key, sector)
+					const sectorTiles = numbers(hexTiles(this.sectorRadius)).map((hexIndex) => {
+						const coords = axial.linear(axial.coords(hexIndex), center)
+						const key = axial.key(coords)
+						let completeTile = this.tiles.get(key)
+						if (completeTile) {
+							completeTile.sectors++
+							return completeTile
+						}
+						let tile = {
+							position: { ...cartesian(coords, this.tileSize), z: 0 },
+							sectors: 1,
+						}
+						for (const part of tileRefiners) tile = part.refineTile!(tile, coords) ?? tile
+						completeTile = tile as Tile
+						this.tiles.set(axial.key(coords), completeTile)
 						return completeTile
-					}
-					let tile = {
-						position: { ...cartesian(coords, this.tileSize), z: 0 },
-						sectors: 1,
-					}
-					for (const part of tileRefiners) tile = part.refineTile!(tile, coords) ?? tile
-					completeTile = tile as Tile
-					this.tiles.set(axial.key(coords), completeTile)
-					return completeTile
-				})
-				for (const part of sectorRenderers) part.renderSector!(sector, sectorTiles)
-				this.group.add(sector.group)
+					})
+					for (const part of sectorRenderers) part.renderSector!(sector, sectorTiles)
+					this.group.add(sector.group)
+				}
 			}
-		}
-		// TODO: Don't remove directly, let a margin unseen but not removed
+
 		for (const key of removed) {
 			const sector = this.sectors.get(key)!
+			const centerCartesian = cartesian(sector.center, this.tileSize)
+			let seen = false
+			for (const camera of cameras)
+				if (distance(centerCartesian, camera.position) < cameraVision(camera)) {
+					seen = true
+					break
+				}
+			if (seen) continue
 			this.group.remove(sector.group)
 			this.sectors.delete(key)
 			const center = sector.center

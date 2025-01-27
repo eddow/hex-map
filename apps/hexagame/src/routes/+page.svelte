@@ -53,7 +53,7 @@
 			}
 		}
 	}
-	const layoutJson = localStorage.getItem('layout')
+	const layoutJson = location.host.startsWith('localhost') ? localStorage.getItem('layout') : null
 	onMount(() => {
 		if (layoutJson) api.fromJSON(JSON.parse(layoutJson))
 		else {

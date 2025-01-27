@@ -5,7 +5,10 @@ import type { Game } from 'hexaboard'
 export interface IConfiguration {
 	darkMode?: boolean
 }
-const storedConfig = localStorage.getItem('configuration')
+
+const storedConfig = location.host.startsWith('luocalhost')
+	? localStorage.getItem('configuration')
+	: null
 export const configuration = $state(
 	storedConfig
 		? JSON.parse(storedConfig)
