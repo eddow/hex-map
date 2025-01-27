@@ -1,10 +1,10 @@
-import { type Axial, type AxialRef, axial, axialDistance, hexSides } from '~/utils/axial'
+import { type Axial, type AxialKey, type AxialRef, axial, hexSides } from '~/utils/axial'
 
 export function straightPath(fromTile: AxialRef, toTile: AxialRef) {
 	const from = axial.coords(fromTile)
 	const to = axial.coords(toTile)
 	const rv: Axial[] = []
-	const dist = axialDistance(from, to)
+	const dist = axial.distance(from, to)
 	for (let i = 0; i < dist; i++) rv.push(axial.round(axial.lerp(from, to, (i + 1) / dist)))
 	return rv
 }
@@ -22,10 +22,11 @@ type HexCost<O = string> = { key: O; cost: number }
 // TODO: add list of shortcuts like train-stations
 const epsilon = 1e-6
 export function costingPath(fromTile: AxialRef, cost: Cost, isFound: IsFound) {
-	if (isFound(axial.key(fromTile))) return [fromTile]
-	const toStudy: HexCost[] = [{ key: axial.key(fromTile), cost: 0 }]
+	const fromKey = axial.key(fromTile)
+	if (isFound(fromKey)) return [fromKey]
+	const toStudy: HexCost[] = [{ key: fromKey, cost: 0 }]
 	const origins: { [tile: string]: HexCost<string | null> } = {
-		[axial.key(fromTile)]: { key: null, cost: 0 },
+		[fromKey]: { key: null, cost: 0 },
 	}
 	let found: { tile: string; cost: number } | undefined
 	while (toStudy.length && (!found || found.cost > toStudy[0].cost)) {
@@ -56,10 +57,10 @@ export function costingPath(fromTile: AxialRef, cost: Cost, isFound: IsFound) {
 		}
 	}
 	if (!found) return null
-	const path: string[] = [found.tile]
+	const path: AxialKey[] = [found.tile]
 	let origin = origins[found.tile]
 	while (origin.key !== null) {
-		path.push(origin.key)
+		path.unshift(origin.key)
 		origin = origins[origin.key]
 	}
 	return path

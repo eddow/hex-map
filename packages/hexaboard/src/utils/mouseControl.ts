@@ -270,7 +270,7 @@ export class MouseControl {
 	private reLock(event: MouseEvent) {
 		const shouldLock = Object.values(mouseConfig.lockButtons).some((c) => isCombination(event, c))
 		if (!!this.lockSemaphore.locked !== shouldLock)
-			this.lockSemaphore.lock(shouldLock ? this.hovered!.canvas : null)
+			this.lockSemaphore.lock(shouldLock ? (event.target as Element) : null)
 		return shouldLock
 	}
 

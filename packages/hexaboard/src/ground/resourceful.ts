@@ -1,6 +1,6 @@
 import { Group } from 'three'
 import type { Handelable, ResourcefulTerrain } from '~/game'
-import { type Axial, LCG, type RandGenerator, axial, genTilePosition } from '~/utils'
+import { LCG, type RandGenerator, axial, genTilePosition } from '~/utils'
 import type { Land, LandPart, Sector } from './land'
 import type { TerrainDefinition, TerrainTile } from './terrain'
 
@@ -55,24 +55,22 @@ export class Resourceful<
 		for (let i = 0; i < placesInTile; i++) yield generateResource(gen, terrain)
 	}
 
-	refineTile(tile: TerrainTile, coords: Axial): ContentTile | undefined {
-		const terrain = this.terrainDefinition.types[tile.terrain]
-		return {
-			...tile,
-			content:
-				tile.position.z > this.seaLevel
-					? Array.from(
-							this.generateResources(LCG(this.seed, 'resourceful', coords.q, coords.r), terrain)
-						)
-					: [],
-		}
-	}
-
-	renderSector(sector: Sector<Tile>, tiles: Tile[]): void {
+	renderSector(sector: Sector<Tile>): void {
 		const group = new Group()
-		sector.group.add(group)
+		const tiles = sector.tiles
+		sector.add(group)
 		for (let tRef = 0; tRef < tiles.length; tRef++) {
 			const tile = tiles[tRef]
+			// Resource content is generated in the `render` phase so that the terrain is completely generated for sure
+			tile.content ??=
+				tile.position.z > this.seaLevel
+					? Array.from(
+							this.generateResources(
+								LCG(this.seed, 'resourceful', tile.position.x, tile.position.y),
+								this.terrainDefinition.types[tile.terrain]
+							)
+						)
+					: []
 			if (tile.content.some((r) => r)) {
 				const worldCoords = axial.linear(axial.coords(tRef), sector.center)
 				const gen = LCG(this.seed, 'placeInTile', worldCoords.q, worldCoords.r)

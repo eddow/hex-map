@@ -1,4 +1,4 @@
-import { TerrainDefinition, type ResourcefulTerrain, type TextureTerrain } from 'hexaboard'
+import { type ResourcefulTerrain, TerrainDefinition, type TextureTerrain } from 'hexaboard'
 import { RepeatWrapping, TextureLoader } from 'three'
 import { Rock, Tree } from './handelable'
 
@@ -10,13 +10,14 @@ function terrainTexture(type: string) {
 }
 
 export const terrainHeight = 160
-export const seaLevel = terrainHeight / 2
+export const seaLevel = 70
 export const waterTexture = terrainTexture('water')
 
 export const terrainTypes: Record<string, TextureTerrain & ResourcefulTerrain> = {
 	sand: {
 		color: { r: 0.8, g: 0.8, b: 0 },
 		texture: terrainTexture('sand'),
+		inTextureRadius: 0.2,
 		appearHeight: Number.NEGATIVE_INFINITY,
 		//variance: 0.1,
 		resourceDistribution: [[Rock, 0.1]],
@@ -24,7 +25,8 @@ export const terrainTypes: Record<string, TextureTerrain & ResourcefulTerrain> =
 	grass: {
 		color: { r: 0.4, g: 0.8, b: 0.4 },
 		texture: terrainTexture('grass'),
-		appearHeight: 0.55 * terrainHeight,
+		inTextureRadius: 0.2,
+		appearHeight: 75,
 		//variance: 0.7,
 		resourceDistribution: [
 			[Rock, 0.2],
@@ -34,7 +36,8 @@ export const terrainTypes: Record<string, TextureTerrain & ResourcefulTerrain> =
 	forest: {
 		color: { r: 0, g: 0.9, b: 0 },
 		texture: terrainTexture('forest'),
-		appearHeight: 0.7 * terrainHeight,
+		inTextureRadius: 0.2,
+		appearHeight: 100,
 		//variance: 2,
 		resourceDistribution: [
 			[Rock, 0.1],
@@ -44,7 +47,8 @@ export const terrainTypes: Record<string, TextureTerrain & ResourcefulTerrain> =
 	stone: {
 		color: { r: 0.6, g: 0.4, b: 0.1 },
 		texture: terrainTexture('stone'),
-		appearHeight: 0.8 * terrainHeight,
+		inTextureRadius: 0.2,
+		appearHeight: 115,
 		//variance: 3,
 		resourceDistribution: [
 			[Rock, 1.5],
@@ -54,9 +58,17 @@ export const terrainTypes: Record<string, TextureTerrain & ResourcefulTerrain> =
 	snow: {
 		color: { r: 0.9, g: 0.9, b: 0.9 },
 		texture: terrainTexture('snow'),
-		appearHeight: 0.9 * terrainHeight,
+		inTextureRadius: 0.2,
+		appearHeight: 130,
 		//variance: 1.5,
 		resourceDistribution: [[Rock, 0.2]],
+	},
+	river: {
+		color: { r: 0.8, g: 0.8, b: 0 },
+		texture: terrainTexture('river_bed'),
+		inTextureRadius: 0.6,
+		//variance: 0.1,
+		resourceDistribution: [[Rock, 1]],
 	},
 }
 

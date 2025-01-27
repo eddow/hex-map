@@ -10,11 +10,11 @@ import {
 	type MouseHoverEvolution,
 	PerlinHeight,
 	Resourceful,
+	Rivers,
 	TextureLandscape,
 	TileCursor,
 	TileHandle,
 	axial,
-	cartesian,
 	icosahedron,
 } from 'hexaboard'
 import type { Object3D } from 'three'
@@ -28,12 +28,12 @@ type MapTuple<T extends any[], U> = {
 export type GameXLand = Land<ContentTile>
 
 export function createGame(seed: number) {
-	const land = new Land<ContentTile>(4, 20)
+	const land = new Land<ContentTile>(5, 20)
 	new PerlinHeight(land, terrainHeight, seed, 1000)
 	new HeightTerrain(land, terrainHeight / 10, seed, terrains, 1000)
 	new Landscaper(
 		land,
-		//new ColorLandscape()
+		new Rivers(land, seed, seaLevel, terrainHeight, 96, 0.05),
 		new TextureLandscape(terrains, seed),
 		new OceanLandscape(seaLevel)
 	)
@@ -77,17 +77,7 @@ export function createGame(seed: number) {
 						to < sector.nbrTiles ? (sector.points[from].z - sector.points[to].z) ** 2 : Number.NaN,
 					(hexIndex) => hexIndex < sector.nbrTiles && pawn.tile === hexIndex
 				)*/
-			/*const path = costingPath(
-					cursor.tile.axial,
-					tiled(
-						(from, to) =>
-							Math.max(0, to.tile.z - from.tile.z) ** 2 +
-							// The fact to not take the strongest down slope
-							to.tile.z -
-							Math.min(...pointsAround(from.axial).map((p) => tileSpec(p).tile.z))
-					),
-					(aRef) => tileSpec(aRef).tile.z < seaLevel
-				)
+			/*
 				if (path && path.length > 1) {
 					const pathCurve = new CatmullRomCurve3(path.map((p) => axialV3(p)))
 					const pathGeometry = new TubeGeometry(pathCurve, path.length * 5, 2, 8, false)
@@ -101,7 +91,7 @@ export function createGame(seed: number) {
 			}*/
 			//}
 			debugInfo.tile = axial.coords(cursor.tile?.hKey)
-			debugInfo.tilePos = cartesian(debugInfo.tile, 20)
+			debugInfo.tilePos = ev.handle.tile.position
 		} else {
 			debugInfo.tilePos = debugInfo.tile = 'none'
 			cursor.tile = undefined

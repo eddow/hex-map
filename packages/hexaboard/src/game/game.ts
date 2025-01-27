@@ -9,7 +9,6 @@ import {
 	WebGLRenderer,
 } from 'three'
 import type { Land } from '~/ground/land'
-import { prerenderGlobals } from '~/three/meshCopyPaste'
 import { MouseControl, type MouseEvolution } from '~/utils/mouseControl'
 
 export type MouseEvolutionEvent<Evolution extends MouseEvolution = MouseEvolution> = (
@@ -77,9 +76,8 @@ export class Game extends MouseControl {
 			const listeners = this.mouseEvents[evolution.type]
 			if (listeners) for (const listener of listeners) listener(evolution)
 		}
-		this.progress(dt)
 		this.updateViews()
-		prerenderGlobals(this.scene)
+		this.progress(dt)
 		for (const view of this.views.values()) view.render()
 		if (this.clock.running) requestAnimationFrame(this.animate)
 	}

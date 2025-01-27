@@ -9,25 +9,26 @@ import {
 } from 'three'
 import { LCG, numbers } from '~/utils'
 import type { Sector } from './land'
-import type { Landscape, Triangle } from './landscaper'
-import type { TerrainBase, TerrainDefinition, TerrainTile } from './terrain'
+import type { Landscape, LandscapeTriangle } from './landscaper'
+import type { TerrainBase, TerrainDefinition, TerrainKey, TerrainTile } from './terrain'
 
 interface TexturePosition {
 	alpha: number
+	inTextureRadius: number
 	center: { u: number; v: number }
 }
 export interface TextureTerrain extends TerrainBase {
 	texture: Texture
+	// Textures are images virtually of size 1x1 - this is the size of the part of the picture taken by tiles
+	inTextureRadius: number
 }
 const scSummits: { cos: number; sin: number }[] = []
 for (let i = 0; i < 6; i++) {
 	scSummits.push({ cos: Math.cos((i * Math.PI) / 3), sin: Math.sin((i * Math.PI) / 3) })
 }
 
-// Textures are images virtually of size 1x1 - this is the size of the part of the picture taken by tiles
-const inTextureRadius = 0.2
 export function textureUVs(
-	{ alpha, center: { u, v } }: TexturePosition,
+	{ alpha, inTextureRadius, center: { u, v } }: TexturePosition,
 	side: number,
 	rot: number
 ) {
@@ -59,13 +60,15 @@ export class TextureLandscape implements Landscape<TerrainTile> {
 	public readonly material: Material
 	public readonly mouseReactive = true
 	private readonly textures: Texture[]
-	private texturesIndex: Record<string, number>
+	private texturesIndex: Record<TerrainKey, number>
 
 	constructor(
 		private readonly terrainDefinition: TerrainDefinition<TextureTerrain>,
 		private readonly seed: number
 	) {
-		this.textures = Object.values(terrainDefinition.types).map((t) => t.texture)
+		this.textures = Array.from(
+			new Set(Object.values(terrainDefinition.types).map((t) => t.texture))
+		)
 		this.material = threeTexturedMaterial(this.textures)
 
 		// Index of all the textures by terrain type name
@@ -76,12 +79,14 @@ export class TextureLandscape implements Landscape<TerrainTile> {
 			])
 		)
 	}
-	render(tiles: TerrainTile[], triangles: Triangle[], sector: Sector<TerrainTile>): Object3D {
-		const textureUvCache = tiles.map((_, i) => {
+	createMesh(sector: Sector<TerrainTile>, triangles: LandscapeTriangle[]): Object3D {
+		const tiles = sector.tiles
+		const textureUvCache = tiles.map((tile, i) => {
 			const coords = sector.tileCoords(i)
 			const gen = LCG(this.seed, 'terrainTextures', coords.q, coords.r)
 			return {
 				alpha: gen(Math.PI * 2),
+				inTextureRadius: this.terrainDefinition.types[tile.terrain].inTextureRadius,
 				center: {
 					u: gen(),
 					v: gen(),

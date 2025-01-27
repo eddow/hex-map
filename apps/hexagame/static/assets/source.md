@@ -10,3 +10,4 @@ for file in *.png; do convert "$file" -resize 512x512! "${file%.png}_512.png"; d
 ## Models
 
 https://free3d.com/
+convert "stone_seamless_texture_7147.png" -resize 512x512! "stone_seamless_texture_7147_512.png"

@@ -1,26 +1,26 @@
 import type { Face, Intersection, Object3D, Object3DEventMap } from 'three'
 import type { Game } from '~/game/game'
 import { MouseHandle, type MouseReactive } from '~/utils'
-import { type Axial, type HexIndex, type HexKey, axial, hexTiles } from '~/utils/axial'
-import type { Land, LandPart, Sector, TileBase } from './land'
+import { type Axial, type AxialIndex, type AxialKey, axial, hexTiles } from '~/utils/axial'
+import type { Land, LandPart, Sector, TileBase, TileUpdater } from './land'
 
 export type Triplet<T> = [T, T, T]
-export interface Triangle {
+export interface LandscapeTriangle {
 	side: number
-	indexes: Triplet<HexIndex>
+	indexes: Triplet<AxialIndex>
 }
 
-export interface Landscape<Tile extends TileBase> {
+export interface Landscape<Tile extends TileBase, GenerationInfo = unknown>
+	extends LandPart<Tile, GenerationInfo> {
 	readonly mouseReactive: boolean
-	render(tiles: Tile[], triangles: Triangle[], sector: Sector<Tile>): Object3D
-	refineTile?(tile: TileBase, coords: Axial): Tile
+	createMesh(sector: Sector<Tile>, triangles: LandscapeTriangle[]): Object3D
 }
 
 export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
 	constructor(
 		public readonly game: Game,
 		public readonly land: Land<Tile>,
-		public readonly hKey: HexKey
+		public readonly hKey: AxialKey
 	) {
 		super()
 	}
@@ -35,7 +35,7 @@ export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
 class SectorMouseHandler<Tile extends TileBase> implements MouseReactive<TileHandle<Tile>> {
 	constructor(
 		private readonly land: Land<Tile>,
-		private readonly geometryVertex: HexIndex[],
+		private readonly geometryVertex: AxialIndex[],
 		private readonly center: Axial
 	) {}
 	mouseHandle(
@@ -73,10 +73,10 @@ function* sectorTriangles(radius: number) {
 /**
  * Provide triangle management for the landscape
  */
-export class Landscaper<Tile extends TileBase> implements LandPart<Tile> {
+export class Landscaper<Tile extends TileBase> implements LandPart<Tile, unknown[]> {
 	private readonly landscapes: Landscape<Tile>[]
-	private readonly triangles: Triangle[] = []
-	private readonly geometryVertex: HexIndex[] = []
+	private readonly triangles: LandscapeTriangle[] = []
+	private readonly geometryVertex: AxialIndex[] = []
 
 	constructor(
 		private readonly land: Land<Tile>,
@@ -89,17 +89,32 @@ export class Landscaper<Tile extends TileBase> implements LandPart<Tile> {
 			this.geometryVertex.push(A, B, C)
 		}
 	}
-	renderSector(sector: Sector<Tile>, tiles: Tile[]): void {
+	renderSector(sector: Sector<Tile>): void {
 		const mouseHandler = new SectorMouseHandler(this.land, this.geometryVertex, sector.center)
 		for (const landscape of this.landscapes) {
-			const o3d = landscape.render(tiles, this.triangles, sector)
+			landscape.renderSector?.(sector)
+			const o3d = landscape.createMesh(sector, this.triangles)
 			if (landscape.mouseReactive) o3d.userData = { mouseHandler }
-			sector.group.add(o3d)
+			sector.add(o3d)
 		}
 	}
 
-	refineTile(tile: TileBase, coords: Axial): Tile {
-		for (const landscape of this.landscapes) tile = landscape.refineTile?.(tile, coords) ?? tile
+	beginGeneration() {
+		return this.landscapes.map((landscape) => landscape?.beginGeneration?.())
+	}
+	/**
+	 *
+	 * @param generationInfo Allows this part to spread generative modifications across multiple sectors
+	 * @param updateTile Function to call when a tile is modified
+	 */
+	spreadGeneration?(updateTile: TileUpdater<Tile>, generationInfo: unknown[]): void {
+		for (let i = 0; i < this.landscapes.length; i++)
+			this.landscapes[i].spreadGeneration?.(updateTile, generationInfo[i])
+	}
+
+	refineTile(tile: TileBase, coords: Axial, generationInfo: unknown[]): Tile {
+		for (let i = 0; i < this.landscapes.length; i++)
+			tile = this.landscapes[i].refineTile?.(tile, coords, generationInfo[i]) ?? tile
 		return tile as Tile
 	}
 }

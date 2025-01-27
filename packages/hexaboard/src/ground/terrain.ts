@@ -2,11 +2,11 @@ import { subSeed } from '~/utils'
 import { HeightMap } from '~/utils/perlin'
 import type { Land, LandPart, TileBase } from './land'
 
-export type TerrainKey = string
+export type TerrainKey = PropertyKey
 
 export interface TerrainBase {
 	color: { r: number; g: number; b: number }
-	appearHeight: number
+	appearHeight?: number
 }
 
 export interface TerrainTile extends TileBase {
@@ -21,7 +21,7 @@ export class TerrainDefinition<Terrain extends TerrainBase = TerrainBase> {
 		for (const type in this.types) {
 			const tType = this.types[type as keyof typeof this.types]
 			const thisH = tType.appearHeight
-			if (height >= thisH && (rvH === undefined || thisH > rvH)) {
+			if (thisH !== undefined && height >= thisH && (rvH === undefined || thisH > rvH)) {
 				rvH = thisH
 				rvT = type
 			}

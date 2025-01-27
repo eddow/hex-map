@@ -1,14 +1,12 @@
 import { createGame } from '$lib/game'
 import type { DockviewApi } from 'dockview-core'
-import type { Game } from 'hexaboard'
+import { type Game, debugInformation } from 'hexaboard'
 
 export interface IConfiguration {
 	darkMode?: boolean
 }
 
-const storedConfig = location.host.startsWith('luocalhost')
-	? localStorage.getItem('configuration')
-	: null
+const storedConfig = localStorage.getItem('configuration')
 export const configuration = $state(
 	storedConfig
 		? JSON.parse(storedConfig)
@@ -18,9 +16,13 @@ export const configuration = $state(
 )
 
 export const games: Record<PropertyKey, Game> = {
-	GameX: createGame(5982),
+	GameX: createGame(59676782),
 }
 
 export const dockview = $state({ api: {} as DockviewApi } as { api: DockviewApi })
 
 export const debugInfo = $state({} as Record<string, any>)
+
+debugInformation.set = (key: string, value: any) => {
+	debugInfo[key] = value
+}

@@ -8,8 +8,8 @@ import {
 	type RGB,
 } from 'three'
 import type { Axial } from '~/utils'
-import type { TileBase } from './land'
-import type { Triangle } from './landscaper'
+import type { Sector, TileBase } from './land'
+import type { LandscapeTriangle } from './landscaper'
 import type { Landscape } from './landscaper'
 
 interface ColorTile extends TileBase {
@@ -28,14 +28,14 @@ export class ColorLandscape implements Landscape<ColorTile> {
 			wireframe: true,
 		})
 	}
-	render(tiles: ColorTile[], triangles: Triangle[]): Object3D {
+	createMesh(sector: Sector<ColorTile>, triangles: LandscapeTriangle[]): Object3D {
 		const positions = new Float32Array(triangles.length * 9)
 		const colors = new Float32Array(triangles.length * 9)
 		let index = 0
 		for (const triangle of triangles) {
 			const { indexes } = triangle
 			for (const hexIndex of indexes) {
-				const tile = tiles[hexIndex]
+				const tile = sector.tiles[hexIndex]
 				const position = tile.position
 				const color = tile.color
 				positions.set([position.x, position.y, position.z], index * 3)
@@ -48,7 +48,7 @@ export class ColorLandscape implements Landscape<ColorTile> {
 		geometry.setAttribute('color', new BufferAttribute(colors, 3))
 		return new Mesh(geometry, this.material)
 	}
-	refineTile?(tile: TileBase, coords: Axial): ColorTile {
+	refineTile(tile: TileBase, coords: Axial): ColorTile {
 		const h01 = Math.min(1, Math.max(0, tile.position.z / 150))
 		return {
 			...tile,

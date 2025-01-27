@@ -1,3 +1,5 @@
+import { debugInformation } from './debug'
+
 export function cached<T>(...needed: PropertyKey[]) {
 	return (original: () => T, context: ClassGetterDecoratorContext<unknown, T>) => {
 		return function (this: any) {
@@ -26,7 +28,7 @@ export function resetPerformances() {
 	for (const k of Object.keys(performanceMeasures)) performanceMeasures[k] = []
 }
 export function logPerformances() {
-	for (const k in performanceMeasures) console.log(k, performanceMeasure(k))
+	for (const k in performanceMeasures) debugInformation.set(`perf:${k}`, performanceMeasure(k))
 	resetPerformances()
 }
 

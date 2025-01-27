@@ -1,15 +1,7 @@
 import { InstancedMesh, type Mesh, Object3D, Quaternion, type Scene } from 'three'
-import { assert } from '~/utils'
+import { assert, debugInformation } from '~/utils'
 
 const generalMaxCount = 15000
-
-interface GlobalPreRendered {
-	prerender: (scene: Scene) => void
-}
-const globalPreRendered = new Set<GlobalPreRendered>()
-export function prerenderGlobals(scene: Scene) {
-	for (const g of globalPreRendered) g.prerender(scene)
-}
 
 function rootObj3d(obj3d: Object3D) {
 	while (obj3d.parent) obj3d = obj3d.parent
@@ -62,7 +54,7 @@ let hasCount = 0
 function recount(application: MeshCopySceneApplication) {
 	const count = application.pastes.length
 	if (count > hasCount) {
-		//console.log('count', count)
+		debugInformation.set('meshCopy', `${count}/${generalMaxCount}`)
 		hasCount = count + 1
 	}
 	for (const instance of application.instances) instance.count = count
@@ -83,14 +75,12 @@ type MeshCopySceneApplication = {
  * Give this guy a mesh, and it will paste it as many times as you wish without a cost
  * @see https://threejs.org/docs/#api/en/objects/InstancedMesh
  */
-export class MeshCopy implements GlobalPreRendered {
+export class MeshCopy {
 	private object3d: Object3D
 	private readonly applications = new WeakMap<Scene, MeshCopySceneApplication>()
 	constructor(object3d: Object3D, maxCount: number = generalMaxCount) {
 		const clone = object3d.clone()
 		this.object3d = obj3dToInstancedMeshes(clone, maxCount) || clone
-		globalPreRendered.add(this)
-		//? dispose => globalPreRendered.delete
 	}
 	application(scene: Scene) {
 		assert(this.applications.has(scene), 'Scene not registered')
@@ -133,24 +123,6 @@ export class MeshCopy implements GlobalPreRendered {
 			pastes[index] = last
 			forward(last, index, application)
 		}
-	}
-	prerender(scene: Scene) {
-		// TODO: Now should be updating on matrix update - kill me when sure
-		// Note: it's really tough to determine when to call the `forward`, even overriding `updateMatrixWorld` is not enough
-		// cost: 18 ms/frame (1/4 of time allocated to render)
-		/*
-		const application = this.applications.get(scene)
-		if (!application) return
-		for (let i = 0; i < application.pastes.length; i++) {
-			const paste = application.pastes[i]
-			if (paste.matrixWorldNeedsUpdate) paste.updateMatrixWorld()
-			forward(paste, i, application)
-		}
-		for (const instance of application.instances) {
-			instance.instanceMatrix.needsUpdate = true
-			instance.computeBoundingBox()
-			instance.computeBoundingSphere()
-		}*/
 	}
 }
 

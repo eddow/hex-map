@@ -3,10 +3,11 @@
  */
 import type { Vector2Like } from 'three'
 import type { RandGenerator } from '~/utils/numbers'
+import { assert } from './debug'
 
-export type HexKey = string
-export type HexIndex = number
-export type AxialRef = HexIndex | HexKey | Axial
+export type AxialKey = string
+export type AxialIndex = number
+export type AxialRef = AxialIndex | AxialKey | Axial
 
 export interface Axial {
 	q: number
@@ -27,12 +28,6 @@ export interface Triangular {
 
 export function cube({ q, r }: Axial) {
 	return { q, r, s: -q - r }
-}
-
-export function axialDistance(a: Axial, b: Axial = { q: 0, r: 0 }) {
-	const aS = -a.q - a.r
-	const bS = -b.q - b.r
-	return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(aS - bS))
 }
 
 export type Rotation = (c: Axial) => Axial
@@ -233,5 +228,27 @@ export const axial = {
 			{ q: rq, r: -rq - rs },
 			{ q: rq, r: rr },
 		][diff.indexOf(Math.max(...diff))]
+	},
+
+	distance(a: Axial, b: Axial = { q: 0, r: 0 }) {
+		const aS = -a.q - a.r
+		const bS = -b.q - b.r
+		return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(aS - bS))
+	},
+
+	/**
+	 * For 2 neighbors, returns the 2 orthogonal neighbors: the 2 points who are common neighbors
+	 * @param ARef
+	 * @param BRef
+	 * @returns
+	 */
+	orthogonal(ARef: AxialRef, BRef: AxialRef): [Axial, Axial] {
+		const sideAxial = axial.linear(ARef, [-1, BRef])
+		const side = hexSides.findIndex(({ q, r }) => q === sideAxial.q && r === sideAxial.r)
+		assert(side !== -1, 'Orthogonal: Points must be neighbors')
+		return [
+			axial.linear(BRef, hexSides[(side + 1) % 6]),
+			axial.linear(BRef, hexSides[(side + 5) % 6]),
+		]
 	},
 }
