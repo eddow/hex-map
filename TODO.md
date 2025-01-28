@@ -3,11 +3,11 @@
 - network/server management?
 - rivers & better terrains
 - https://threejs.org/docs/#api/en/objects/LOD , even for sectors?
+- Change key system?
 
 ## Big optimizations
 
-- Add sectors :"> - for ray tracing/hitboxes, LOD
-- No more "pre-render" for MeshPaste: keep the list up to date
+- - auto-update-world-matrix
 
 ## Grok Formulas
 

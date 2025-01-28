@@ -4,6 +4,7 @@
 	import TestComponent from '$lib/test.component.svelte'
 	import { onMount } from 'svelte'
 	import DvWidget from '$lib/dv-widget.svelte'
+	import { EyeOutline } from 'flowbite-svelte-icons'
 
 	let api: DockviewApi | undefined = $state.raw()
 	let ids = 0
@@ -69,7 +70,7 @@
 		height: 50px;
 	}
 
-	.content {
+	:global(.content) {
 		flex: 1;
 	}
 </style>

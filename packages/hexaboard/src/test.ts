@@ -1,4 +1,4 @@
-import { axialAt, hexTiles } from './utils'
+import { axial, hexTiles } from './utils'
 
 function* connections(radius: number) {
 	for (let ring = 1; ring < radius; ring++) {
@@ -20,5 +20,5 @@ function* connections(radius: number) {
 }
 
 const C = [...connections(3)]
-for (const [a, b] of C) console.log(a, axialAt(a), b, axialAt(b))
+for (const [a, b] of C) console.log(a, axial.coords(a), b, axial.coords(b))
 console.log(C.length)

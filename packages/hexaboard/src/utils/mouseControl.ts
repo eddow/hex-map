@@ -138,7 +138,7 @@ interface MouseEventsView extends GameView {
 	[mouseListeners]: Record<string, (event: any) => void>
 }
 export class MouseControl {
-	protected views = new Map<HTMLCanvasElement, GameView>()
+	public views = new Map<HTMLCanvasElement, GameView>()
 	public readonly scene = new Scene()
 	private hovered?: GameView
 	private hoveredHandle?: MouseHandle

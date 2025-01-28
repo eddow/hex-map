@@ -219,7 +219,7 @@ void main() {
 
 	// Apply the weights to the colors
 	if(alpha < 0.00) discard;
-	gl_FragColor = vec4(vColor, clamp(shoreOpacity + alpha * (1.0-shoreOpacity), shoreOpacity, 1.0));
+	gl_FragColor = vec4(vColor, 1);//clamp(shoreOpacity + alpha * (1.0-shoreOpacity), shoreOpacity, 1.0));
 }
 						`,
 })

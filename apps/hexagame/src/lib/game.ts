@@ -67,7 +67,7 @@ export function createGame(seed: number) {
 			/*try {
 				/* straight path
 				const path = [
-					axialAt(pawn.tile),
+					axial.coords(pawn.tile),
 					...straightPath(pawn.sector, pawn.tile, cursor.tile.target, cursor.tile.hexIndex),
 				]*/
 			/* no height path (0 height diff still has horizontal mvt not counted)
@@ -99,9 +99,9 @@ export function createGame(seed: number) {
 	})
 	game.onMouse('click', (ev: MouseButtonEvolution) => {
 		if (ev.handle instanceof TileHandle) {
-			const tile = ev.handle?.hKey
+			const hKey = ev.handle?.hKey
 			const game = ev.handle?.game
-			if (tile)
+			if (hKey)
 				switch (ev.button) {
 					case MouseButton.Left:
 						//pawn.goTo(tile.target, tile.hexIndex)
@@ -110,10 +110,10 @@ export function createGame(seed: number) {
 						dockview.api.addPanel({
 							id: `selectionInfo.${crypto.randomUUID()}`,
 							component: 'selectionInfo',
-							title: m.selectInfo(),
+							title: hKey,
 							params: {
 								game: Object.entries(games).find(([k, v]) => v === game)?.[0],
-								hKey: tile,
+								hKey: hKey,
 							},
 							floating: true,
 						})

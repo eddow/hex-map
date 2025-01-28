@@ -113,7 +113,7 @@
 		flex-direction: column;
 	}
 
-	.content {
+	:global(.content) {
 		flex: 1;
 	}
 </style>

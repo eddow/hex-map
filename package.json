@@ -9,5 +9,8 @@
 	"workspaces": [
 		"packages/*",
 		"apps/*"
-	]
+	],
+	"dependencies": {
+		"@biomejs/biome": "^1.9.4"
+	}
 }
