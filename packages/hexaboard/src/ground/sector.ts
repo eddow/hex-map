@@ -16,10 +16,6 @@ export class Sector<Tile extends TileBase> {
 	cartesian(aKey: AxialKey, tiles?: Map<AxialKey, Tile>) {
 		return { ...cartesian(aKey, this.land.tileSize), z: tiles?.get(aKey)?.position?.z ?? 0 }
 	}
-	// TODO: remove
-	tileCoords(aRef: AxialRef) {
-		return axial.coords(aRef)
-	}
 	add(o3d: Object3D) {
 		assert(this.group, 'Rendering should happen in an existing sector')
 		this.group.add(o3d)
@@ -31,9 +27,9 @@ export class Sector<Tile extends TileBase> {
 	 * @returns
 	 */
 	inTile(aRef: AxialRef, { s, u, v }: PositionInTile) {
-		const coords = axial.coords(aRef)
-		const next1 = axial.key(axial.linear(coords, hexSides[s]))
-		const next2 = axial.key(axial.linear(coords, hexSides[(s + 1) % 6]))
+		const coord = axial.coord(aRef)
+		const next1 = axial.key(axial.linear(coord, hexSides[s]))
+		const next2 = axial.key(axial.linear(coord, hexSides[(s + 1) % 6]))
 		if (!this.tiles.has(next1) || !this.tiles.has(next2)) return null
 		const pos = new Vector3().copy(this.tiles.get(axial.key(aRef))!.position)
 		const next1dir = new Vector3()

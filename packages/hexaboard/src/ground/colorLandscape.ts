@@ -48,7 +48,7 @@ export class ColorLandscape implements Landscape<ColorTile> {
 		geometry.setAttribute('color', new BufferAttribute(colors, 3))
 		return new Mesh(geometry, this.material)
 	}
-	refineTile(tile: TileBase, coords: Axial): ColorTile {
+	refineTile(tile: TileBase, coord: Axial): ColorTile {
 		const h01 = Math.min(1, Math.max(0, tile.position.z / 150))
 		return {
 			...tile,

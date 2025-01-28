@@ -48,15 +48,15 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 	beginGeneration() {
 		return []
 	}
-	refineTile(tile: Tile, coords: Axial, sources: Sources): undefined {
+	refineTile(tile: Tile, coord: Axial, sources: Sources): undefined {
 		if (tile.position.z < this.seaLevel) return
-		const gen = LCG(this.seed, 'rivers', coords.q, coords.r)
+		const gen = LCG(this.seed, 'rivers', coord.q, coord.r)
 		if (
 			gen() <
 			(this.sourcesPerTile * (tile.position.z - this.seaLevel)) /
 				(this.terrainHeight - this.seaLevel)
 		)
-			sources.push(coords)
+			sources.push(coord)
 	}
 
 	spreadGeneration(updateTile: TileUpdater<Tile>, sources: Sources): void {
@@ -65,8 +65,8 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 			const path = costingPath(
 				source,
 				(from, to) => {
-					const toCoords = axial.coords(to)
-					if (axial.distance(toCoords, source) > this.maxAxialDistance) return Number.NaN
+					const toCoord = axial.coord(to)
+					if (axial.distance(toCoord, source) > this.maxAxialDistance) return Number.NaN
 					const [tFrom, tTo] = [this.land.getTile(from), this.land.getTile(to)]
 					// 2 facts are costly:
 					return (
@@ -83,8 +83,18 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 				}
 			)
 			const sourceSectors = this.land.getTile(source).sectors as Sector<Tile>[]
-			// TODO: path.pop when penult has enough ocean neighbors
+
 			if (path && path.length > 3) {
+				// Remove the end of river who enters too much in the sea
+				while (path.length > 0) {
+					const last = path[path.length - 1]
+					const oceanNeighbors = neighbors(last).reduce(
+						(nbr, tile) => nbr + (this.land.getTile(tile).position.z < this.seaLevel ? 1 : 0),
+						0
+					)
+					if (oceanNeighbors < 4) break
+					path.pop()
+				}
 				path.shift() //source
 				// Last tile in the path
 				const ultimatePosition = this.land.getTile(path[path.length - 1]).position
@@ -157,13 +167,16 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 		const tileIndices = new Map<RiverTile, number>()
 		const seaLevel = this.seaLevel
 		for (const triangle of triangles) {
+			const triangleKeys = triangle.coords.map((coord) => axial.key(coord))
+			//if (triangleKeys.filter((key) => [2490346].includes(key)).length) debugger
+			const x = triangleKeys
 			const triangleTiles = triangle.coords.map((coord) => sector.tiles.get(axial.key(coord))!)
 			const nbrRiverHeights = triangleTiles.reduce(
 				(nbr, tile) => nbr + (tile.riverHeight !== undefined ? 1 : 0),
 				0
 			)
 			const nbrOcean = triangleTiles.reduce(
-				(nbr, tile) => nbr + (tile.position.z < seaLevel ? 1 : 0),
+				(nbr, tile) => nbr + ((tile.originalZ ?? tile.position.z) < seaLevel ? 1 : 0),
 				0
 			)
 			if (nbrRiverHeights < 3 && (nbrRiverHeights < 1 || nbrOcean < 1)) continue
@@ -175,7 +188,10 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 					const { x, y, z } = tile.position
 					const riverHeight = tile.riverHeight ?? seaLevel
 					// TODO: 20? 40?
-					const opacity = z < seaLevel ? (seaLevel - z) / (seaLevel * 2) : (riverHeight - z) / 40
+					const opacity =
+						(tile.originalZ ?? z) < seaLevel
+							? (seaLevel - z) / (seaLevel * 2)
+							: (riverHeight - z) / 80
 					positions.push(x, y, riverHeight)
 					opacities.push(opacity)
 					/*if (tile.riverHeight !== undefined) colors.push(0.05, 0.2, 0.95)
@@ -219,7 +235,7 @@ void main() {
 
 	// Apply the weights to the colors
 	if(alpha < 0.00) discard;
-	gl_FragColor = vec4(vColor, 1);//clamp(shoreOpacity + alpha * (1.0-shoreOpacity), shoreOpacity, 1.0));
+	gl_FragColor = vec4(vColor, clamp(shoreOpacity + alpha * (1.0-shoreOpacity), shoreOpacity, 1.0));
 }
 						`,
 })

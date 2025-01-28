@@ -57,7 +57,7 @@ export function puzzleTiles(radius: number) {
 }
 
 export function cartesian(aRef: AxialRef, size = 1) {
-	const { q, r } = axial.coords(aRef)
+	const { q, r } = axial.coord(aRef)
 	const A = Math.sqrt(3) * size
 	const B = (Math.sqrt(3) / 2) * size
 	const C = (3 / 2) * size
@@ -100,9 +100,9 @@ export function genTilePosition(gen: RandGenerator, radius = 1) {
  */
 export function posInTile(aRef: AxialRef, radius: number) {
 	if (axial.zero(aRef)) return { s: 0, u: 0, v: 0 }
-	const coords = axial.coords(aRef)
+	const coord = axial.coord(aRef)
 	const outerRadius = radius + 0.5
-	const { q, r } = { q: coords.q / outerRadius, r: coords.r / outerRadius }
+	const { q, r } = { q: coord.q / outerRadius, r: coord.r / outerRadius }
 	const s = -q - r
 	const signs = (q >= 0 ? 'Q' : 'q') + (r >= 0 ? 'R' : 'r') + (s >= 0 ? 'S' : 's')
 	return {
@@ -137,7 +137,7 @@ export const axial = {
 	 * Get the axial-ref as an axial: an object `{q, r}`
 	 * @returns Axial
 	 */
-	coords(aRef: AxialRef | string): Axial {
+	coord(aRef: AxialRef | string): Axial {
 		switch (typeof aRef) {
 			case 'number':
 				return bitShiftUnpair(aRef)
@@ -158,14 +158,14 @@ export const axial = {
 			case 'number':
 				return aRef
 			case 'string':
-				return bitShiftPair(axial.coords(aRef))
+				return bitShiftPair(axial.coord(aRef))
 			default:
 				return bitShiftPair(aRef)
 		}
 	},
 
 	toString(aRef: AxialRef) {
-		const { q, r } = axial.coords(aRef)
+		const { q, r } = axial.coord(aRef)
 		return `<${q} ${r}>`
 	},
 
@@ -179,7 +179,7 @@ export const axial = {
 		return args.reduce<Axial>(
 			(acc, term) => {
 				const [coef, aRef] = Array.isArray(term) ? term : [1, term]
-				const { q, r } = axial.coords(aRef)
+				const { q, r } = axial.coord(aRef)
 				return { q: acc.q + coef * q, r: acc.r + coef * r }
 			},
 			{ q: 0, r: 0 }
@@ -191,7 +191,7 @@ export const axial = {
 	 */
 	zero(aRef: AxialRef) {
 		if (typeof aRef !== 'object') return [0, '0,0'].includes(aRef)
-		const { q, r } = axial.coords(aRef)
+		const { q, r } = axial.coord(aRef)
 		return q === 0 && r === 0
 	},
 
@@ -201,7 +201,7 @@ export const axial = {
 	},
 
 	round(aRef: AxialRef) {
-		const { q, r } = axial.coords(aRef)
+		const { q, r } = axial.coord(aRef)
 		const v = [q, r, -q - r]
 		const round = v.map(Math.round)
 		const diff = v.map((v, i) => Math.abs(round[i] - v))
@@ -246,3 +246,6 @@ export const axial = {
 		}
 	},
 }
+
+// @ts-expect-error
+if (typeof window !== 'undefined') window.axial = axial

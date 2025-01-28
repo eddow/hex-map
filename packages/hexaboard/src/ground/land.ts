@@ -11,6 +11,7 @@ import {
 	hexTiles,
 } from '~/utils'
 import { logPerformances, resetPerformances } from '~/utils/decorators'
+import { DMap } from '~/utils/mapDegug'
 import { Sector } from './sector'
 
 export interface TileBase {
@@ -29,9 +30,9 @@ export interface LandPart<Tile extends TileBase, GenerationInfo = unknown> {
 	/**
 	 * Refine tile information
 	 * @param tile
-	 * @param coords
+	 * @param coord
 	 */
-	refineTile?(tile: TileBase, coords: Axial, generationInfo: GenerationInfo): undefined | Tile
+	refineTile?(tile: TileBase, coord: Axial, generationInfo: GenerationInfo): undefined | Tile
 	/**
 	 * Add Object3D to sector with `sector.add`
 	 * @param sector
@@ -94,7 +95,7 @@ function scaleAxial({ q, r }: Axial, scale: number) {
 }
 
 export class Land<Tile extends TileBase = TileBase> {
-	public readonly tiles = new Map<AxialKey, Tile>()
+	public readonly tiles = new DMap<AxialKey, Tile>()
 	private readonly parts: LandPart<Tile>[] = []
 	public readonly group = new Group()
 	private readonly sectors = new Map<AxialKey, Sector<Tile>>()
@@ -112,29 +113,29 @@ export class Land<Tile extends TileBase = TileBase> {
 	}
 
 	sector2tile(aRef: AxialRef) {
-		return scaleAxial(axial.coords(aRef), this.sectorRadius - 1)
+		return scaleAxial(axial.coord(aRef), this.sectorRadius - 1)
 	}
 	tile2sector(aRef: AxialRef) {
-		return axial.round(scaleAxial(axial.coords(aRef), 1 / (3 * (this.sectorRadius - 1))))
+		return axial.round(scaleAxial(axial.coord(aRef), 1 / (3 * (this.sectorRadius - 1))))
 	}
 
 	createSectors(added: Map<AxialKey, Axial>, generationInfos: Map<LandPart<Tile>, any>) {
 		const tileRefiners = this.parts.filter((part) => part.refineTile)
 		for (const [key, toSee] of added) {
 			const center = this.sector2tile(toSee)
-			const sectorTiles = axial.enum(this.sectorRadius - 1).map((lclCoords): [AxialKey, Tile] => {
-				const coords = axial.linear(center, lclCoords)
-				const key = axial.key(coords)
+			const sectorTiles = axial.enum(this.sectorRadius - 1).map((lclCoord): [AxialKey, Tile] => {
+				const coord = axial.linear(center, lclCoord)
+				const key = axial.key(coord)
 				let completeTile = this.tiles.get(key)
 				if (completeTile) return [key, completeTile]
 				let tile: TileBase = {
-					position: { ...cartesian(coords, this.tileSize), z: 0 },
+					position: { ...cartesian(coord, this.tileSize), z: 0 },
 					sectors: [],
 				}
 				for (const part of tileRefiners)
-					tile = part.refineTile!(tile, coords, generationInfos.get(part)) ?? tile
+					tile = part.refineTile!(tile, coord, generationInfos.get(part)) ?? tile
 				completeTile = tile as Tile
-				this.tiles.set(axial.key(coords), completeTile)
+				this.tiles.set(axial.key(coord), completeTile)
 				return [key, completeTile]
 			})
 			const sector = new Sector(this, center, new Map(sectorTiles))
@@ -228,7 +229,7 @@ export class Land<Tile extends TileBase = TileBase> {
 	temporaryTiles = new Map<AxialKey, Tile>()
 	generateOneTile(aRef: AxialRef) {
 		const key = axial.key(aRef)
-		const coords = axial.coords(aRef)
+		const coord = axial.coord(aRef)
 		const generationInfos = new Map<LandPart<Tile>, any>()
 		for (const part of this.parts)
 			if (part.beginGeneration) generationInfos.set(part, part.beginGeneration())
@@ -237,15 +238,15 @@ export class Land<Tile extends TileBase = TileBase> {
 			sectors: [],
 		}
 		for (const part of this.parts)
-			if (part.refineTile) tile = part.refineTile(tile, coords, generationInfos.get(part)) ?? tile
+			if (part.refineTile) tile = part.refineTile(tile, coord, generationInfos.get(part)) ?? tile
 		const completeTile = tile as Tile
-		this.tiles.set(axial.key(coords), completeTile)
+		this.tiles.set(axial.key(coord), completeTile)
 		this.temporaryTiles.set(key, completeTile)
 		for (const part of this.parts)
 			if (part.spreadGeneration)
 				part.spreadGeneration((sectors, aRef, modifications) => {
 					const tile = this.tileUpdater(sectors, aRef, modifications)
-					if (!tile.sectors.length) this.temporaryTiles.set(key, tile)
+					if (!tile.sectors.length) this.temporaryTiles.set(axial.key(aRef), tile)
 				}, generationInfos.get(part))
 		return completeTile
 	}

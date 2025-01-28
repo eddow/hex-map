@@ -82,8 +82,8 @@ export class TextureLandscape implements Landscape<TerrainTile> {
 	createMesh(sector: Sector<TerrainTile>, triangles: LandscapeTriangle[]): Object3D {
 		const textureUvCache = new Map(
 			sector.tiles.entries().map(([i, tile]) => {
-				const coords = sector.tileCoords(i)
-				const gen = LCG(this.seed, 'terrainTextures', coords.q, coords.r)
+				const coord = axial.coord(i)
+				const gen = LCG(this.seed, 'terrainTextures', coord.q, coord.r)
 				return [
 					i,
 					{

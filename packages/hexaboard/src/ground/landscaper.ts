@@ -159,9 +159,9 @@ export class Landscaper<Tile extends TileBase> implements LandPart<Tile, unknown
 			this.landscapes[i].spreadGeneration?.(updateTile, generationInfo[i])
 	}
 
-	refineTile(tile: TileBase, coords: Axial, generationInfo: unknown[]): Tile {
+	refineTile(tile: TileBase, coord: Axial, generationInfo: unknown[]): Tile {
 		for (let i = 0; i < this.landscapes.length; i++)
-			tile = this.landscapes[i].refineTile?.(tile, coords, generationInfo[i]) ?? tile
+			tile = this.landscapes[i].refineTile?.(tile, coord, generationInfo[i]) ?? tile
 		return tile as Tile
 	}
 }

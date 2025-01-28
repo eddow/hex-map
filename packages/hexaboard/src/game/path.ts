@@ -1,8 +1,8 @@
 import { type Axial, type AxialKey, type AxialRef, axial, hexSides } from '~/utils/axial'
 
 export function straightPath(fromTile: AxialRef, toTile: AxialRef) {
-	const from = axial.coords(fromTile)
-	const to = axial.coords(toTile)
+	const from = axial.coord(fromTile)
+	const to = axial.coord(toTile)
 	const rv: Axial[] = []
 	const dist = axial.distance(from, to)
 	for (let i = 0; i < dist; i++) rv.push(axial.round(axial.lerp(from, to, (i + 1) / dist)))
@@ -32,9 +32,9 @@ export function costingPath(fromTile: AxialRef, cost: Cost, isFound: IsFound) {
 	let found: { tile: AxialKey; cost: number } | undefined
 	while (toStudy.length && (!found || found.cost > toStudy[0].cost)) {
 		const study = toStudy.shift()!
-		const coords = axial.coords(study.key)
+		const coord = axial.coord(study.key)
 		for (const hexSide of hexSides) {
-			const next = axial.key(axial.linear([1, coords], [1, hexSide]))
+			const next = axial.key(axial.linear([1, coord], [1, hexSide]))
 			if (next !== origins[study.key].key) {
 				let nextCost = cost(study.key, next)
 				if (Number.isNaN(nextCost)) continue

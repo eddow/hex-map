@@ -66,7 +66,7 @@ export function createGame(seed: number) {
 			/*try {
 				/* straight path
 				const path = [
-					axial.coords(pawn.tile),
+					axial.coord(pawn.tile),
 					...straightPath(pawn.sector, pawn.tile, cursor.tile.target, cursor.tile.hexIndex),
 				]*/
 			/* no height path (0 height diff still has horizontal mvt not counted)
@@ -89,10 +89,13 @@ export function createGame(seed: number) {
 				if (!(e instanceof SectorNotGeneratedError)) throw e
 			}*/
 			//}
-			debugInfo.tile = axial.coords(cursor.tile?.hKey)
-			debugInfo.tilePos = ev.handle.tile.position
+			debugInfo.axial = axial.coord(cursor.tile?.hKey)
+			debugInfo.key = axial.key(cursor.tile?.hKey)
+			const tile = ev.handle.tile
+			debugInfo.tilePos = tile.position
+			debugInfo.riverHeight = tile.riverHeight
 		} else {
-			debugInfo.tilePos = debugInfo.tile = 'none'
+			debugInfo.key = debugInfo.tilePos = debugInfo.tile = 'none'
 			cursor.tile = undefined
 		}
 	})

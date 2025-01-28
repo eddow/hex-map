@@ -20,5 +20,5 @@ function* connections(radius: number) {
 }
 
 const C = [...connections(3)]
-for (const [a, b] of C) console.log(a, axial.coords(a), b, axial.coords(b))
+for (const [a, b] of C) console.log(a, axial.coord(a), b, axial.coord(b))
 console.log(C.length)

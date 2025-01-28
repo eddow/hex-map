@@ -21,4 +21,5 @@
 	<Button onclick={goTo}>
 		<EyeOutline class="w-6 h-6" />
 	</Button>
+	<p>{hKey}</p>
 </div>

@@ -71,8 +71,8 @@ export class Resourceful<
 						)
 					: []
 			if (tile.content.some((r) => r)) {
-				const worldCoords = axial.linear(axial.coords(tRef), sector.center)
-				const gen = LCG(this.seed, 'placeInTile', worldCoords.q, worldCoords.r)
+				const worldCoord = axial.linear(axial.coord(tRef), sector.center)
+				const gen = LCG(this.seed, 'placeInTile', worldCoord.q, worldCoord.r)
 				for (let aRef = 0; aRef < tile.content.length; aRef++) {
 					const rsc = tile.content[aRef]
 					if (rsc) {
