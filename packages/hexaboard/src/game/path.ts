@@ -9,15 +9,15 @@ export function straightPath(fromTile: AxialRef, toTile: AxialRef) {
 	return rv
 }
 
-export type IsFound = (aRef: string) => boolean
+export type IsFound = (aRef: AxialKey) => boolean
 /**
  * Cost function: Gets the cost from a tile to another
  * - Strictly positive
  * - NaN if no path
  */
-export type Cost = (from: string, to: string) => number
+export type Cost = (from: AxialKey, to: AxialKey) => number
 
-type HexCost<O = string> = { key: O; cost: number }
+type HexCost<O = AxialKey> = { key: O; cost: number }
 
 // TODO: add list of shortcuts like train-stations
 const epsilon = 1e-6
@@ -26,10 +26,10 @@ export function costingPath(fromTile: AxialRef, cost: Cost, isFound: IsFound) {
 	if (isFound(fromKey)) return [fromKey]
 	const toStudy: HexCost[] = [{ key: fromKey, cost: 0 }]
 	// TODO: origins -> Map?
-	const origins: { [tile: string]: HexCost<string | null> } = {
+	const origins: { [tile: AxialKey]: HexCost<AxialKey | null> } = {
 		[fromKey]: { key: null, cost: 0 },
 	}
-	let found: { tile: string; cost: number } | undefined
+	let found: { tile: AxialKey; cost: number } | undefined
 	while (toStudy.length && (!found || found.cost > toStudy[0].cost)) {
 		const study = toStudy.shift()!
 		const coords = axial.coords(study.key)

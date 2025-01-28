@@ -5,13 +5,12 @@ import type { Vector2Like } from 'three'
 import type { RandGenerator } from '~/utils/numbers'
 import { assert } from './debug'
 
-export type AxialKey = string
-export type AxialRef = AxialKey | Axial
-
+export type AxialKey = number
 export interface Axial {
 	q: number
 	r: number
 }
+export type AxialRef = AxialKey | Axial
 
 /**
  * Position in a triangle: side of the triangle and [u,v] where u+v<=1
@@ -115,6 +114,15 @@ export function posInTile(aRef: AxialRef, radius: number) {
 		QRs: { s: 5, u: q, v: r },
 	}[signs]!
 }
+function bitShiftPair({ q, r }: Axial): number {
+	return (q << 16) | (r & 0xffff) // Ensure b fits in 16 bits for comparison
+}
+
+function bitShiftUnpair(z: number): Axial {
+	const rv = { q: z >> 16, r: z & 0xffff }
+	if (rv.r > 32767) rv.r -= 65536
+	return rv
+}
 
 /**
  * Retrieves the tiles around a given tile
@@ -129,22 +137,38 @@ export const axial = {
 	 * Get the axial-ref as an axial: an object `{q, r}`
 	 * @returns Axial
 	 */
-	coords(aRef: AxialRef) {
-		if (typeof aRef === 'string') {
-			const [q, r] = aRef.split(',')
-			return { q: Number(q), r: Number(r) }
+	coords(aRef: AxialRef | string): Axial {
+		switch (typeof aRef) {
+			case 'number':
+				return bitShiftUnpair(aRef)
+			case 'string': {
+				const [q, r] = aRef.split(',').map(Number)
+				return { q, r }
+			}
+			default:
+				return aRef
 		}
-		return aRef
 	},
 	/**
 	 * Get the axial-ref as a key
 	 * @returns string
 	 */
-	key(aRef: AxialRef) {
-		if (typeof aRef === 'string') return aRef
-		const { q, r } = aRef
-		return `${q},${r}`
+	key(aRef: AxialRef | string): AxialKey {
+		switch (typeof aRef) {
+			case 'number':
+				return aRef
+			case 'string':
+				return bitShiftPair(axial.coords(aRef))
+			default:
+				return bitShiftPair(aRef)
+		}
 	},
+
+	toString(aRef: AxialRef) {
+		const { q, r } = axial.coords(aRef)
+		return `<${q} ${r}>`
+	},
+
 	/**
 	 * Addition a list of axial coordinates optionally with a scalar coefficient
 	 * @param args [coef, AxialRef] Scalar coefficient and axial to multiply/add
@@ -221,31 +245,4 @@ export const axial = {
 				yield { q, r }
 		}
 	},
-
-	toString(aRef: AxialRef) {
-		const { q, r } = axial.coords(aRef)
-		return `<${q} ${r}>`
-	},
-}
-function cantorPair(a: number, b: number) {
-	// Convert to positive indices
-	const aPositive = a >= 0 ? 2 * a : -2 * a - 1
-	const bPositive = b >= 0 ? 2 * b : -2 * b - 1
-
-	// Apply Cantor pairing function
-	const sum = aPositive + bPositive
-	return (sum * (sum + 1)) / 2 + bPositive
-}
-
-function cantorUnpair(z: number) {
-	const w = Math.floor((Math.sqrt(8 * z + 1) - 1) / 2)
-	const t = (w * (w + 1)) / 2
-	const bPositive = z - t
-	const aPositive = w - bPositive
-
-	// Convert back to integers
-	const a = aPositive % 2 === 0 ? aPositive / 2 : -(aPositive + 1) / 2
-	const b = bPositive % 2 === 0 ? bPositive / 2 : -(bPositive + 1) / 2
-
-	return [a, b]
 }

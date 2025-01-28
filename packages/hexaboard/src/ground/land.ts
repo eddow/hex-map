@@ -52,7 +52,7 @@ function distance(p1: { x: number; y: number }, p2: { x: number; y: number }): n
 }
 
 function cameraVision(camera: PerspectiveCamera): number {
-	return 100 // camera.far / Math.cos((camera.fov * Math.PI) / 360)
+	return camera.far / Math.cos((camera.fov * Math.PI) / 360)
 }
 
 function* viewedSectors(centerRef: AxialRef, camera: PerspectiveCamera, size: number) {
@@ -94,7 +94,7 @@ function scaleAxial({ q, r }: Axial, scale: number) {
 }
 
 export class Land<Tile extends TileBase = TileBase> {
-	public readonly tiles = new Map<string, Tile>()
+	public readonly tiles = new Map<AxialKey, Tile>()
 	private readonly parts: LandPart<Tile>[] = []
 	public readonly group = new Group()
 	private readonly sectors = new Map<AxialKey, Sector<Tile>>()
