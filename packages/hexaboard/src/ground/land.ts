@@ -1,19 +1,17 @@
-import { Group, type Object3D, type PerspectiveCamera, Vector3, type Vector3Like } from 'three'
+import { Group, type PerspectiveCamera, type Vector3Like } from 'three'
 import {
 	assert,
 	type Axial,
-	type AxialIndex,
 	type AxialKey,
 	type AxialRef,
 	axial,
 	cartesian,
 	debugInformation,
 	fromCartesian,
-	hexSides,
 	hexTiles,
-	numbers,
 } from '~/utils'
 import { logPerformances, resetPerformances } from '~/utils/decorators'
+import { Sector } from './sector'
 
 export interface TileBase {
 	position: Vector3Like
@@ -24,7 +22,7 @@ export interface TileBase {
 export type TileUpdater<Tile extends TileBase> = (
 	updaters: Sector<Tile>[],
 	aRef: AxialRef,
-	tile?: Partial<Tile>
+	modifications?: Partial<Tile>
 ) => void
 
 export interface LandPart<Tile extends TileBase, GenerationInfo = unknown> {
@@ -54,31 +52,24 @@ function distance(p1: { x: number; y: number }, p2: { x: number; y: number }): n
 }
 
 function cameraVision(camera: PerspectiveCamera): number {
-	return camera.far / Math.cos((camera.fov * Math.PI) / 360)
+	return 100 // camera.far / Math.cos((camera.fov * Math.PI) / 360)
 }
 
-function* sectorsToRender(centerRef: AxialRef, camera: PerspectiveCamera, size: number) {
+function* viewedSectors(centerRef: AxialRef, camera: PerspectiveCamera, size: number) {
 	const center = axial.round(centerRef)
 	const centerCartesian = cartesian(center, size)
 	// Estimate the maximum axial distance. Since a hexagon's circumradius is sqrt(3) * side length,
 	// we use D / (sqrt(3) * size) as an upper bound for axial distance check.
 	const vision = cameraVision(camera)
 	const maxAxialDistance = Math.ceil(vision / size + 0.5)
-	// TODO: Browse with axialIndex now that we have maxAxialDistance
 	// Check all hexagons within this range
-	for (let dq = -maxAxialDistance; dq <= maxAxialDistance; dq++) {
-		for (
-			let dr = Math.max(-maxAxialDistance, -dq - maxAxialDistance);
-			dr <= Math.min(maxAxialDistance, -dq + maxAxialDistance);
-			dr++
-		) {
-			const currentHex = { q: center.q + dq, r: center.r + dr }
-			const currentCartesian = cartesian(currentHex, size)
+	for (const { q, r } of axial.enum(maxAxialDistance)) {
+		const currentHex = { q: center.q + q, r: center.r + r }
+		const currentCartesian = cartesian(currentHex, size)
 
-			// Check if the Cartesian distance is within D
-			if (distance(centerCartesian, currentCartesian) <= vision) {
-				yield currentHex
-			}
+		// Check if the Cartesian distance is within D
+		if (distance(centerCartesian, currentCartesian) <= vision) {
+			yield currentHex
 		}
 	}
 }
@@ -93,67 +84,6 @@ export interface PositionInTile {
 	u: number
 	/** 2D coordinate in side triangle */
 	v: number
-}
-
-export class Sector<Tile extends TileBase> {
-	public group?: Group
-	public readonly attachedTiles = new Set<AxialKey>()
-	constructor(
-		public readonly land: Land<Tile>,
-		public readonly center: Axial,
-		public readonly tiles: Tile[]
-	) {
-		for (const tile of this.tiles) tile.sectors.push(this)
-	}
-	cartesian(hexIndex: AxialIndex, tiles?: Tile[]) {
-		return { ...cartesian(hexIndex, this.land.tileSize), z: tiles?.[hexIndex]?.position?.z ?? 0 }
-	}
-	tileCoords(aRef: AxialRef) {
-		return axial.linear(aRef, this.center)
-	}
-	add(o3d: Object3D) {
-		assert(this.group, 'Rendering should happen in an existing sector')
-		this.group.add(o3d)
-	}
-	/**
-	 * Retrieves a point (xyz) inside a rendered tile
-	 * In case of border tiles, positions involving a tile outside of the sector return `null`
-	 * Reference: tile
-	 * @returns
-	 */
-	inTile(tiles: Tile[], aRef: AxialRef, { s, u, v }: PositionInTile) {
-		const coords = axial.coords(aRef)
-		const next1 = axial.index(axial.linear(coords, hexSides[s]))
-		const next2 = axial.index(axial.linear(coords, hexSides[(s + 1) % 6]))
-		const nbrTiles = tiles.length
-		if (next1 >= nbrTiles || next2 >= nbrTiles) return null
-		const pos = new Vector3().copy(tiles[axial.index(aRef)].position)
-		const next1dir = new Vector3()
-			.copy(tiles[next1].position)
-			.sub(pos)
-			.multiplyScalar(u / 2)
-		const next2dir = new Vector3()
-			.copy(tiles[next2].position)
-			.sub(pos)
-			.multiplyScalar(v / 2)
-		return pos.add(next1dir).add(next2dir)
-	}
-	freeTiles() {
-		const { center } = this
-		const { tiles } = this.land
-		const removeTiles = (bunch: Iterable<AxialKey>) => {
-			for (const tileKey of bunch) {
-				const tile = tiles.get(tileKey)!
-				tile.sectors = tile.sectors.filter((sector) => sector !== this)
-				if (tile.sectors.length === 0) tiles.delete(tileKey)
-			}
-		}
-		const sectorTileKeys = numbers(hexTiles(this.land.sectorRadius)).map((hexIndex) =>
-			axial.key(axial.linear(hexIndex, center))
-		)
-		removeTiles(sectorTileKeys)
-		removeTiles(this.attachedTiles)
-	}
 }
 
 function scaleAxial({ q, r }: Axial, scale: number) {
@@ -192,14 +122,11 @@ export class Land<Tile extends TileBase = TileBase> {
 		const tileRefiners = this.parts.filter((part) => part.refineTile)
 		for (const [key, toSee] of added) {
 			const center = this.sector2tile(toSee)
-			const sectorTiles = numbers(hexTiles(this.sectorRadius)).map((hexIndex) => {
-				const coords = axial.linear(axial.coords(hexIndex), center)
+			const sectorTiles = axial.enum(this.sectorRadius - 1).map((lclCoords): [AxialKey, Tile] => {
+				const coords = axial.linear(center, lclCoords)
 				const key = axial.key(coords)
 				let completeTile = this.tiles.get(key)
-				if (completeTile) {
-					completeTile.sectors
-					return completeTile
-				}
+				if (completeTile) return [key, completeTile]
 				let tile: TileBase = {
 					position: { ...cartesian(coords, this.tileSize), z: 0 },
 					sectors: [],
@@ -208,27 +135,21 @@ export class Land<Tile extends TileBase = TileBase> {
 					tile = part.refineTile!(tile, coords, generationInfos.get(part)) ?? tile
 				completeTile = tile as Tile
 				this.tiles.set(axial.key(coords), completeTile)
-				return completeTile
+				return [key, completeTile]
 			})
-			const sector = new Sector(this, center, sectorTiles)
+			const sector = new Sector(this, center, new Map(sectorTiles))
 			this.sectors.set(key, sector)
 			this.sectorsToRender.add(sector)
 		}
 	}
 
 	spreadGeneration(generationInfos: Map<LandPart<Tile>, any>) {
-		const modifier = (sectors: Sector<Tile>[], aRef: AxialRef, mod?: Partial<Tile>) => {
-			const tile = this.getTile(axial.coords(aRef))
-			if (mod) Object.assign(tile, mod)
-			for (const sector of sectors)
-				if (!tile.sectors.includes(sector)) {
-					tile.sectors.push(sector)
-					sector.attachedTiles.add(axial.key(aRef))
-				}
-			for (const sector of tile.sectors) this.sectorsToRender.add(sector as Sector<Tile>)
-		}
 		for (const part of this.parts)
-			if (part.spreadGeneration) part.spreadGeneration(modifier, generationInfos.get(part))
+			if (part.spreadGeneration)
+				part.spreadGeneration(
+					(sectors, aRef, modifications) => this.tileUpdater(sectors, aRef, modifications),
+					generationInfos.get(part)
+				)
 	}
 
 	renderSectors() {
@@ -261,9 +182,9 @@ export class Land<Tile extends TileBase = TileBase> {
 			if (seen) continue
 			assert(deletedSector.group, 'Removed group should be generated')
 			this.group.remove(deletedSector.group)
-			this.sectors.delete(key)
-			const center = deletedSector.center
 			deletedSector.freeTiles()
+			this.sectors.delete(key)
+			this.sectorsToRender.delete(deletedSector)
 		}
 	}
 
@@ -275,7 +196,7 @@ export class Land<Tile extends TileBase = TileBase> {
 		resetPerformances()
 		const added = new Map<AxialKey, Axial>()
 		for (const camera of cameras)
-			for (const toSee of sectorsToRender(
+			for (const toSee of viewedSectors(
 				this.tile2sector(fromCartesian(camera.position, this.tileSize)),
 				camera,
 				this.tileSize * this.sectorRadius
@@ -286,7 +207,6 @@ export class Land<Tile extends TileBase = TileBase> {
 				if (!this.sectors.has(key) && !added.has(key)) added.set(key, toSee)
 			}
 		if (added.size > 0) {
-			this.sectorsToRender ??= new Set()
 			for (const part of this.parts)
 				if (part.beginGeneration) generationInfos.set(part, part.beginGeneration())
 			this.createSectors(added, generationInfos)
@@ -321,9 +241,26 @@ export class Land<Tile extends TileBase = TileBase> {
 		const completeTile = tile as Tile
 		this.tiles.set(axial.key(coords), completeTile)
 		this.temporaryTiles.set(key, completeTile)
+		for (const part of this.parts)
+			if (part.spreadGeneration)
+				part.spreadGeneration((sectors, aRef, modifications) => {
+					const tile = this.tileUpdater(sectors, aRef, modifications)
+					if (!tile.sectors.length) this.temporaryTiles.set(key, tile)
+				}, generationInfos.get(part))
 		return completeTile
 	}
 
+	tileUpdater(sectors: Sector<Tile>[], aRef: AxialRef, modifications?: Partial<Tile>) {
+		const tile = this.getTile(aRef)
+		if (modifications) Object.assign(tile, modifications)
+		for (const sector of sectors)
+			if (!tile.sectors.includes(sector)) {
+				tile.sectors.push(sector)
+				sector.attachedTiles.add(axial.key(aRef))
+			}
+		for (const sector of tile.sectors) this.sectorsToRender.add(sector as Sector<Tile>)
+		return tile
+	}
 	addPart(part: LandPart<Tile>) {
 		this.parts.push(part)
 	}

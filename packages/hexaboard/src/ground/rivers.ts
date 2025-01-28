@@ -1,8 +1,9 @@
 import { BufferGeometry, Float32BufferAttribute, Mesh, type Object3D, ShaderMaterial } from 'three'
 import { costingPath } from '~/game'
 import { type Axial, type AxialKey, LCG, axial, neighbors } from '~/utils'
-import type { Land, Sector, TileUpdater } from './land'
+import type { Land, TileUpdater } from './land'
 import type { Landscape, LandscapeTriangle } from './landscaper'
+import type { Sector } from './sector'
 import type { TerrainKey, TerrainTile } from './terrain'
 
 // TODO: avoid ending in a puddle
@@ -156,8 +157,7 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 		const tileIndices = new Map<RiverTile, number>()
 		const seaLevel = this.seaLevel
 		for (const triangle of triangles) {
-			const { indexes } = triangle
-			const triangleTiles = indexes.map((tileIndex) => sector.tiles[tileIndex])
+			const triangleTiles = triangle.coords.map((coord) => sector.tiles.get(axial.key(coord))!)
 			const nbrRiverHeights = triangleTiles.reduce(
 				(nbr, tile) => nbr + (tile.riverHeight !== undefined ? 1 : 0),
 				0

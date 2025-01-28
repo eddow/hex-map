@@ -7,10 +7,11 @@ import {
 	type Object3D,
 	type RGB,
 } from 'three'
-import type { Axial } from '~/utils'
-import type { Sector, TileBase } from './land'
+import { type Axial, axial } from '~/utils'
+import type { TileBase } from './land'
 import type { LandscapeTriangle } from './landscaper'
 import type { Landscape } from './landscaper'
+import type { Sector } from './sector'
 
 interface ColorTile extends TileBase {
 	color: RGB
@@ -33,9 +34,8 @@ export class ColorLandscape implements Landscape<ColorTile> {
 		const colors = new Float32Array(triangles.length * 9)
 		let index = 0
 		for (const triangle of triangles) {
-			const { indexes } = triangle
-			for (const hexIndex of indexes) {
-				const tile = sector.tiles[hexIndex]
+			for (const coord of triangle.coords) {
+				const tile = sector.tiles.get(axial.key(coord))!
 				const position = tile.position
 				const color = tile.color
 				positions.set([position.x, position.y, position.z], index * 3)

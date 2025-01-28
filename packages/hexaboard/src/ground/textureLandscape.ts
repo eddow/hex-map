@@ -7,9 +7,9 @@ import {
 	ShaderMaterial,
 	type Texture,
 } from 'three'
-import { LCG, numbers } from '~/utils'
-import type { Sector } from './land'
+import { LCG, axial, numbers } from '~/utils'
 import type { Landscape, LandscapeTriangle } from './landscaper'
+import type { Sector } from './sector'
 import type { TerrainBase, TerrainDefinition, TerrainKey, TerrainTile } from './terrain'
 
 interface TexturePosition {
@@ -80,19 +80,23 @@ export class TextureLandscape implements Landscape<TerrainTile> {
 		)
 	}
 	createMesh(sector: Sector<TerrainTile>, triangles: LandscapeTriangle[]): Object3D {
-		const tiles = sector.tiles
-		const textureUvCache = tiles.map((tile, i) => {
-			const coords = sector.tileCoords(i)
-			const gen = LCG(this.seed, 'terrainTextures', coords.q, coords.r)
-			return {
-				alpha: gen(Math.PI * 2),
-				inTextureRadius: this.terrainDefinition.types[tile.terrain].inTextureRadius,
-				center: {
-					u: gen(),
-					v: gen(),
-				},
-			}
-		})
+		const textureUvCache = new Map(
+			sector.tiles.entries().map(([i, tile]) => {
+				const coords = sector.tileCoords(i)
+				const gen = LCG(this.seed, 'terrainTextures', coords.q, coords.r)
+				return [
+					i,
+					{
+						alpha: gen(Math.PI * 2),
+						inTextureRadius: this.terrainDefinition.types[tile.terrain].inTextureRadius,
+						center: {
+							u: gen(),
+							v: gen(),
+						},
+					},
+				]
+			})
+		)
 
 		const positions = new Float32Array(triangles.length * 3 * 3)
 		const textureIdx = new Uint8Array(triangles.length * 3 * 3)
@@ -107,15 +111,17 @@ export class TextureLandscape implements Landscape<TerrainTile> {
 
 		let index = 0
 		for (const triangle of triangles) {
-			const { indexes, side } = triangle
-			const [A, B, C] = indexes.map((index) => textureUvCache[index])
+			const { coords, side } = triangle
+			const [A, B, C] = coords.map((coord) => textureUvCache.get(axial.key(coord))!)
 			uvA.set(textureUVs(A, side, 0), index * 2)
 			uvB.set(textureUVs(B, side, 4), index * 2)
 			uvC.set(textureUVs(C, side, 2), index * 2)
 			//textureIdx.set(triangle.textureIdx, index * 3)
-			const textureIndexes = indexes.map((index) => this.texturesIndex[tiles[index].terrain])
-			for (const tileIndex of indexes) {
-				const tile = tiles[tileIndex]
+			const textureIndexes = coords.map(
+				(coord) => this.texturesIndex[sector.tiles.get(axial.key(coord))!.terrain]
+			)
+			for (const tileCoord of coords) {
+				const tile = sector.tiles.get(axial.key(tileCoord))!
 				const position = tile.position
 
 				positions.set([position.x, position.y, position.z], index * 3)

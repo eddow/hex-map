@@ -1,7 +1,8 @@
 import { Group } from 'three'
 import type { Handelable, ResourcefulTerrain } from '~/game'
 import { LCG, type RandGenerator, axial, genTilePosition } from '~/utils'
-import type { Land, LandPart, Sector } from './land'
+import type { Land, LandPart } from './land'
+import type { Sector } from './sector'
 import type { TerrainDefinition, TerrainTile } from './terrain'
 
 // Hardcoded to have 7 (center + 6 sides) places for stuff (resources, supplies, ...) roughly placed at the same place
@@ -57,10 +58,8 @@ export class Resourceful<
 
 	renderSector(sector: Sector<Tile>): void {
 		const group = new Group()
-		const tiles = sector.tiles
 		sector.add(group)
-		for (let tRef = 0; tRef < tiles.length; tRef++) {
-			const tile = tiles[tRef]
+		for (const [tRef, tile] of sector.tiles.entries()) {
 			// Resource content is generated in the `render` phase so that the terrain is completely generated for sure
 			tile.content ??=
 				tile.position.z > this.seaLevel
@@ -77,7 +76,7 @@ export class Resourceful<
 				for (let aRef = 0; aRef < tile.content.length; aRef++) {
 					const rsc = tile.content[aRef]
 					if (rsc) {
-						const pos = sector.inTile(tiles, tRef, placeInTile(aRef, gen))
+						const pos = sector.inTile(tRef, placeInTile(aRef, gen))
 						if (pos && !rsc.builtMesh) {
 							const mesh = rsc.createMesh()
 							mesh.position.copy(pos)

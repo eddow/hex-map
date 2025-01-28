@@ -1,7 +1,8 @@
 import { BufferGeometry, Float32BufferAttribute, Mesh, type Object3D, ShaderMaterial } from 'three'
-import type { Sector } from './land'
+import { axial } from '~/utils'
 import type { Landscape, LandscapeTriangle } from './landscaper'
 import type { RiverTile } from './rivers'
+import type { Sector } from './sector'
 
 /**
  * For testing purpose
@@ -16,8 +17,7 @@ export class OceanLandscape implements Landscape<RiverTile> {
 		const tileIndices = new Map<RiverTile, number>()
 		const seaLevel = this.seaLevel
 		for (const triangle of triangles) {
-			const { indexes } = triangle
-			const triangleTiles = indexes.map((tileIndex) => sector.tiles[tileIndex])
+			const triangleTiles = triangle.coords.map((coord) => sector.tiles.get(axial.key(coord))!)
 			if (
 				!triangleTiles.some((tile) => tile.position.z < seaLevel) ||
 				triangleTiles.some((tile) => tile.riverHeight !== undefined)

@@ -6,8 +6,7 @@ import type { RandGenerator } from '~/utils/numbers'
 import { assert } from './debug'
 
 export type AxialKey = string
-export type AxialIndex = number
-export type AxialRef = AxialIndex | AxialKey | Axial
+export type AxialRef = AxialKey | Axial
 
 export interface Axial {
 	q: number
@@ -43,34 +42,6 @@ export const rotations: Rotation[] = [
 ]
 
 export const hexSides = rotations.map((c) => c({ q: 1, r: 0 }))
-
-/**
- * Returns the axial coordinates of the nth hexagonal tile
- * @deprecated use `ArialRef` and `axial.coords`
- */
-export function axialAt(hexIndex: number): Axial {
-	if (hexIndex === 0) return { q: 0, r: 0 }
-	const radius = Math.floor((3 + Math.sqrt(-3 + 12 * hexIndex)) / 6)
-	const previous = 3 * radius * (radius - 1) + 1
-	const sidePos = hexIndex - previous
-	const side = Math.floor(sidePos / radius)
-	return axial.linear([radius, hexSides[side]], [sidePos % radius, hexSides[(side + 2) % 6]])
-}
-
-/**
- * Gets the hexIndex from the position
- * @deprecated use `ArialRef` and `axial.index`
- */
-export function indexAt({ q, r }: Axial): number {
-	if (q === 0 && r === 0) return 0
-	const s = -q - r
-	const ring = Math.max(Math.abs(q), Math.abs(r), Math.abs(s))
-	const side = [q === ring, r === -ring, s === ring, q === -ring, r === ring, s === -ring].indexOf(
-		true
-	)
-	const offset = [-r, s, -q, r, -s, q][side]
-	return 3 * ring * (ring - 1) + side * ring + offset + 1
-}
 
 /**
  * Retrieve the number of hexagon tiles in a complete hexagonal board of size radius
@@ -163,18 +134,7 @@ export const axial = {
 			const [q, r] = aRef.split(',')
 			return { q: Number(q), r: Number(r) }
 		}
-		return typeof aRef === 'number' ? axialAt(aRef) : aRef
-	},
-	/**
-	 * Get the axial-ref as an index
-	 * @returns number
-	 */
-	index(aRef: AxialRef) {
-		if (typeof aRef === 'string') {
-			const [q, r] = aRef.split(',')
-			return indexAt({ q: Number(q), r: Number(r) })
-		}
-		return typeof aRef === 'number' ? aRef : indexAt(aRef)
+		return aRef
 	},
 	/**
 	 * Get the axial-ref as a key
@@ -182,7 +142,7 @@ export const axial = {
 	 */
 	key(aRef: AxialRef) {
 		if (typeof aRef === 'string') return aRef
-		const { q, r } = typeof aRef === 'number' ? axialAt(aRef) : aRef
+		const { q, r } = aRef
 		return `${q},${r}`
 	},
 	/**
@@ -251,4 +211,41 @@ export const axial = {
 			axial.linear(BRef, hexSides[(side + 5) % 6]),
 		]
 	},
+	*enum(maxAxialDistance: number) {
+		for (let q = -maxAxialDistance; q <= maxAxialDistance; q++) {
+			for (
+				let r = Math.max(-maxAxialDistance, -q - maxAxialDistance);
+				r <= Math.min(maxAxialDistance, -q + maxAxialDistance);
+				r++
+			)
+				yield { q, r }
+		}
+	},
+
+	toString(aRef: AxialRef) {
+		const { q, r } = axial.coords(aRef)
+		return `<${q} ${r}>`
+	},
+}
+function cantorPair(a: number, b: number) {
+	// Convert to positive indices
+	const aPositive = a >= 0 ? 2 * a : -2 * a - 1
+	const bPositive = b >= 0 ? 2 * b : -2 * b - 1
+
+	// Apply Cantor pairing function
+	const sum = aPositive + bPositive
+	return (sum * (sum + 1)) / 2 + bPositive
+}
+
+function cantorUnpair(z: number) {
+	const w = Math.floor((Math.sqrt(8 * z + 1) - 1) / 2)
+	const t = (w * (w + 1)) / 2
+	const bPositive = z - t
+	const aPositive = w - bPositive
+
+	// Convert back to integers
+	const a = aPositive % 2 === 0 ? aPositive / 2 : -(aPositive + 1) / 2
+	const b = bPositive % 2 === 0 ? bPositive / 2 : -(bPositive + 1) / 2
+
+	return [a, b]
 }

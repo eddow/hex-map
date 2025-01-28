@@ -257,7 +257,7 @@ export class MouseControl {
 				this.hovered = this.lockedGV
 				this.evolve({ type: 'unlock', target: this.lockedGV })
 				this.lockedGV = null
-				this.evolve(this.lastCursorEvolution!)
+				if (this.lastCursorEvolution) this.evolve(this.lastCursorEvolution)
 			} else {
 				this.hovered = undefined
 				this.evolve({ type: 'lock', target: shouldLock })
