@@ -27,7 +27,7 @@ type MapTuple<T extends any[], U> = {
 export type GameXLand = Land<ContentTile>
 
 export function createGame(seed: number) {
-	const land = new Land<ContentTile>(5, 20)
+	const land = new Land<ContentTile>(4, 20)
 	new PerlinHeight(land, terrainHeight, seed, 1000)
 	new HeightTerrain(land, terrainHeight / 10, seed, terrains, 1000)
 	new Landscaper(

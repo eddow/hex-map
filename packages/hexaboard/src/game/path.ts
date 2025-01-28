@@ -61,7 +61,7 @@ export function costingPath(fromTile: AxialRef, cost: Cost, isFound: IsFound) {
 	const path: AxialKey[] = [found.tile]
 	let origin = origins[found.tile]
 	while (origin.key !== null) {
-		path.unshift(origin.key)
+		path.push(origin.key)
 		origin = origins[origin.key]
 	}
 	return path

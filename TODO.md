@@ -1,13 +1,10 @@
 # TODO
 
 - network/server management?
-- rivers & better terrains
+- .better terrains
 - https://threejs.org/docs/#api/en/objects/LOD , even for sectors?
-- Change key system?
 
 ## Big optimizations
-
-- - auto-update-world-matrix
 
 ## Grok Formulas
 

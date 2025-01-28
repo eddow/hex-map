@@ -16,9 +16,6 @@
 		"verbatimModuleSyntax": true,
 		"paths": {
 			"~/*": ["./src/*"]
-		},
-		"types": [
-			"vite-plugin-glsl/ext"
-		]
+		}
 	}
 }

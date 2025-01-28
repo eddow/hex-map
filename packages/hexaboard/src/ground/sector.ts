@@ -43,7 +43,6 @@ export class Sector<Tile extends TileBase> {
 		return pos.add(next1dir).add(next2dir)
 	}
 	freeTiles() {
-		const { center } = this
 		const { tiles } = this.land
 		const removeTiles = (bunch: Iterable<AxialKey>) => {
 			for (const tileKey of bunch) {

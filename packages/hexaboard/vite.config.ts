@@ -1,7 +1,6 @@
 import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
-import glsl from 'vite-plugin-glsl'
 
 // Transform decorators but let the remaining untouched
 const target = 'es2023'
@@ -32,7 +31,7 @@ export default defineConfig({
 		},
 	},
 	// @ts-expect-error: ...() is not a `PluginOption` but a `vite.Plugin`
-	plugins: [dts(), glsl()],
+	plugins: [dts()],
 	resolve: {
 		alias: {
 			'~': resolve(__dirname, 'src'),

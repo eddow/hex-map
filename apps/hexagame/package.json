@@ -35,7 +35,7 @@
 	},
 	"dependencies": {
 		"dockview-core": "^3.0.2",
-		"dockview-svelte": "*",
+		"dockview-svelte": "^1.0.0",
 		"hexaboard": "*",
 		"three": "^0.172.0"
 	}

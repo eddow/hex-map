@@ -35,7 +35,7 @@ const config = {
 			// TODO make it work from built library
 			hexaboard: '../../packages/hexaboard/src/main.ts',
 			'~/*': '../../packages/hexaboard/src/*',
-			'dockview-svelte': '../../packages/dockview-svelte/src/lib/index.ts',
+			//'dockview-svelte': '../../packages/dockview-svelte/src/lib/index.ts',
 			$widgets: 'src/widgets',
 		},
 	},

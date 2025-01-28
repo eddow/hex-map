@@ -26,7 +26,7 @@ export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
 		super()
 	}
 	get tile() {
-		return this.land.getTile(this.hKey)
+		return this.land.tile(this.hKey)
 	}
 	equals(other: TileHandle): boolean {
 		return this.hKey === other.hKey

@@ -7,7 +7,7 @@
 
 	let { game: gameKey, hKey }: { game: string; hKey: AxialKey } = $props()
 	let land = $derived(games[gameKey].land) as GameXLand
-	let tile = $derived(land.getTile(hKey))
+	let tile = $derived(land.tile(hKey))
 	let terrainTypeName = $derived(tile.terrain)
 	function goTo() {
 		const camera = games[gameKey].views.values().next().value?.camera

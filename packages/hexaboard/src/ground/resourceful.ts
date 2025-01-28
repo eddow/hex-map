@@ -1,6 +1,6 @@
 import { Group } from 'three'
 import type { Handelable, ResourcefulTerrain } from '~/game'
-import { LCG, type RandGenerator, axial, genTilePosition } from '~/utils'
+import { LCG, type RandGenerator, genTilePosition } from '~/utils'
 import type { Land, LandPart } from './land'
 import type { Sector } from './sector'
 import type { TerrainDefinition, TerrainTile } from './terrain'
@@ -71,8 +71,7 @@ export class Resourceful<
 						)
 					: []
 			if (tile.content.some((r) => r)) {
-				const worldCoord = axial.linear(axial.coord(tRef), sector.center)
-				const gen = LCG(this.seed, 'placeInTile', worldCoord.q, worldCoord.r)
+				const gen = LCG(this.seed, 'placeInTile', tRef)
 				for (let aRef = 0; aRef < tile.content.length; aRef++) {
 					const rsc = tile.content[aRef]
 					if (rsc) {

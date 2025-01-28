@@ -1,4 +1,4 @@
-import { Group, type PerspectiveCamera, type Vector3Like } from 'three'
+import { Group, type PerspectiveCamera, type Vector2Like, type Vector3Like } from 'three'
 import {
 	assert,
 	type Axial,
@@ -219,13 +219,6 @@ export class Land<Tile extends TileBase = TileBase> {
 		logPerformances()
 	}
 
-	getTile(aRef: AxialRef): Tile {
-		const key = axial.key(aRef)
-		const renderedTile = this.tiles.get(key)
-		if (renderedTile) return renderedTile
-		return this.generateOneTile(aRef)
-	}
-
 	temporaryTiles = new Map<AxialKey, Tile>()
 	generateOneTile(aRef: AxialRef) {
 		const key = axial.key(aRef)
@@ -252,7 +245,7 @@ export class Land<Tile extends TileBase = TileBase> {
 	}
 
 	tileUpdater(sectors: Sector<Tile>[], aRef: AxialRef, modifications?: Partial<Tile>) {
-		const tile = this.getTile(aRef)
+		const tile = this.tile(aRef)
 		if (modifications) Object.assign(tile, modifications)
 		for (const sector of sectors)
 			if (!tile.sectors.includes(sector)) {
@@ -271,4 +264,18 @@ export class Land<Tile extends TileBase = TileBase> {
 		for (const [key, tile] of this.temporaryTiles) if (!tile.sectors.length) this.tiles.delete(key)
 		this.temporaryTiles.clear()
 	}
+	// #region Tile access
+
+	tile(aRef: AxialRef): Tile {
+		const key = axial.key(aRef)
+		const renderedTile = this.tiles.get(key)
+		if (renderedTile) return renderedTile
+		return this.generateOneTile(aRef)
+	}
+
+	tileAt(vec2: Vector2Like) {
+		return fromCartesian(vec2, this.tileSize)
+	}
+
+	// #endregion
 }

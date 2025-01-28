@@ -67,39 +67,39 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 				(from, to) => {
 					const toCoord = axial.coord(to)
 					if (axial.distance(toCoord, source) > this.maxAxialDistance) return Number.NaN
-					const [tFrom, tTo] = [this.land.getTile(from), this.land.getTile(to)]
+					const [tFrom, tTo] = [this.land.tile(from), this.land.tile(to)]
 					// 2 facts are costly:
 					return (
 						// the fact to get upward
 						Math.max(0, Z(tTo) - Z(tFrom)) ** 2 +
 						// The fact to not take the strongest down slope
 						Z(tTo) -
-						Math.min(...neighbors(from).map((p) => Z(this.land.getTile(p))))
+						Math.min(...neighbors(from).map((p) => Z(this.land.tile(p))))
 					)
 				},
 				(aRef) => {
-					const tile = this.land.getTile(aRef)
+					const tile = this.land.tile(aRef)
 					return Z(tile) < this.seaLevel //|| tile.terrain === this.options.riverTerrain
 				}
 			)
-			const sourceSectors = this.land.getTile(source).sectors as Sector<Tile>[]
+			const sourceSectors = this.land.tile(source).sectors as Sector<Tile>[]
 
-			if (path && path.length > 3) {
-				// Remove the end of river who enters too much in the sea
-				while (path.length > 0) {
-					const last = path[path.length - 1]
-					const oceanNeighbors = neighbors(last).reduce(
-						(nbr, tile) => nbr + (this.land.getTile(tile).position.z < this.seaLevel ? 1 : 0),
-						0
-					)
-					if (oceanNeighbors < 4) break
-					path.pop()
-				}
-				path.shift() //source
+			// Remove the end of river who enters too much in the sea
+			while (path && path.length > 0) {
+				const last = path[0]
+				const oceanNeighbors = neighbors(last).reduce(
+					(nbr, tile) => nbr + (this.land.tile(tile).position.z < this.seaLevel ? 1 : 0),
+					0
+				)
+				if (oceanNeighbors < 4) break
+				path.shift()
+			}
+			if (path && path.length > 4) {
+				path.pop() //source
 				// Last tile in the path
-				const ultimatePosition = this.land.getTile(path[path.length - 1]).position
+				const ultimatePosition = this.land.tile(path[0]).position
 				// Last processed tile
-				let lastTile = this.land.getTile(source)
+				let lastTile = this.land.tile(source)
 				let lastTileKey = axial.key(source)
 				updateTile([], source, {
 					terrain: this.options.riverTerrain,
@@ -109,16 +109,16 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 				//path.pop()
 				const bank = new Set<AxialKey>()
 				while (path.length > 0) {
-					const tileKey = path.shift()!
-					const tile = this.land.getTile(tileKey)
+					const tileKey = path.pop()!
+					const tile = this.land.tile(tileKey)
 					if (tile.originalZ === undefined) tile.originalZ = tile.position.z
 					const tileNeighborsKeys = neighbors(tileKey)
 						.map((c) => axial.key(c))
-						.filter((p) => ![path[0], lastTileKey].includes(p))
+						.filter((p) => ![path[path.length - 1], lastTileKey].includes(p))
 
 					for (const neighborKey of tileNeighborsKeys) bank.add(neighborKey)
 					const minNeighborZ = Math.min(
-						...tileNeighborsKeys.map((key) => this.land.getTile(key).position.z)
+						...tileNeighborsKeys.map((key) => this.land.tile(key).position.z)
 					)
 
 					// enforce minimum slope
@@ -147,9 +147,9 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 					lastTileKey = tileKey
 				}
 				for (const key of bank) {
-					const tile = this.land.getTile(key)
+					const tile = this.land.tile(key)
 					const river = neighbors(key)
-						.map((p) => this.land.getTile(p))
+						.map((p) => this.land.tile(p))
 						.filter((t) => t.terrain === this.options.riverTerrain)
 						.map((t) => t.riverHeight!)
 					updateTile(sourceSectors, key, {

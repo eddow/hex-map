@@ -27,8 +27,11 @@ export class TileCursor extends GameEntity {
 		}
 	}
 	progress(dt: number): void {
-		const rotation = this.o3d.rotation
-		rotation.x += dt
-		rotation.y += dt
+		if (this.shown) {
+			const rotation = this.o3d.rotation
+			rotation.x += dt
+			rotation.y += dt
+			this.o3d.updateMatrixWorld()
+		}
 	}
 }
