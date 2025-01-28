@@ -11,7 +11,7 @@ import {
 	hexTiles,
 } from '~/utils'
 import { logPerformances, resetPerformances } from '~/utils/decorators'
-import { DMap } from '~/utils/mapDegug'
+import { DMap } from '~/utils/mapDebug'
 import { Sector } from './sector'
 
 export interface TileBase {

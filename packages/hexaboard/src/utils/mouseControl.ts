@@ -146,6 +146,10 @@ export class MouseControl {
 	private dragStartHandle?: MouseHandle
 	private lastEvolutions: MouseEvolution[] = []
 
+	constructor(private clampCamZ: { min: number; max: number }) {
+		this.scene.matrixWorldAutoUpdate = false
+	}
+
 	get lastEvolution(): MouseEvolution | undefined {
 		return this.lastEvolutions[this.lastEvolutions.length - 1]
 	}
@@ -191,8 +195,6 @@ export class MouseControl {
 	}
 
 	// #region Event listeners book-keeping
-
-	constructor(private clampCamZ: { min: number; max: number }) {}
 	listenTo(gameView: GameView) {
 		const canvas = gameView.canvas
 		const events = {

@@ -2,7 +2,6 @@ import { InstancedMesh, type Mesh, Object3D, Quaternion, type Scene } from 'thre
 import { assert, debugInformation } from '~/utils'
 
 const generalMaxCount = 15000
-//TODO: .matrixWorldAutoUpdate = false
 function rootObj3d(obj3d: Object3D) {
 	while (obj3d.parent) obj3d = obj3d.parent
 	return obj3d
@@ -81,6 +80,10 @@ export class MeshCopy {
 	constructor(object3d: Object3D, maxCount: number = generalMaxCount) {
 		const clone = object3d.clone()
 		this.object3d = obj3dToInstancedMeshes(clone, maxCount) || clone
+		this.object3d.addEventListener('added', () => {
+			this.object3d.updateMatrix()
+			this.object3d.updateMatrixWorld(true)
+		})
 	}
 	application(scene: Scene) {
 		assert(this.applications.has(scene), 'Scene not registered')
@@ -126,8 +129,6 @@ export class MeshCopy {
 	}
 }
 
-let [added, removed] = [0, 0]
-
 export class MeshPaste extends Object3D {
 	private scene?: Scene
 	private from?: MeshCopy
@@ -136,7 +137,6 @@ export class MeshPaste extends Object3D {
 		const bindCopy = (copy: MeshCopy) => {
 			this.from = copy
 			this.scene = rootScene(this)
-			added++
 			if (this.scene) copy.register(this, this.scene)
 		}
 		if (will instanceof MeshCopy) bindCopy(will)
@@ -158,9 +158,6 @@ export class MeshPaste extends Object3D {
 		const scene = (root as Scene).isScene ? (root as Scene) : undefined
 		const copy = this.from
 		if (copy && this.scene !== scene) {
-			if (!this.scene && scene) added++
-			if (this.scene && !scene) removed++
-			//console.log('added', added, 'removed', removed)
 			if (this.scene) copy.unregister(this, this.scene)
 			this.scene = scene
 			if (scene) copy.register(this, scene)

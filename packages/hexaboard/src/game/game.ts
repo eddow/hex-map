@@ -30,11 +30,12 @@ export class Game extends MouseControl {
 	) {
 		super(clampCamZ)
 		this._land = land
-		this.scene.add(this.lights, land.group, this.entitiesGroup)
 		this.lights.add(new AmbientLight(0x404040))
 		const light = new DirectionalLight(0xffffff, 1)
 		light.position.set(10, 10, 10)
 		this.lights.add(light)
+		this.lights.updateMatrixWorld(true)
+		this.scene.add(this.lights, land.group, this.entitiesGroup)
 	}
 
 	// #region Events
