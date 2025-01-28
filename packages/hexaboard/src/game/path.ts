@@ -25,6 +25,7 @@ export function costingPath(fromTile: AxialRef, cost: Cost, isFound: IsFound) {
 	const fromKey = axial.key(fromTile)
 	if (isFound(fromKey)) return [fromKey]
 	const toStudy: HexCost[] = [{ key: fromKey, cost: 0 }]
+	// TODO: origins -> Map?
 	const origins: { [tile: string]: HexCost<string | null> } = {
 		[fromKey]: { key: null, cost: 0 },
 	}

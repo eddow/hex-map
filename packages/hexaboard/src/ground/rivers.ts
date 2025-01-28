@@ -5,6 +5,7 @@ import type { Land, Sector, TileUpdater } from './land'
 import type { Landscape, LandscapeTriangle } from './landscaper'
 import type { TerrainKey, TerrainTile } from './terrain'
 
+// TODO: avoid ending in a puddle
 type Sources = Axial[]
 
 export interface RiverTile extends TerrainTile {
@@ -81,6 +82,7 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 				}
 			)
 			const sourceSectors = this.land.getTile(source).sectors as Sector<Tile>[]
+			// TODO: path.pop when penult has enough ocean neighbors
 			if (path && path.length > 3) {
 				path.shift() //source
 				// Last tile in the path
@@ -172,7 +174,7 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 					tileIndices.set(tile, tileVertex)
 					const { x, y, z } = tile.position
 					const riverHeight = tile.riverHeight ?? seaLevel
-					// TODO: 20?
+					// TODO: 20? 40?
 					const opacity = z < seaLevel ? (seaLevel - z) / (seaLevel * 2) : (riverHeight - z) / 40
 					positions.push(x, y, riverHeight)
 					opacities.push(opacity)

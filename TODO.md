@@ -3,7 +3,6 @@
 - network/server management?
 - rivers & better terrains
 - https://threejs.org/docs/#api/en/objects/LOD , even for sectors?
-- BatchedMesh for sectors - but: little optimization & perhaps raycast cannot recognize instances
 
 ## Big optimizations
 
@@ -44,9 +43,3 @@ function calculateWalkingTimeWithSlope(H: number, T: number, dH: number): number
     return totalTime; // total time in minutes
 }
 ```
-
-## Rivers algorithms
-
-All points have 1/x chances of being a source - rely on "wide enough" generation not to see rivers appearing: rivers have a sectors boundary (cost -> NaN) for spreads of too many sectors
-
-Here: make "rivers" the first renderer

@@ -2,7 +2,7 @@ import { InstancedMesh, type Mesh, Object3D, Quaternion, type Scene } from 'thre
 import { assert, debugInformation } from '~/utils'
 
 const generalMaxCount = 15000
-
+//TODO: .matrixWorldAutoUpdate = false
 function rootObj3d(obj3d: Object3D) {
 	while (obj3d.parent) obj3d = obj3d.parent
 	return obj3d

@@ -258,7 +258,7 @@ export class Land<Tile extends TileBase = TileBase> {
 					seen = true
 					break
 				}
-			//if (seen) continue
+			if (seen) continue
 			assert(deletedSector.group, 'Removed group should be generated')
 			this.group.remove(deletedSector.group)
 			this.sectors.delete(key)
