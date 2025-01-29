@@ -33,9 +33,7 @@ const config = {
 		}),*/
 		alias: {
 			// TODO make it work from built library
-			hexaboard: '../../packages/hexaboard/src/main.ts',
-			'~/*': '../../packages/hexaboard/src/*',
-			//'dockview-svelte': '../../packages/dockview-svelte/src/lib/index.ts',
+			//hexaboard: '../../packages/hexaboard/dist/hexaboard.js',
 			$widgets: 'src/widgets',
 		},
 	},

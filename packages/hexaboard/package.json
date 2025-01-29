@@ -1,6 +1,6 @@
 {
 	"name": "hexaboard",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"description": "A minimal 3D hexagonal game board using Three.js",
 	"main": "dist/index.mjs",
 	"files": [
@@ -12,13 +12,12 @@
 		"**/*.css"
 	],
 	"type": "module",
-	"types": "dist/src/",
-	"module": "dist/hexaboard.mjs",
+	"types": "dist/src/main.d.ts",
+	"module": "dist/hexaboard.js",
 	"exports": {
 		".": {
-			"types": "./dist/src/",
-			"require": "./dist/hexaboard.js",
-			"import": "./dist/hexaboard.mjs"
+			"types": "./dist/src/main.d.ts",
+			"import": "./dist/hexaboard.js"
 		}
 	},
 	"scripts": {

@@ -1,6 +1,9 @@
 <script lang="ts">
+	//https://uxwing.com/?s=Mouse+left+
+	//https://boxy-svg.com/
 	import DarkMode from '$lib/dark-mode.svelte'
 	import { configuration, dockview } from '$lib/globals.svelte'
+	import MouseButtons from '$lib/mouseButtons.svelte'
 	import { Alert, Button } from 'flowbite-svelte'
 	let darkMode = $state(configuration.darkMode)
 
@@ -19,3 +22,5 @@
 	<p>Both left+right down = pan</p>
 	<a href="https://github.com/eddow/hex-map" target="_blank">https://github.com/eddow/hex-map</a>
 </Alert>
+
+<MouseButtons />

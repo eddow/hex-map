@@ -100,7 +100,6 @@ export class MeshCopy {
 			scene.add(object3d)
 		}
 		const application = this.application(scene)
-		const index = application.pastes.length
 		application.pastes.push(meshPaste)
 		recount(application)
 		meshPaste.updateMatrixWorld(true)

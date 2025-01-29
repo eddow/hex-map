@@ -27,6 +27,8 @@ export enum MouseButtons {
 	Left = 1,
 	Right = 2,
 	Middle = 4,
+	th4 = 8,
+	th5 = 16,
 }
 const modKeys = ['shift', 'alt', 'ctrl'] as const
 export type ModKey = (typeof modKeys)[number]
@@ -383,6 +385,7 @@ export class MouseControl {
 		//})
 	}
 	private mouseDown(event: MouseEvent) {
+		event.preventDefault()
 		this.dragStartHandle = undefined
 		if (this.reLock(event)) this.lastButtonDown = undefined
 		else {
@@ -398,6 +401,7 @@ export class MouseControl {
 	}
 
 	private mouseUp(event: MouseEvent) {
+		event.preventDefault()
 		if (event.buttons === 0 && this.lastButtonDown?.button === event.button)
 			this.evolve({
 				type: 'click',

@@ -7,6 +7,7 @@ import {
 	MouseButton,
 	type MouseButtonEvolution,
 	type MouseHoverEvolution,
+	OceanLandscape,
 	PerlinHeight,
 	Resourceful,
 	Rivers,
@@ -17,7 +18,6 @@ import {
 	icosahedron,
 } from 'hexaboard'
 import type { Object3D } from 'three'
-import { OceanLandscape } from '~/ground/oceanLandscape'
 import { debugInfo, dockview, games } from './globals.svelte'
 import terrains, { seaLevel, terrainHeight } from './world/terrain'
 type MapTuple<T extends any[], U> = {
