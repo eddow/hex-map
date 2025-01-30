@@ -11,6 +11,7 @@ import {
 	OceanLandscape,
 	PerlinHeight,
 	Resourceful,
+	type RiverTile,
 	Rivers,
 	type RoadTile,
 	TextureLandscape,
@@ -23,21 +24,25 @@ import type { Object3D } from 'three'
 import { debugInfo, dockview, games } from './globals.svelte'
 import { roadTypes, seaLevel, terrainHeight, terrains } from './world/textures'
 
-export type GameXTile = ContentTile & RoadTile
+export type GameXTile = ContentTile & RoadTile & RiverTile
 export type GameXLand = Land<GameXTile>
 
 export function createGame(seed: number) {
 	const land = new Land<GameXTile>(4, 20)
-	new PerlinHeight(land, terrainHeight, seed, 1000)
-	new HeightTerrain(land, terrainHeight / 10, seed, terrains, 1000)
-	new Landscaper<GameXTile>(
-		land,
-		new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),
-		new TextureLandscape<GameXTile>(terrains, roadTypes, seed),
-		new ColorRoadGrid<GameXTile>(roadTypes),
-		new OceanLandscape(seaLevel)
+	const landscape = new TextureLandscape<GameXTile>(terrains, roadTypes, seed)
+	land.addPart(
+		new PerlinHeight<GameXTile>(terrainHeight, seed, 1000),
+		new HeightTerrain<GameXTile>(terrainHeight / 10, seed, terrains, 1000),
+
+		new Landscaper<GameXTile>(
+			land.sectorRadius,
+			new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),
+			landscape,
+			new ColorRoadGrid<GameXTile>(roadTypes),
+			new OceanLandscape(seaLevel)
+		),
+		new Resourceful(terrains, seed, seaLevel)
 	)
-	new Resourceful(land, terrains, seed, seaLevel)
 
 	const game = new Game(land, { clampCamZ: { min: 150, max: 700 } })
 
@@ -55,8 +60,8 @@ export function createGame(seed: number) {
 		return tileSpec(aRef).center
 	}*/
 	let pathTube: Object3D | undefined
-	game.onMouse('hover', (ev: MouseHoverEvolution) => {
-		if (ev.handle instanceof TileHandle) {
+	landscape.on({
+		'mouse:hover': (ev: MouseHoverEvolution<TileHandle>) => {
 			cursor.tile = ev.handle
 
 			if (pathTube) {
@@ -90,19 +95,21 @@ export function createGame(seed: number) {
 				if (!(e instanceof SectorNotGeneratedError)) throw e
 			}*/
 			//}
-			debugInfo.axial = axial.coord(cursor.tile?.hKey)
-			debugInfo.key = axial.key(cursor.tile?.hKey)
+			debugInfo.axial = cursor.tile?.point
 			const tile = ev.handle.tile
 			debugInfo.tilePos = tile.position
-			debugInfo.riverHeight = tile.riverHeight
-		} else {
-			debugInfo.key = debugInfo.tilePos = debugInfo.tile = 'none'
+			debugInfo.riverHeight = (tile as GameXTile).riverHeight
+		},
+		'mouse:leave': (ev: MouseHoverEvolution<TileHandle>) => {
 			cursor.tile = undefined
-		}
+			debugInfo.axial = undefined
+			debugInfo.tilePos = undefined
+			debugInfo.riverHeight = undefined
+		},
 	})
-	game.onMouse('click', (ev: MouseButtonEvolution) => {
+	game.on('mouse:click', (ev: MouseButtonEvolution) => {
 		if (ev.handle instanceof TileHandle) {
-			const hKey = ev.handle?.hKey
+			const hKey = ev.handle?.point.key
 			const game = ev.handle?.game
 			if (hKey)
 				switch (ev.button) {

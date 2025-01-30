@@ -9,7 +9,7 @@ import {
 	WebGLRenderer,
 } from 'three'
 import type { Land } from '~/ground/land'
-import { MouseControl, type MouseEvolution } from '~/utils/mouseControl'
+import { MouseControl, type MouseEvolution } from '~/mouse'
 
 export type MouseEvolutionEvent<Evolution extends MouseEvolution = MouseEvolution> = (
 	evolution: Evolution
@@ -39,19 +39,6 @@ export class Game extends MouseControl {
 		this.scene.add(this.lights, land.group, this.entitiesGroup)
 	}
 
-	// #region Events
-
-	private readonly mouseEvents: Record<string, Set<MouseEvolutionEvent>> = {}
-	onMouse<Evolution extends { type: Evolution['type'] } & MouseEvolution>(
-		type: Evolution['type'],
-		evolution: MouseEvolutionEvent<Evolution>
-	) {
-		this.mouseEvents[type as string] ??= new Set()
-		this.mouseEvents[type as string].add(evolution as MouseEvolutionEvent)
-		return () => this.mouseEvents[type as string]?.delete(evolution as MouseEvolutionEvent)
-	}
-
-	// #endregion
 	// #region Game entities
 
 	private _entities = new Set<GameEntity>()
@@ -74,10 +61,7 @@ export class Game extends MouseControl {
 	animate = () => {
 		if (!this.clock.running) return
 		const dt = this.clock.getDelta()
-		for (const evolution of this.evolutions()) {
-			const listeners = this.mouseEvents[evolution.type]
-			if (listeners) for (const listener of listeners) listener(evolution)
-		}
+		this.raiseEvents()
 		this.updateViews()
 		this.progress(dt)
 		for (const view of this.views.values()) view.render()

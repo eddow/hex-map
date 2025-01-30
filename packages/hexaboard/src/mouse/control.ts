@@ -1,77 +1,30 @@
-import {
-	type Intersection,
-	type Object3D,
-	type Object3DEventMap,
-	Raycaster,
-	Scene,
-	Vector2,
-	Vector3,
-} from 'three'
+import { Raycaster, Scene, Vector2, Vector3 } from 'three'
 import type { GameView } from '~/game/game'
+import { Eventful } from '../utils/events'
 import { LockSemaphore } from './lockSemaphore'
-
-export interface MouseReactive<Handle = MouseHandle> {
-	mouseHandle(sender: MouseControl, intersection: Intersection<Object3D<Object3DEventMap>>): Handle
-}
-
-export abstract class MouseHandle {
-	abstract equals(other: MouseHandle): boolean
-}
-
-export enum MouseButton {
-	Left = 0,
-	Middle = 1,
-	Right = 2,
-}
-export enum MouseButtons {
-	Left = 1,
-	Right = 2,
-	Middle = 4,
-	th4 = 8,
-	th5 = 16,
-}
-const modKeys = ['shift', 'alt', 'ctrl'] as const
-export type ModKey = (typeof modKeys)[number]
-export type ModKeyCombination = Record<ModKey, boolean>
-export const modKeysComb: Record<string, ModKeyCombination> = {
-	none: { alt: false, ctrl: false, shift: false },
-	alt: { alt: true, ctrl: false, shift: false },
-	ctrl: { alt: false, ctrl: true, shift: false },
-	shift: { alt: false, ctrl: false, shift: true },
-	altShift: { alt: true, ctrl: false, shift: true },
-	altCtrl: { alt: true, ctrl: true, shift: false },
-	shiftCtrl: { alt: false, ctrl: true, shift: true },
-	altShiftCtrl: { alt: true, ctrl: true, shift: true },
-}
-
-export type ButtonsCombination = {
-	buttons: MouseButtons
-	modifiers: ModKeyCombination
-}
-export type WheelCombination = {
-	axis: 'x' | 'y'
-	modifiers: ModKeyCombination
-}
-export interface MouseLockButtons {
-	pan?: ButtonsCombination
-	turn?: ButtonsCombination
-	lookAt?: ButtonsCombination
-}
-
-export interface MouseConfig {
-	lockButtons: MouseLockButtons
-	zoomWheel: WheelCombination
-	zoomSpeed: number
-}
-export const mouseConfig: MouseConfig = {
-	lockButtons: {
-		pan: { buttons: MouseButtons.Right | MouseButtons.Left, modifiers: modKeysComb.none },
-		turn: { buttons: MouseButtons.Middle, modifiers: modKeysComb.none },
-		//lookAt: { buttons: MouseButtons.Right, modifiers: modKeysComb.none },
-	},
-	zoomWheel: { axis: 'y', modifiers: modKeysComb.none },
-	zoomSpeed: 1.2,
-}
+import {
+	type ButtonsCombination,
+	type HandledMouseEvents,
+	type ModKeyCombination,
+	type MouseButtonEvolution,
+	type MouseButtons,
+	type MouseDragEvolution,
+	type MouseDragHandle,
+	type MouseEvents,
+	type MouseEvolution,
+	type MouseHandle,
+	type MouseHoverEvolution,
+	type MouseLockButtons,
+	type MouseMoveEvolution,
+	type MousePosition,
+	type MouseReactive,
+	type MouseWheelEvolution,
+	type MouseZoomEvolution,
+	type PositionedMouseEvolution,
+	modKeys,
+	modKeysComb,
+	mouseConfig,
+} from './types'
 
 function isModKeyCombination(e: MouseEvent, c: ModKeyCombination) {
 	return modKeys.every((mod) => e[`${mod}Key` as keyof MouseEvent] === c[mod])
@@ -85,78 +38,30 @@ function isCombination(e: MouseEvent, c: ButtonsCombination) {
 	return e.buttons === c.buttons && isModKeyCombination(e, c.modifiers)
 }
 
-// #region Evolutions
-
-export interface MouseEvolution {
-	type: string
-}
-
-interface MousePosition {
-	x: number
-	y: number
-}
-
-interface PositionedMouseEvolution extends MouseEvolution {
-	target: GameView
-	position: MousePosition | null
-	handle?: MouseHandle
-}
-
-interface MouseControlledEvolution extends PositionedMouseEvolution {
-	modKeyCombination: ModKeyCombination
-}
-
-export interface MouseButtonEvolution extends MouseControlledEvolution {
-	type: 'click' | 'up' | 'down' | 'dragStart'
-	button: MouseButton
-}
-
-export interface MouseDragEvolution extends MouseControlledEvolution {
-	type: 'dragEnd' | 'dragOver'
-	dragStartHandle: MouseHandle
-	button: MouseButton
-}
-
-export interface MouseEnterEvolution extends MouseEvolution {
-	type: 'enter'
-	target: GameView
-}
-
-export interface MouseMoveEvolution extends MouseControlledEvolution {
-	type: 'move'
-	buttons: MouseButtons
-}
-
-export interface MouseHoverEvolution extends MouseEvolution {
-	type: 'hover'
-	target: GameView
-	handle: MouseHandle
-}
-
-// #endregion
-
 const mouseListeners: unique symbol = Symbol('Mouse events')
 interface MouseEventsView extends GameView {
 	[mouseListeners]: Record<string, (event: any) => void>
 }
-export class MouseControl {
+
+export class MouseControl extends Eventful<MouseEvents> {
 	public views = new Map<HTMLCanvasElement, GameView>()
 	public readonly scene = new Scene()
 	private hovered?: GameView
 	private hoveredHandle?: MouseHandle
-	private lastButtonDown?: MouseButtonEvolution
-	private dragStartHandle?: MouseHandle
+	private lastButtonDown?: MouseButtonEvolution<MouseHandle | undefined>
+	private dragStartHandle?: MouseDragHandle
 	private lastEvolutions: MouseEvolution[] = []
 
 	constructor(private clampCamZ: { min: number; max: number }) {
+		super()
 		this.scene.matrixWorldAutoUpdate = false
 	}
 
 	get lastEvolution(): MouseEvolution | undefined {
 		return this.lastEvolutions[this.lastEvolutions.length - 1]
 	}
-	evolve<Evolution extends MouseEvolution>(evolution: Evolution) {
-		this.lastEvolutions.push(evolution)
+	evolve<Evolution extends MouseEvolution>(evolution: Omit<Evolution, 'gameView'>) {
+		this.lastEvolutions.push({ ...evolution, gameView: this.hovered ?? this.lockedGV! })
 	}
 
 	*evolutions() {
@@ -167,7 +72,7 @@ export class MouseControl {
 		const rv = this.lastEvolutions
 		this.lastEvolutions = []
 		for (const e of rv) {
-			const eP = e as PositionedMouseEvolution
+			const eP = e as PositionedMouseEvolution<MouseHandle | undefined>
 			if ('position' in eP) {
 				if (lastPosition?.x === eP.position?.x && lastPosition?.y === eP.position?.y)
 					eP.handle = lastHandle
@@ -181,18 +86,41 @@ export class MouseControl {
 			}
 			yield e
 			// These evolutions invalidate the cached position/handle
-			if (['lock', 'unlock'].includes(e.type)) lastHandle = lastPosition = undefined
+			if (['leave', 'lock'].includes(e.type)) lastHandle = lastPosition = undefined
 			if (
-				('position' in eP && !!this.hoveredHandle !== !!lastHandle) ||
+				!!this.hoveredHandle !== !!lastHandle ||
 				(this.hoveredHandle && lastHandle && !this.hoveredHandle.equals(lastHandle))
 			) {
+				if (this.hoveredHandle)
+					yield {
+						type: 'leave',
+						position: eP.position,
+						gameView: this.hovered,
+						handle: this.hoveredHandle,
+					}
 				this.hoveredHandle = lastHandle
+				if (this.hoveredHandle)
+					yield {
+						type: 'enter',
+						position: eP.position,
+						gameView: this.hovered,
+						handle: this.hoveredHandle,
+					}
 				yield {
 					type: 'hover',
-					target: this.hovered,
+					position: eP.position,
+					gameView: this.hovered,
 					handle: this.hoveredHandle,
-				} as MouseHoverEvolution
+				}
 			}
+		}
+	}
+
+	raiseEvents() {
+		for (const e of this.evolutions()) {
+			this.emit(`mouse:${e.type}` as keyof MouseEvents, e as any)
+			if ('handle' in e && e.handle)
+				e.handle.target.emit(`mouse:${e.type}` as keyof HandledMouseEvents, e as any)
 		}
 	}
 
@@ -227,28 +155,31 @@ export class MouseControl {
 	// #region Mouse Interactions
 
 	private readonly rayCaster = new Raycaster()
-	mouseIntersection(eP: PositionedMouseEvolution) {
-		if (!eP.target || !eP.position) return
-		const { canvas, camera } = eP.target
+	mouseIntersections(gameView: GameView, position: MousePosition) {
+		const { canvas, camera } = gameView
 		const mouse = new Vector2(
-			(eP.position.x / canvas.clientWidth) * 2 - 1,
-			-(eP.position.y / canvas.clientHeight) * 2 + 1
+			(position.x / canvas.clientWidth) * 2 - 1,
+			-(position.y / canvas.clientHeight) * 2 + 1
 		)
 		this.rayCaster.setFromCamera(mouse, camera)
 
-		const intersects = this.rayCaster.intersectObjects(this.scene.children)
-
-		const interact = intersects.findIndex((i) => i.object?.userData?.mouseHandler?.mouseHandle)
-		if (interact > -1) return intersects[interact]
+		return this.rayCaster.intersectObjects(this.scene.children)
 	}
-	mouseInteract(eP: PositionedMouseEvolution) {
-		const intersection = this.mouseIntersection(eP)
-		if (intersection) {
-			const target = intersection.object?.userData?.mouseHandler as MouseReactive
-			return {
-				intersection,
-				handle: target.mouseHandle(this, intersection),
-			}
+	mouseInteract({ gameView, position }: PositionedMouseEvolution) {
+		const intersections = this.mouseIntersections(gameView, position).filter(
+			(i) =>
+				i.object?.userData?.mouseHandler?.mouseHandle &&
+				this.dragStartHandle?.dropValidation?.(i.object?.userData?.mouseHandler) !== false
+		)
+		for (const intersection of intersections) {
+			const userData = intersection.object.userData
+			const target = userData.mouseHandler as MouseReactive
+			const handle = target.mouseHandle(this, userData.mouseTarget, intersection)
+			if (handle)
+				return {
+					intersection: intersection,
+					handle,
+				}
 		}
 	}
 
@@ -259,15 +190,19 @@ export class MouseControl {
 		if (!!this.lockedGV !== !!shouldLock) {
 			if (this.lockedGV) {
 				this.hovered = this.lockedGV
-				this.evolve({ type: 'unlock', target: this.lockedGV })
+				this.evolve({ type: 'unlock' })
 				this.lockedGV = null
 				if (this.lastCursorEvolution) this.evolve(this.lastCursorEvolution)
 			} else {
 				this.hovered = undefined
-				this.evolve({ type: 'lock', target: shouldLock })
 				this.lockedGV = shouldLock
-				this.evolve({ type: 'hover', target: shouldLock, handle: undefined })
-				this.hoveredHandle = undefined
+				this.evolve({ type: 'lock' })
+				if (this.hoveredHandle)
+					this.evolve<MouseHoverEvolution>({
+						type: 'leave',
+						position: { x: 0, y: 0 },
+						handle: this.hoveredHandle,
+					})
 			}
 		}
 	})
@@ -350,18 +285,17 @@ export class MouseControl {
 		if (this.hovered && !!event.buttons && !this.dragStartHandle && this.lastButtonDown) {
 			this.dragStartHandle = this.mouseInteract(this.lastButtonDown!)?.handle
 			if (this.dragStartHandle) {
-				this.evolve({
+				this.evolve<MouseDragEvolution>({
 					...this.lastButtonDown,
 					type: 'dragStart',
+					dragStartHandle: this.dragStartHandle,
 				})
-			}
-			this.lastButtonDown = undefined
+			} else this.lastButtonDown = undefined
 		}
-		this.lastButtonDown = undefined
 		if (this.lastEvolution?.type === 'move') this.lastEvolutions.pop()
 		const evolution = {
 			type: 'move',
-			target: this.hovered,
+			gameView: this.hovered,
 			...(this.hovered
 				? {
 						buttons: event.buttons,
@@ -380,7 +314,8 @@ export class MouseControl {
 		this.lastCursorEvolution = evolution
 		this.evolve(evolution)
 		if (this.dragStartHandle) {
-			this.evolve({
+			this.evolve<MouseDragEvolution>({
+				...this.lastButtonDown!,
 				...evolution,
 				type: 'dragOver',
 				dragStartHandle: this.dragStartHandle,
@@ -406,9 +341,9 @@ export class MouseControl {
 				type: 'down',
 				button: event.button,
 				modKeyCombination: modKeysCombinations(event),
-				target: this.hovered!,
+				gameView: this.hovered!,
 				position: { x: event.offsetX, y: event.offsetY },
-			}
+			} as MouseButtonEvolution
 			this.evolve(this.lastButtonDown)
 		}
 	}
@@ -416,31 +351,33 @@ export class MouseControl {
 	private mouseUp(event: MouseEvent) {
 		event.preventDefault()
 		if (event.buttons === 0 && this.lastButtonDown?.button === event.button)
-			this.evolve({
+			this.evolve<MouseButtonEvolution>({
 				type: 'click',
 				button: event.button,
+				buttons: event.buttons as MouseButtons,
 				modKeyCombination: modKeysCombinations(event),
-				target: this.hovered,
 				position: { x: event.offsetX, y: event.offsetY },
+				handle: undefined,
 			})
 		this.lastButtonDown = undefined
 		if (this.dragStartHandle) {
-			this.evolve({
+			this.evolve<MouseDragEvolution>({
 				type: 'dragEnd',
 				dragStartHandle: this.dragStartHandle,
 				button: event.button,
 				modKeyCombination: modKeysCombinations(event),
-				target: this.hovered,
 				position: { x: event.offsetX, y: event.offsetY },
+				handle: undefined,
 			})
 		}
 		this.dragStartHandle = undefined
-		this.evolve({
+		this.evolve<MouseButtonEvolution>({
 			type: 'up',
 			button: event.button,
+			buttons: event.buttons as MouseButtons,
 			modKeyCombination: modKeysCombinations(event),
-			target: this.hovered,
 			position: { x: event.offsetX, y: event.offsetY },
+			handle: undefined,
 		})
 		this.reLock(event)
 	}
@@ -456,10 +393,12 @@ export class MouseControl {
 					mouseConfig.zoomWheel.axis === axis &&
 					isModKeyCombination(event, mouseConfig.zoomWheel.modifiers)
 				) {
-					const center = this.mouseIntersection({
+					const position = { x: event.offsetX, y: event.offsetY }
+					const center = this.mouseIntersections(this.hovered!, position)[0]
+					this.evolve<MouseZoomEvolution>({
 						type: 'zoom',
-						target: this.hovered!,
-						position: { x: event.offsetX, y: event.offsetY },
+						position,
+						handle: undefined,
 					})
 					const camera = this.hovered!.camera
 					if (center) {
@@ -470,25 +409,30 @@ export class MouseControl {
 						else if (camera.position.z < this.clampCamZ.min) camera.position.z = this.clampCamZ.min
 					}
 				} else
-					this.evolve({
+					this.evolve<MouseWheelEvolution>({
 						type: 'wheel',
+						position: { x: event.offsetX, y: event.offsetY },
 						axis,
 						modKeyCombination: modKeysCombinations(event),
 						delta: delta[axis],
+						handle: undefined,
 					})
 			}
 	}
 
 	private mouseEnter(event: MouseEvent) {}
 	private mouseLeave(event: MouseEvent) {
-		// In case it has entered in another canvas then receive the `leave` just milliseconds later
-		this.evolve({
-			type: 'move',
-			target: null,
-			buttons: 0,
-			modKeyCombination: modKeysComb.none,
-			position: null,
-		})
+		if (this.hoveredHandle) {
+			this.evolve<MouseHoverEvolution>({
+				type: 'leave',
+				position: {
+					x: event.offsetX,
+					y: event.offsetY,
+				},
+				handle: this.hoveredHandle,
+			})
+			this.hoveredHandle = undefined
+		}
 	}
 
 	// #endregion

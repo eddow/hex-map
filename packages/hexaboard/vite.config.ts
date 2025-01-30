@@ -11,6 +11,7 @@ export default defineConfig({
 	},
 
 	build: {
+		minify: false,
 		target,
 		sourcemap: true,
 		lib: {

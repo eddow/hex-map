@@ -255,8 +255,8 @@ export class Land<Tile extends TileBase = TileBase> {
 		for (const sector of tile.sectors) this.sectorsToRender.add(sector as Sector<Tile>)
 		return tile
 	}
-	addPart(part: LandPart<Tile>) {
-		this.parts.push(part)
+	addPart(...parts: LandPart<Tile>[]) {
+		this.parts.push(...parts)
 	}
 
 	progress(dt: number) {

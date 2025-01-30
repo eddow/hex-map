@@ -1,6 +1,6 @@
 import { subSeed } from '~/utils'
 import { HeightMap } from '~/utils/perlin'
-import type { Land, LandPart, TileBase } from './land'
+import type { LandPart, TileBase } from './land'
 
 export type TerrainKey = PropertyKey
 
@@ -30,24 +30,22 @@ export class TerrainDefinition<Terrain extends TerrainBase = TerrainBase> {
 	}
 }
 
-export class HeightTerrain implements LandPart<TerrainTile> {
+export class HeightTerrain<Tile extends TerrainTile = TerrainTile> implements LandPart<Tile> {
 	readonly perlin: HeightMap
 	constructor(
-		land: Land<TileBase>,
 		private readonly variation: number,
 		private readonly seed: number,
 		private readonly terrains: TerrainDefinition,
 		scale = 10
 	) {
 		this.perlin = new HeightMap(subSeed(seed, 'terrainH'), scale, [-variation, variation])
-		land.addPart(this)
 	}
-	refineTile(tile: TileBase): TerrainTile {
+	refineTile(tile: TileBase): Tile {
 		const { x, y, z } = tile.position
 		const add = this.perlin.getHeight(x, y, 2)
 		return {
 			...tile,
 			terrain: this.terrains.terrainType(z + add),
-		}
+		} as Tile
 	}
 }

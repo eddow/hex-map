@@ -1,7 +1,7 @@
 import { Group } from 'three'
 import type { Handelable, ResourcefulTerrain } from '~/game'
 import { LCG, type RandGenerator, genTilePosition } from '~/utils'
-import type { Land, LandPart } from './land'
+import type { LandPart } from './land'
 import type { Sector } from './sector'
 import type { TerrainDefinition, TerrainTile } from './terrain'
 
@@ -43,13 +43,10 @@ export class Resourceful<
 > implements LandPart<ContentTile>
 {
 	constructor(
-		land: Land<ContentTile>,
 		private readonly terrainDefinition: TerrainDefinition<Terrain>,
 		private readonly seed: number,
 		private readonly seaLevel: number
-	) {
-		land.addPart(this)
-	}
+	) {}
 
 	*generateResources(gen: RandGenerator, terrain: ResourcefulTerrain) {
 		if (!terrain.resourceDistribution.length) return
