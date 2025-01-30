@@ -108,7 +108,7 @@ export class TextureLandscape<Tile extends TextureTile = TextureTile> implements
 			})
 		)
 		const neighborsMap = new Map<AxialKey, Triplet<number>[]>()
-		// 1- compute each vertex normal
+		// TODO: We should consider calculating normals on the CPU to limit attributes
 		for (const [i, tile] of sector.tiles.entries()) {
 			neighborsMap.set(
 				i,
@@ -123,13 +123,15 @@ export class TextureLandscape<Tile extends TextureTile = TextureTile> implements
 		const textureIdx = new Uint8Array(triangles.length * 3 * 3)
 		const outRoadWidths = new Float32Array(triangles.length * 3 * 3)
 		const outRoadBlends = new Float32Array(triangles.length * 3 * 3)
+		const inRoadWidths = new Float32Array(triangles.length * 3 * 3)
+		const inRoadBlends = new Float32Array(triangles.length * 3 * 3)
 		const barycentric = new Float32Array(triangles.length * 3 * 3)
-		const n1 = new Float32Array(triangles.length * 3 * 3)
+		/*const n1 = new Float32Array(triangles.length * 3 * 3)
 		const n2 = new Float32Array(triangles.length * 3 * 3)
 		const n3 = new Float32Array(triangles.length * 3 * 3)
 		const n4 = new Float32Array(triangles.length * 3 * 3)
 		const n5 = new Float32Array(triangles.length * 3 * 3)
-		const n6 = new Float32Array(triangles.length * 3 * 3)
+		const n6 = new Float32Array(triangles.length * 3 * 3)*/
 
 		const uvA = new Float32Array(triangles.length * 3 * 2)
 		const uvB = new Float32Array(triangles.length * 3 * 2)
@@ -142,6 +144,7 @@ export class TextureLandscape<Tile extends TextureTile = TextureTile> implements
 
 		let index = 0
 		for (const triangle of triangles) {
+			// Calculate the 3 terrain textures parameters
 			const { points, side } = triangle
 			const [A, B, C] = points.map((coord) => textureUvCache.get(axial.key(coord))!)
 			uvA.set(textureUVs(A, side, 0), index * 2)
@@ -150,13 +153,19 @@ export class TextureLandscape<Tile extends TextureTile = TextureTile> implements
 			const textureIndexes = points.map(
 				(point) => this.texturesIndex[sector.tiles.get(point.key)!.terrain]
 			)
+
 			const outRoadWidth = []
 			const outRoadBlend = []
+			const inRoadWidth = []
+			const inRoadBlend = []
 			//if (points[2].key === 1) debugger
+			let o2 = 1
+			let o1 = 0
 			for (let p = 0; p < 3; p++) {
-				if (points[p].key === 196607) debugger
-				const o1 = (p + 1) % 3
-				const o2 = (p + 2) % 3
+				//if (points[p].key === 196607) debugger
+				// Calculate the road opposite to a point
+				o1 = o2
+				o2 = (o2 + 1) % 3
 				const tile1 = sector.tiles.get(points[o1].key)!
 				const neighborIndex = axial.neighborIndex(points[o2], points[o1])
 				assert(neighborIndex !== undefined, 'O-s are neighbors')
@@ -169,6 +178,16 @@ export class TextureLandscape<Tile extends TextureTile = TextureTile> implements
 					outRoadWidth[p] = 0
 					outRoadBlend[p] = 0
 				}
+				// TODO: Oder by type level (mud road < highway < railroad) and take the highest level
+				const inRoadType = tile1.roads.find((roadType) => roadType !== undefined)
+				if (inRoadType) {
+					const road = this.roadDefinition[inRoadType]
+					inRoadWidth[o1] = road.width
+					inRoadBlend[o1] = road.blend
+				} else {
+					inRoadWidth[o1] = 0
+					inRoadBlend[o1] = 0
+				}
 			}
 			for (const point of points) {
 				const tile = sector.tiles.get(point.key)!
@@ -177,18 +196,20 @@ export class TextureLandscape<Tile extends TextureTile = TextureTile> implements
 				// Per vertex
 				positions.set([position.x, position.y, position.z], index * 3)
 
-				const neighbors = neighborsMap.get(point.key)!
+				/*const neighbors = neighborsMap.get(point.key)!
 				n1.set(neighbors[5], index * 3)
 				n2.set(neighbors[4], index * 3)
 				n3.set(neighbors[3], index * 3)
 				n4.set(neighbors[2], index * 3)
 				n5.set(neighbors[1], index * 3)
-				n6.set(neighbors[0], index * 3)
+				n6.set(neighbors[0], index * 3)*/
 
 				// Per triangle
 				textureIdx.set(textureIndexes, index * 3)
 				outRoadWidths.set(outRoadWidth, index * 3)
 				outRoadBlends.set(outRoadBlend, index * 3)
+				inRoadWidths.set(inRoadWidth, index * 3)
+				inRoadBlends.set(inRoadBlend, index * 3)
 
 				index++
 			}
@@ -203,14 +224,16 @@ export class TextureLandscape<Tile extends TextureTile = TextureTile> implements
 		geometry.setAttribute('textureIdx', new BufferAttribute(textureIdx, 3))
 		geometry.setAttribute('outRoadWidths', new BufferAttribute(outRoadWidths, 3))
 		geometry.setAttribute('outRoadBlends', new BufferAttribute(outRoadBlends, 3))
+		geometry.setAttribute('inRoadWidths', new BufferAttribute(inRoadWidths, 3))
+		geometry.setAttribute('inRoadBlends', new BufferAttribute(inRoadBlends, 3))
 		// per point
-		geometry.setAttribute('position', new BufferAttribute(positions, 3))
+		geometry.setAttribute('position', new BufferAttribute(positions, 3)) /*
 		geometry.setAttribute('n1', new BufferAttribute(n1, 3))
 		geometry.setAttribute('n2', new BufferAttribute(n2, 3))
 		geometry.setAttribute('n3', new BufferAttribute(n3, 3))
 		geometry.setAttribute('n4', new BufferAttribute(n4, 3))
 		geometry.setAttribute('n5', new BufferAttribute(n5, 3))
-		geometry.setAttribute('n6', new BufferAttribute(n6, 3))
+		geometry.setAttribute('n6', new BufferAttribute(n6, 3))*/
 		return new Mesh(geometry, this.material)
 	}
 }
@@ -229,8 +252,6 @@ function threeTexturedMaterial(terrainTextures: Texture[]) {
 			{
 				terrainTextures: { value: terrainTextures },
 				roadColor: { value: new Color(0xff0000) },
-				roadWidth: { value: 0.07 },
-				roadBlend: { value: 0.05 },
 			},
 		]),
 		vertexShader: `
@@ -242,12 +263,12 @@ attribute vec2 uvB;
 attribute vec2 uvC;
 attribute vec3 textureIdx;
 varying vec3 vTextureIdx;
-attribute vec3 n1;
+/*attribute vec3 n1;
 attribute vec3 n2;
 attribute vec3 n3;
 attribute vec3 n4;
 attribute vec3 n5;
-attribute vec3 n6;
+attribute vec3 n6;*/
 //varying vec3 vNormal;
 //varying vec3 vViewPosition;
 varying vec3 vPosition;
@@ -255,8 +276,12 @@ varying vec3 vPosition;
 
 attribute vec3 outRoadWidths;
 attribute vec3 outRoadBlends;
+attribute vec3 inRoadWidths;
+attribute vec3 inRoadBlends;
 varying vec3 vOutRoadWidth;
 varying vec3 vOutRoadBlend;
+varying vec3 vInRoadWidth;
+varying vec3 vInRoadBlend;
 
 vec3 computeHexNormal(vec3 center, vec3 n1, vec3 n2, vec3 n3, vec3 n4, vec3 n5, vec3 n6) {
     vec3 computed = vec3(0.0);
@@ -280,6 +305,8 @@ void main() {
 
 	vOutRoadWidth = outRoadWidths;
 	vOutRoadBlend = outRoadBlends;
+	vInRoadWidth = inRoadWidths;
+	vInRoadBlend = inRoadBlends;
 
 	//vNormal = normalize(normalMatrix * computeHexNormal(position, n1, n2, n3, n4, n5, n6));
 	vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
@@ -310,6 +337,8 @@ vec4 tColor(int i, vec2 vUv) {
 uniform vec3 roadColor;
 varying vec3 vOutRoadWidth;
 varying vec3 vOutRoadBlend;
+varying vec3 vInRoadWidth;
+varying vec3 vInRoadBlend;
 
 void main() {
 	vec4 color1 = tColor(int(round(vTextureIdx.x)), vUv[0]);
@@ -324,17 +353,21 @@ void main() {
 	// Apply the weights to the colors
 	vec4 terrainColor = vec4(color1.rgb * weights.x + color2.rgb * weights.y + color3.rgb * weights.z, 1.0);
 
-	float roadX = 1.0;
+	float road = 1.0;
 	if(vOutRoadWidth.x > 0.0)
-		roadX = smoothstep(vOutRoadWidth.x, vOutRoadWidth.x + vOutRoadBlend.x, bary.x);
-	float roadY = 1.0;
+		road = min(road, smoothstep(vOutRoadWidth.x, vOutRoadWidth.x + vOutRoadBlend.x, bary.x));
 	if(vOutRoadWidth.y > 0.0)
-		roadY = smoothstep(vOutRoadWidth.y, vOutRoadWidth.y + vOutRoadBlend.y, bary.y);
-	float roadZ = 1.0;
+		road = min(road, smoothstep(vOutRoadWidth.y, vOutRoadWidth.y + vOutRoadBlend.y, bary.y));
 	if(vOutRoadWidth.z > 0.0)
-		roadZ = smoothstep(vOutRoadWidth.z, vOutRoadWidth.z + vOutRoadBlend.z, bary.z);
+		road = min(road, smoothstep(vOutRoadWidth.z, vOutRoadWidth.z + vOutRoadBlend.z, bary.z));
 
-	float road = roadX * roadY * roadZ;
+	if(vInRoadWidth.x > 0.0)
+		road = min(road, smoothstep(vInRoadWidth.x, vInRoadWidth.x + vInRoadBlend.x, 1.0-bary.x));
+	if(vInRoadWidth.y > 0.0)
+		road = min(road, smoothstep(vInRoadWidth.y, vInRoadWidth.y + vInRoadBlend.y, 1.0-bary.y));
+	if(vInRoadWidth.z > 0.0)
+		road = min(road, smoothstep(vInRoadWidth.z, vInRoadWidth.z + vInRoadBlend.z, 1.0-bary.z));
+	
 
 	vec3 finalColor = mix(roadColor, terrainColor.xyz, road);
 	gl_FragColor = vec4(finalColor, 1.0);
