@@ -1,11 +1,11 @@
 import type { Face, Intersection, Object3D, Object3DEventMap } from 'three'
 import type { Game } from '~/game/game'
+import type { Triplet } from '~/types'
 import { MouseHandle, type MouseReactive } from '~/utils'
 import { type Axial, type AxialKey, axial, hexSides } from '~/utils/axial'
 import type { Land, LandPart, TileBase, TileUpdater } from './land'
 import type { Sector } from './sector'
 
-export type Triplet<T> = [T, T, T]
 export interface LandscapeTriangle {
 	side: number
 	coords: Triplet<Axial>

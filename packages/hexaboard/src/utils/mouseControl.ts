@@ -309,10 +309,9 @@ export class MouseControl {
 				const displacement = camera.position.z / 1000
 				const xv = new Vector3(1, 0, 0)
 				xv.applyQuaternion(camera.quaternion)
-				const upVector = new Vector3(0, 1, 0) // Local up direction
+				const upVector = new Vector3(0, 1, 0)
 				const worldUpVector = upVector.applyQuaternion(camera.quaternion)
 
-				// Step 2: Project onto the plane (set z to 0)
 				const projectedUp = new Vector3(worldUpVector.x, worldUpVector.y, 0)
 
 				// Step 3: Normalize the vector
@@ -325,8 +324,22 @@ export class MouseControl {
 				camera.position
 					.add(xv.multiplyScalar(-dx * displacement))
 					.add(projectedUp.multiplyScalar(dy * displacement))
+				break
 			}
-			// TODO case 'lookAt': = look at the same point and turn around
+			case 'lookAt': {
+				/*
+			TODO: Take the look-at point (at least x/y) at mousedown event
+				const lookAt = this.hoveredHandle?.position.clone() || camera.position.clone()
+				// Rotate camera
+				// x: movement rotates the camera around the word's Z axis
+				camera.position
+					.copy(lookAt)
+					.add(new Vector3(dx * displacement, -dy * displacement, 0))
+					.sub(lookAt)
+					.normalize()
+					.multiplyScalar(camera.position.distanceTo(lookAt))
+				camera.lookAt(lookAt)*/
+			}
 		}
 	}
 

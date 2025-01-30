@@ -32,7 +32,8 @@ export class Game extends MouseControl {
 		this._land = land
 		this.lights.add(new AmbientLight(0x404040))
 		const light = new DirectionalLight(0xffffff, 1)
-		light.position.set(10, 10, 10)
+		light.position.set(0, 0, 300)
+		light.target.position.set(0, 0, 0)
 		this.lights.add(light)
 		this.lights.updateMatrixWorld(true)
 		this.scene.add(this.lights, land.group, this.entitiesGroup)

@@ -30,8 +30,14 @@ export default defineConfig({
 			},
 		},
 	},
-	// @ts-expect-error: ...() is not a `PluginOption` but a `vite.Plugin`
-	plugins: [dts()],
+	plugins: [
+		// @ts-expect-error: ...() is not a `PluginOption` but a `vite.Plugin`
+		dts({
+			insertTypesEntry: true,
+			copyDtsFiles: true,
+			include: ['src/dts.d.ts', 'src/**/*.ts', 'src/**/*.d.ts'],
+		}),
+	],
 	resolve: {
 		alias: {
 			'~': resolve(__dirname, 'src'),

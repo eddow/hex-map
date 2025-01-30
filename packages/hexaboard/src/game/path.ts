@@ -25,17 +25,14 @@ export function costingPath(fromTile: AxialRef, cost: Cost, isFound: IsFound) {
 	const fromKey = axial.key(fromTile)
 	if (isFound(fromKey)) return [fromKey]
 	const toStudy: HexCost[] = [{ key: fromKey, cost: 0 }]
-	// TODO: origins -> Map?
-	const origins: { [tile: AxialKey]: HexCost<AxialKey | null> } = {
-		[fromKey]: { key: null, cost: 0 },
-	}
+	const origins = new Map<AxialKey, HexCost<AxialKey | null>>([[fromKey, { key: null, cost: 0 }]])
 	let found: { tile: AxialKey; cost: number } | undefined
 	while (toStudy.length && (!found || found.cost > toStudy[0].cost)) {
 		const study = toStudy.shift()!
 		const coord = axial.coord(study.key)
 		for (const hexSide of hexSides) {
 			const next = axial.key(axial.linear([1, coord], [1, hexSide]))
-			if (next !== origins[study.key].key) {
+			if (next !== origins.get(study.key)?.key) {
 				let nextCost = cost(study.key, next)
 				if (Number.isNaN(nextCost)) continue
 				if (nextCost < 0) throw new Error('negative or null cost')
@@ -43,12 +40,12 @@ export function costingPath(fromTile: AxialRef, cost: Cost, isFound: IsFound) {
 				const pathCost = study.cost + nextCost
 				if (isFound(next) && (!found || found.cost > pathCost))
 					found = { tile: next, cost: pathCost }
-				if (!origins[next] || origins[next].cost > pathCost) {
-					if (origins[next]) {
+				if (!origins.has(next) || origins.get(next)!.cost > pathCost) {
+					if (origins.has(next)) {
 						const tsIndex = toStudy.findIndex((ts) => ts.key === next)
 						if (tsIndex !== -1) toStudy.splice(tsIndex, 1)
 					}
-					origins[next] = { key: study.key, cost: pathCost }
+					origins.set(next, { key: study.key, cost: pathCost })
 					// add in toStudy
 					let i: number
 					for (i = 0; i < toStudy.length; i++) if (toStudy[i].cost > pathCost) break
@@ -59,10 +56,10 @@ export function costingPath(fromTile: AxialRef, cost: Cost, isFound: IsFound) {
 	}
 	if (!found) return null
 	const path: AxialKey[] = [found.tile]
-	let origin = origins[found.tile]
+	let origin = origins.get(found.tile)!
 	while (origin.key !== null) {
 		path.push(origin.key)
-		origin = origins[origin.key]
+		origin = origins.get(origin.key)!
 	}
-	return path
+	return path.reverse()
 }

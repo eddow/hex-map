@@ -3,17 +3,21 @@ import { RepeatWrapping, TextureLoader } from 'three'
 import { Rock, Tree } from './handelable'
 
 const textureLoader = new TextureLoader()
-function terrainTexture(type: string) {
-	const texture = textureLoader.load(`./assets/terrain/${type}.png`)
-	texture.wrapS = texture.wrapT = RepeatWrapping
-	return texture
+function assetTexture(asset: string) {
+	return (type: string) => {
+		const texture = textureLoader.load(`./assets/${asset}/${type}.jpg`)
+		texture.wrapS = texture.wrapT = RepeatWrapping
+		return texture
+	}
 }
+
+const terrainTexture = assetTexture('terrain')
+const roadTexture = assetTexture('road')
 
 export const terrainHeight = 160
 export const seaLevel = 70
-export const waterTexture = terrainTexture('water')
 
-export const terrainTypes: Record<string, TextureTerrain & ResourcefulTerrain> = {
+const terrainTypes: Record<string, TextureTerrain & ResourcefulTerrain> = {
 	sand: {
 		color: { r: 0.8, g: 0.8, b: 0 },
 		texture: terrainTexture('sand'),
@@ -72,5 +76,15 @@ export const terrainTypes: Record<string, TextureTerrain & ResourcefulTerrain> =
 	},
 }
 
-const terrains = new TerrainDefinition(terrainTypes)
-export default terrains
+export const terrains = new TerrainDefinition(terrainTypes)
+
+/*
+export const roadTypes: Record<string, TextureTerrain & ResourcefulTerrain> = {
+	asphalt4: {
+		color: { r: 0.8, g: 0.8, b: 0 },
+		texture: roadTexture('4lanes'),
+		width: 0.1
+	},
+}*/
+
+//export const terrains = new TerrainDefinition(terrainTypes)

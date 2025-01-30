@@ -1,6 +1,6 @@
 import { BufferGeometry, Float32BufferAttribute, Mesh, type Object3D, ShaderMaterial } from 'three'
 import { costingPath } from '~/game'
-import { type Axial, type AxialKey, LCG, axial, neighbors } from '~/utils'
+import { type Axial, type AxialKey, LCG, axial } from '~/utils'
 import type { Land, TileUpdater } from './land'
 import type { Landscape, LandscapeTriangle } from './landscaper'
 import type { Sector } from './sector'
@@ -39,7 +39,7 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 			riverTerrain = 'river',
 			minLength = 3,
 			minBankSlope = 4,
-			minStreamSlope = 2,
+			minStreamSlope = 1,
 		}: Partial<RivesOptions> = {}
 	) {
 		this.options = { riverTerrain, minLength, minBankSlope, minStreamSlope }
@@ -74,7 +74,7 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 						Math.max(0, Z(tTo) - Z(tFrom)) ** 2 +
 						// The fact to not take the strongest down slope
 						Z(tTo) -
-						Math.min(...neighbors(from).map((p) => Z(this.land.tile(p))))
+						Math.min(...axial.neighbors(from).map((p) => Z(this.land.tile(p))))
 					)
 				},
 				(aRef) => {
@@ -87,15 +87,13 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 			// Remove the end of river who enters too much in the sea
 			while (path && path.length > 0) {
 				const last = path[0]
-				const oceanNeighbors = neighbors(last).reduce(
-					(nbr, tile) => nbr + (this.land.tile(tile).position.z < this.seaLevel ? 1 : 0),
-					0
-				)
+				const oceanNeighbors = axial
+					.neighbors(last)
+					.reduce((nbr, tile) => nbr + (this.land.tile(tile).position.z < this.seaLevel ? 1 : 0), 0)
 				if (oceanNeighbors < 4) break
-				path.shift()
+				path.pop()
 			}
 			if (path && path.length > 4) {
-				path.pop() //source
 				// Last tile in the path
 				const ultimatePosition = this.land.tile(path[0]).position
 				// Last processed tile
@@ -105,16 +103,15 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 					terrain: this.options.riverTerrain,
 					riverHeight: lastTile.position.z,
 				} as Partial<Tile>)
-				//ignore the one in the sea but have it here as "next" is used
-				//path.pop()
 				const bank = new Set<AxialKey>()
-				while (path.length > 0) {
-					const tileKey = path.pop()!
+				for (let step = 1; step < path.length; step++) {
+					const tileKey = path[step]!
 					const tile = this.land.tile(tileKey)
 					if (tile.originalZ === undefined) tile.originalZ = tile.position.z
-					const tileNeighborsKeys = neighbors(tileKey)
+					const tileNeighborsKeys = axial
+						.neighbors(tileKey)
 						.map((c) => axial.key(c))
-						.filter((p) => ![path[path.length - 1], lastTileKey].includes(p))
+						.filter((p) => ![path[step + 1], lastTileKey].includes(p))
 
 					for (const neighborKey of tileNeighborsKeys) bank.add(neighborKey)
 					const minNeighborZ = Math.min(
@@ -127,7 +124,7 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 						// bank slope
 						minNeighborZ - this.options.minBankSlope,
 						// 0.8: minimum slope to have (1 = never change the slope)
-						lastTile.position.z + (ultimatePosition.z - lastTile.position.z) / (path.length + 1),
+						lastTile.position.z + (ultimatePosition.z - lastTile.position.z) / (path.length - step),
 						// absolute stream slope
 						lastTile.position.z - this.options.minStreamSlope
 					)
@@ -148,7 +145,8 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 				}
 				for (const key of bank) {
 					const tile = this.land.tile(key)
-					const river = neighbors(key)
+					const river = axial
+						.neighbors(key)
 						.map((p) => this.land.tile(p))
 						.filter((t) => t.terrain === this.options.riverTerrain)
 						.map((t) => t.riverHeight!)

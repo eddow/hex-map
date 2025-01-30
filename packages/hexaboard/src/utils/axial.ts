@@ -124,14 +124,6 @@ function bitShiftUnpair(z: number): Axial {
 	return rv
 }
 
-/**
- * Retrieves the tiles around a given tile
- * @returns Axial[]
- */
-export function neighbors(aRef: AxialRef) {
-	return hexSides.map((side) => axial.linear(aRef, side))
-}
-
 export const axial = {
 	/**
 	 * Get the axial-ref as an axial: an object `{q, r}`
@@ -244,6 +236,14 @@ export const axial = {
 			)
 				yield { q, r }
 		}
+	},
+
+	/**
+	 * Retrieves the tiles around a given tile
+	 * @returns Axial[]
+	 */
+	neighbors(aRef: AxialRef) {
+		return hexSides.map((side) => axial.linear(aRef, side))
 	},
 }
 

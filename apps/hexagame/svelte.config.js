@@ -32,8 +32,6 @@ const config = {
 			strict: true,
 		}),*/
 		alias: {
-			// TODO make it work from built library
-			//hexaboard: '../../packages/hexaboard/dist/hexaboard.js',
 			$widgets: 'src/widgets',
 		},
 	},

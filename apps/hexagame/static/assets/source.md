@@ -3,11 +3,12 @@
 ## Textures
 
 https://3djungle.net
+https://www.sketchuptextureclub.com/ (half free)
 
-for file in *.jpg; do convert "$file" "${file%.jpg}.png"; done
-for file in *.png; do convert "$file" -resize 512x512! "${file%.png}_512.png"; done
+for file in *.png; do convert "$file" "${file%.png}.jpg"; done
+for file in *.jpg; do convert "$file" -resize 512x512! "${file%.jpg}_512.jpg"; done
 
 ## Models
 
 https://free3d.com/
-convert "stone_seamless_texture_7147.png" -resize 512x512! "stone_seamless_texture_7147_512.png"
+

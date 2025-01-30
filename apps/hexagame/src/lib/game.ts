@@ -19,7 +19,7 @@ import {
 } from 'hexaboard'
 import type { Object3D } from 'three'
 import { debugInfo, dockview, games } from './globals.svelte'
-import terrains, { seaLevel, terrainHeight } from './world/terrain'
+import { seaLevel, terrainHeight, terrains } from './world/textures'
 type MapTuple<T extends any[], U> = {
 	[K in keyof T]: U
 }
@@ -32,7 +32,7 @@ export function createGame(seed: number) {
 	new HeightTerrain(land, terrainHeight / 10, seed, terrains, 1000)
 	new Landscaper(
 		land,
-		new Rivers(land, seed, seaLevel, terrainHeight, 96, 0.05),
+		new Rivers(land, seed, seaLevel, terrainHeight, 96, 0.03),
 		new TextureLandscape(terrains, seed),
 		new OceanLandscape(seaLevel)
 	)

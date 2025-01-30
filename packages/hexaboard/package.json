@@ -12,11 +12,11 @@
 		"**/*.css"
 	],
 	"type": "module",
-	"types": "dist/src/main.d.ts",
+	"types": "dist/src/index.d.ts",
 	"module": "dist/hexaboard.js",
 	"exports": {
 		".": {
-			"types": "./dist/src/main.d.ts",
+			"types": "./dist/src/index.d.ts",
 			"import": "./dist/hexaboard.js"
 		}
 	},
