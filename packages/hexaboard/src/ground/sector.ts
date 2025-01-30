@@ -1,5 +1,5 @@
 import { type Group, type Object3D, Vector3 } from 'three'
-import { type Axial, type AxialKey, type AxialRef, axial, cartesian, hexSides } from '~/utils'
+import { type AxialCoord, type AxialKey, type AxialRef, axial, cartesian, hexSides } from '~/utils'
 import { assert } from '~/utils/debug'
 import type { Land, PositionInTile, TileBase } from './land'
 
@@ -8,7 +8,7 @@ export class Sector<Tile extends TileBase> {
 	public readonly attachedTiles = new Set<AxialKey>()
 	constructor(
 		public readonly land: Land<Tile>,
-		public readonly center: Axial,
+		public readonly center: AxialCoord,
 		public readonly tiles: Map<AxialKey, Tile>
 	) {
 		for (const [_, tile] of this.tiles) tile.sectors.push(this)

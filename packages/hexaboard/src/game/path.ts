@@ -1,9 +1,9 @@
-import { type Axial, type AxialKey, type AxialRef, axial, hexSides } from '~/utils/axial'
+import { type AxialCoord, type AxialKey, type AxialRef, axial, hexSides } from '~/utils/axial'
 
 export function straightPath(fromTile: AxialRef, toTile: AxialRef) {
 	const from = axial.coord(fromTile)
 	const to = axial.coord(toTile)
-	const rv: Axial[] = []
+	const rv: AxialCoord[] = []
 	const dist = axial.distance(from, to)
 	for (let i = 0; i < dist; i++) rv.push(axial.round(axial.lerp(from, to, (i + 1) / dist)))
 	return rv

@@ -7,7 +7,7 @@ import {
 	type Object3D,
 	type RGB,
 } from 'three'
-import { type Axial, axial } from '~/utils'
+import { type AxialCoord, axial } from '~/utils'
 import type { TileBase } from './land'
 import type { LandscapeTriangle } from './landscaper'
 import type { Landscape } from './landscaper'
@@ -34,7 +34,7 @@ export class ColorLandscape implements Landscape<ColorTile> {
 		const colors = new Float32Array(triangles.length * 9)
 		let index = 0
 		for (const triangle of triangles) {
-			for (const coord of triangle.coords) {
+			for (const coord of triangle.points) {
 				const tile = sector.tiles.get(axial.key(coord))!
 				const position = tile.position
 				const color = tile.color
@@ -48,7 +48,7 @@ export class ColorLandscape implements Landscape<ColorTile> {
 		geometry.setAttribute('color', new BufferAttribute(colors, 3))
 		return new Mesh(geometry, this.material)
 	}
-	refineTile(tile: TileBase, coord: Axial): ColorTile {
+	refineTile(tile: TileBase, coord: AxialCoord): ColorTile {
 		const h01 = Math.min(1, Math.max(0, tile.position.z / 150))
 		return {
 			...tile,

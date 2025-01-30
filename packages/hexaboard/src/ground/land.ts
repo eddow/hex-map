@@ -2,6 +2,7 @@ import { Group, type PerspectiveCamera, type Vector2Like, type Vector3Like } fro
 import {
 	assert,
 	type Axial,
+	type AxialCoord,
 	type AxialKey,
 	type AxialRef,
 	axial,
@@ -56,8 +57,8 @@ function cameraVision(camera: PerspectiveCamera): number {
 	return camera.far / Math.cos((camera.fov * Math.PI) / 360)
 }
 
-function* viewedSectors(centerRef: AxialRef, camera: PerspectiveCamera, size: number) {
-	const center = axial.round(centerRef)
+function* viewedSectors(centerCoord: AxialCoord, camera: PerspectiveCamera, size: number) {
+	const center = axial.round(centerCoord)
 	const centerCartesian = cartesian(center, size)
 	// Estimate the maximum axial distance. Since a hexagon's circumradius is sqrt(3) * side length,
 	// we use D / (sqrt(3) * size) as an upper bound for axial distance check.
@@ -87,7 +88,7 @@ export interface PositionInTile {
 	v: number
 }
 
-function scaleAxial({ q, r }: Axial, scale: number) {
+function scaleAxial({ q, r }: AxialCoord, scale: number) {
 	return {
 		q: (q + 2 * r) * scale,
 		r: (q - r) * scale,
@@ -119,26 +120,26 @@ export class Land<Tile extends TileBase = TileBase> {
 		return axial.round(scaleAxial(axial.coord(aRef), 1 / (3 * (this.sectorRadius - 1))))
 	}
 
-	createSectors(added: Map<AxialKey, Axial>, generationInfos: Map<LandPart<Tile>, any>) {
+	createSectors(added: Map<AxialKey, AxialCoord>, generationInfos: Map<LandPart<Tile>, any>) {
 		const tileRefiners = this.parts.filter((part) => part.refineTile)
 		for (const [key, toSee] of added) {
 			const center = this.sector2tile(toSee)
 			const sectorTiles = axial.enum(this.sectorRadius - 1).map((lclCoord): [AxialKey, Tile] => {
-				const coord = axial.linear(center, lclCoord)
-				const key = axial.key(coord)
-				let completeTile = this.tiles.get(key)
-				if (completeTile) return [key, completeTile]
+				const point = axial.coordAccess(axial.linear(center, lclCoord))
+				let completeTile = this.tiles.get(point.key)
+				if (completeTile) return [point.key, completeTile]
 				let tile: TileBase = {
-					position: { ...cartesian(coord, this.tileSize), z: 0 },
+					position: { ...cartesian(point, this.tileSize), z: 0 },
 					sectors: [],
 				}
 				for (const part of tileRefiners)
-					tile = part.refineTile!(tile, coord, generationInfos.get(part)) ?? tile
+					tile = part.refineTile!(tile, point, generationInfos.get(part)) ?? tile
 				completeTile = tile as Tile
-				this.tiles.set(axial.key(coord), completeTile)
-				return [key, completeTile]
+				this.tiles.set(point.key, completeTile)
+				return [point.key, completeTile]
 			})
-			const sector = new Sector(this, center, new Map(sectorTiles))
+			const st = Array.from(sectorTiles)
+			const sector = new Sector(this, center, new Map(st))
 			this.sectors.set(key, sector)
 			this.sectorsToRender.add(sector)
 		}
@@ -195,7 +196,7 @@ export class Land<Tile extends TileBase = TileBase> {
 		const removed = new Set(this.sectors.keys())
 		const generationInfos = new Map<LandPart<Tile>, any>()
 		resetPerformances()
-		const added = new Map<AxialKey, Axial>()
+		const added = new Map<AxialKey, AxialCoord>()
 		for (const camera of cameras)
 			for (const toSee of viewedSectors(
 				this.tile2sector(fromCartesian(camera.position, this.tileSize)),
@@ -221,20 +222,19 @@ export class Land<Tile extends TileBase = TileBase> {
 
 	temporaryTiles = new Map<AxialKey, Tile>()
 	generateOneTile(aRef: AxialRef) {
-		const key = axial.key(aRef)
-		const coord = axial.coord(aRef)
+		const point = axial.access(aRef)
 		const generationInfos = new Map<LandPart<Tile>, any>()
 		for (const part of this.parts)
 			if (part.beginGeneration) generationInfos.set(part, part.beginGeneration())
 		let tile: TileBase = {
-			position: { ...cartesian(key, this.tileSize), z: 0 },
+			position: { ...cartesian(point, this.tileSize), z: 0 },
 			sectors: [],
 		}
 		for (const part of this.parts)
-			if (part.refineTile) tile = part.refineTile(tile, coord, generationInfos.get(part)) ?? tile
+			if (part.refineTile) tile = part.refineTile(tile, point, generationInfos.get(part)) ?? tile
 		const completeTile = tile as Tile
-		this.tiles.set(axial.key(coord), completeTile)
-		this.temporaryTiles.set(key, completeTile)
+		this.tiles.set(point.key, completeTile)
+		this.temporaryTiles.set(point.key, completeTile)
 		for (const part of this.parts)
 			if (part.spreadGeneration)
 				part.spreadGeneration((sectors, aRef, modifications) => {

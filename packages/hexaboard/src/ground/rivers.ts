@@ -1,13 +1,13 @@
 import { BufferGeometry, Float32BufferAttribute, Mesh, type Object3D, ShaderMaterial } from 'three'
 import { costingPath } from '~/game'
-import { type Axial, type AxialKey, LCG, axial } from '~/utils'
+import { type AxialCoord, type AxialKey, LCG, axial } from '~/utils'
 import type { Land, TileUpdater } from './land'
 import type { Landscape, LandscapeTriangle } from './landscaper'
 import type { Sector } from './sector'
 import type { TerrainKey, TerrainTile } from './terrain'
 
 // TODO: avoid ending in a puddle
-type Sources = Axial[]
+type Sources = AxialCoord[]
 
 export interface RiverTile extends TerrainTile {
 	riverHeight?: number
@@ -48,7 +48,7 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 	beginGeneration() {
 		return []
 	}
-	refineTile(tile: Tile, coord: Axial, sources: Sources): undefined {
+	refineTile(tile: Tile, coord: AxialCoord, sources: Sources): undefined {
 		if (tile.position.z < this.seaLevel) return
 		const gen = LCG(this.seed, 'rivers', coord.q, coord.r)
 		if (
@@ -165,10 +165,10 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 		const tileIndices = new Map<RiverTile, number>()
 		const seaLevel = this.seaLevel
 		for (const triangle of triangles) {
-			const triangleKeys = triangle.coords.map((coord) => axial.key(coord))
+			const triangleKeys = triangle.points.map((coord) => axial.key(coord))
 			//if (triangleKeys.filter((key) => [2490346].includes(key)).length) debugger
 			const x = triangleKeys
-			const triangleTiles = triangle.coords.map((coord) => sector.tiles.get(axial.key(coord))!)
+			const triangleTiles = triangle.points.map((coord) => sector.tiles.get(axial.key(coord))!)
 			const nbrRiverHeights = triangleTiles.reduce(
 				(nbr, tile) => nbr + (tile.riverHeight !== undefined ? 1 : 0),
 				0

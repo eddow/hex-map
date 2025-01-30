@@ -17,7 +17,7 @@ export class OceanLandscape implements Landscape<RiverTile> {
 		const tileIndices = new Map<RiverTile, number>()
 		const seaLevel = this.seaLevel
 		for (const triangle of triangles) {
-			const triangleTiles = triangle.coords.map((coord) => sector.tiles.get(axial.key(coord))!)
+			const triangleTiles = triangle.points.map((coord) => sector.tiles.get(axial.key(coord))!)
 			if (
 				!triangleTiles.some((tile) => tile.position.z < seaLevel) ||
 				triangleTiles.some((tile) => tile.riverHeight !== undefined)

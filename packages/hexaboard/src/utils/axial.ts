@@ -2,15 +2,21 @@
  * @link https://www.redblobgames.com/grids/hexagons/
  */
 import type { Vector2Like } from 'three'
+import type { Sextuplet } from '~/types'
 import type { RandGenerator } from '~/utils/numbers'
 import { assert } from './debug'
 
+// TODO: Type "all-refs" with q,r,key
+
 export type AxialKey = number
-export interface Axial {
+export interface AxialCoord {
 	q: number
 	r: number
 }
-export type AxialRef = AxialKey | Axial
+export interface Axial extends AxialCoord {
+	key: AxialKey
+}
+export type AxialRef = AxialKey | AxialCoord
 
 /**
  * Position in a triangle: side of the triangle and [u,v] where u+v<=1
@@ -24,11 +30,11 @@ export interface Triangular {
 	v: number
 }
 
-export function cube({ q, r }: Axial) {
+export function cube({ q, r }: AxialCoord) {
 	return { q, r, s: -q - r }
 }
 
-export type Rotation = (c: Axial) => Axial
+export type Rotation = (c: AxialCoord) => AxialCoord
 
 /** Rotations for 0, 60, 120, 180, 240 and 300° */
 export const rotations: Rotation[] = [
@@ -41,7 +47,6 @@ export const rotations: Rotation[] = [
 ]
 
 export const hexSides = rotations.map((c) => c({ q: 1, r: 0 }))
-
 /**
  * Retrieve the number of hexagon tiles in a complete hexagonal board of size radius
  */
@@ -56,6 +61,9 @@ export function puzzleTiles(radius: number) {
 	return 3 * radius ** 2
 }
 
+/**
+ * @todo: arg -> Axial
+ */
 export function cartesian(aRef: AxialRef, size = 1) {
 	const { q, r } = axial.coord(aRef)
 	const A = Math.sqrt(3) * size
@@ -114,22 +122,41 @@ export function posInTile(aRef: AxialRef, radius: number) {
 		QRs: { s: 5, u: q, v: r },
 	}[signs]!
 }
-function bitShiftPair({ q, r }: Axial): number {
+function bitShiftPair({ q, r }: AxialCoord): number {
 	return (q << 16) | (r & 0xffff) // Ensure b fits in 16 bits for comparison
 }
 
-function bitShiftUnpair(z: number): Axial {
+function bitShiftUnpair(z: number): AxialCoord {
 	const rv = { q: z >> 16, r: z & 0xffff }
 	if (rv.r > 32767) rv.r -= 65536
 	return rv
 }
 
 export const axial = {
+	access(aRef: AxialRef): Axial {
+		if (typeof aRef === 'number') return axial.keyAccess(aRef)
+		return axial.coordAccess(aRef)
+	},
+	keyAccess(aRef: AxialKey): Axial {
+		return {
+			key: aRef,
+			...bitShiftUnpair(aRef),
+		}
+	},
+	coordAccess(aRef: AxialCoord): Axial {
+		if ('key' in aRef) return aRef as Axial
+		return {
+			...aRef,
+			key: bitShiftPair(aRef),
+		}
+	},
 	/**
 	 * Get the axial-ref as an axial: an object `{q, r}`
-	 * @returns Axial
+	 * @returns AxialCoord
+	 * @todo Remove all refs
+	 * @deprecated use AxialAccess
 	 */
-	coord(aRef: AxialRef | string): Axial {
+	coord(aRef: AxialRef | string): AxialCoord {
 		switch (typeof aRef) {
 			case 'number':
 				return bitShiftUnpair(aRef)
@@ -144,6 +171,8 @@ export const axial = {
 	/**
 	 * Get the axial-ref as a key
 	 * @returns string
+	 * @todo Remove all refs
+	 * @deprecated use AxialAccess
 	 */
 	key(aRef: AxialRef | string): AxialKey {
 		switch (typeof aRef) {
@@ -165,10 +194,10 @@ export const axial = {
 	 * Addition a list of axial coordinates optionally with a scalar coefficient
 	 * @param args [coef, AxialRef] Scalar coefficient and axial to multiply/add
 	 * @param args AxialRef Axial to add
-	 * @returns Axial
+	 * @returns AxialCoord
 	 */
-	linear(...args: ([number, AxialRef] | AxialRef)[]): Axial {
-		return args.reduce<Axial>(
+	linear(...args: ([number, AxialRef] | AxialRef)[]): AxialCoord {
+		return args.reduce<AxialCoord>(
 			(acc, term) => {
 				const [coef, aRef] = Array.isArray(term) ? term : [1, term]
 				const { q, r } = axial.coord(aRef)
@@ -182,18 +211,17 @@ export const axial = {
 	 * @returns boolean
 	 */
 	zero(aRef: AxialRef) {
-		if (typeof aRef !== 'object') return [0, '0,0'].includes(aRef)
+		if (typeof aRef !== 'object') return aRef === 0
 		const { q, r } = axial.coord(aRef)
 		return q === 0 && r === 0
 	},
 
-	lerp(a: Axial, b: Axial, t: number) {
+	lerp(a: AxialCoord, b: AxialCoord, t: number) {
 		// epsilon to avoid straight mid-points (point exactly on the line between 2 hexagons)
 		return { q: lerp(a.q + 1e-6, b.q + 2e-6, t), r: lerp(a.r, b.r, t) }
 	},
 
-	round(aRef: AxialRef) {
-		const { q, r } = axial.coord(aRef)
+	round({ q, r }: AxialCoord) {
 		const v = [q, r, -q - r]
 		const round = v.map(Math.round)
 		const diff = v.map((v, i) => Math.abs(round[i] - v))
@@ -206,7 +234,7 @@ export const axial = {
 		][diff.indexOf(Math.max(...diff))]
 	},
 
-	distance(a: Axial, b: Axial = { q: 0, r: 0 }) {
+	distance(a: AxialCoord, b: AxialCoord = { q: 0, r: 0 }) {
 		const aS = -a.q - a.r
 		const bS = -b.q - b.r
 		return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(aS - bS))
@@ -218,7 +246,7 @@ export const axial = {
 	 * @param BRef
 	 * @returns
 	 */
-	orthogonal(ARef: AxialRef, BRef: AxialRef): [Axial, Axial] {
+	orthogonal(ARef: AxialRef, BRef: AxialRef): [AxialCoord, AxialCoord] {
 		const sideAxial = axial.linear(ARef, [-1, BRef])
 		const side = hexSides.findIndex(({ q, r }) => q === sideAxial.q && r === sideAxial.r)
 		assert(side !== -1, 'Orthogonal: Points must be neighbors')
@@ -240,12 +268,27 @@ export const axial = {
 
 	/**
 	 * Retrieves the tiles around a given tile
-	 * @returns Axial[]
+	 * @returns AxialCoord[]
 	 */
-	neighbors(aRef: AxialRef) {
-		return hexSides.map((side) => axial.linear(aRef, side))
+	neighbors(aRef: AxialRef): Sextuplet<AxialCoord> {
+		return hexSides.map((side) => axial.linear(aRef, side)) as Sextuplet<AxialCoord>
+	},
+	neighborIndex(coord: AxialCoord, from?: AxialCoord) {
+		if (from) coord = axial.linear(coord, [-1, from])
+		return neighborIndexes[coord.q * 3 + coord.r + 4]
 	},
 }
+const neighborIndexes = [
+	undefined, // q-1 r-1
+	3, // q-1 r 0
+	2, // q-1 r+1
+	4, // q 0 r-1
+	undefined, // q 0 r 0
+	1, // q 0 r+1
+	5, // q+1 r-1
+	0, // q+1 r 0
+	undefined, // q+1 r+1
+]
 
-// @ts-expect-error
+// @ts-expect-error - this is only for debug purpose anyway
 if (typeof window !== 'undefined') window.axial = axial

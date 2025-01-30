@@ -2,13 +2,13 @@ import type { Face, Intersection, Object3D, Object3DEventMap } from 'three'
 import type { Game } from '~/game/game'
 import type { Triplet } from '~/types'
 import { MouseHandle, type MouseReactive } from '~/utils'
-import { type Axial, type AxialKey, axial, hexSides } from '~/utils/axial'
+import { type Axial, type AxialCoord, type AxialKey, axial, hexSides } from '~/utils/axial'
 import type { Land, LandPart, TileBase, TileUpdater } from './land'
 import type { Sector } from './sector'
 
-export interface LandscapeTriangle {
+export interface LandscapeTriangle<A extends AxialCoord = Axial> {
 	side: number
-	coords: Triplet<Axial>
+	points: Triplet<A>
 }
 
 export interface Landscape<Tile extends TileBase, GenerationInfo = unknown>
@@ -36,8 +36,8 @@ export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
 class SectorMouseHandler<Tile extends TileBase> implements MouseReactive<TileHandle<Tile>> {
 	constructor(
 		private readonly land: Land<Tile>,
-		private readonly geometryVertex: Axial[],
-		private readonly center: Axial
+		private readonly geometryVertex: AxialCoord[],
+		private readonly center: AxialCoord
 	) {}
 	mouseHandle(
 		game: Game,
@@ -51,7 +51,7 @@ class SectorMouseHandler<Tile extends TileBase> implements MouseReactive<TileHan
 	}
 }
 
-function centricIndex(hexIndex: number): Axial {
+function centricIndex(hexIndex: number): AxialCoord {
 	if (hexIndex === 0) return { q: 0, r: 0 }
 	const radius = Math.floor((3 + Math.sqrt(-3 + 12 * hexIndex)) / 6)
 	const previous = 3 * radius * (radius - 1) + 1
@@ -60,14 +60,14 @@ function centricIndex(hexIndex: number): Axial {
 	return axial.linear([radius, hexSides[side]], [sidePos % radius, hexSides[(side + 2) % 6]])
 }
 
-function* sectorTriangles(maxAxialDistance: number): Generator<LandscapeTriangle> {
+function* sectorTriangles(maxAxialDistance: number): Generator<LandscapeTriangle<AxialCoord>> {
 	for (let r = -maxAxialDistance; r < maxAxialDistance; r++) {
 		const qFrom = Math.max(1 - maxAxialDistance, -r - maxAxialDistance)
 		const qTo = Math.min(maxAxialDistance, -r + maxAxialDistance)
 		if (r < 0) {
 			yield {
 				side: 0,
-				coords: [
+				points: [
 					{ q: qTo, r },
 					{ q: qTo, r: r + 1 },
 					{ q: qTo - 1, r: r + 1 },
@@ -76,7 +76,7 @@ function* sectorTriangles(maxAxialDistance: number): Generator<LandscapeTriangle
 		} else {
 			yield {
 				side: 1,
-				coords: [
+				points: [
 					{ q: qFrom - 1, r },
 					{ q: qFrom, r },
 					{ q: qFrom - 1, r: r + 1 },
@@ -86,7 +86,7 @@ function* sectorTriangles(maxAxialDistance: number): Generator<LandscapeTriangle
 		for (let q = qFrom; q < qTo; q++) {
 			yield {
 				side: 0,
-				coords: [
+				points: [
 					{ q, r },
 					{ q, r: r + 1 },
 					{ q: q - 1, r: r + 1 },
@@ -94,7 +94,7 @@ function* sectorTriangles(maxAxialDistance: number): Generator<LandscapeTriangle
 			}
 			yield {
 				side: 1,
-				coords: [
+				points: [
 					{ q, r },
 					{ q: q + 1, r },
 					{ q: q, r: r + 1 },
@@ -105,14 +105,16 @@ function* sectorTriangles(maxAxialDistance: number): Generator<LandscapeTriangle
 }
 
 function centeredTriangles(
-	triangles: Iterable<LandscapeTriangle>,
-	center: Axial
+	triangles: Iterable<LandscapeTriangle<AxialCoord>>,
+	center: AxialCoord
 ): LandscapeTriangle[] {
 	const rv: LandscapeTriangle[] = []
 	for (const triangle of triangles)
 		rv.push({
 			...triangle,
-			coords: triangle.coords.map((coord) => axial.linear(center, coord)) as Triplet<Axial>,
+			points: triangle.points.map((coord) =>
+				axial.coordAccess(axial.linear(center, coord))
+			) as Triplet<Axial>,
 		})
 	return rv
 }
@@ -121,8 +123,8 @@ function centeredTriangles(
  */
 export class Landscaper<Tile extends TileBase> implements LandPart<Tile, unknown[]> {
 	private readonly landscapes: Landscape<Tile>[]
-	private readonly triangles: LandscapeTriangle[] = []
-	private readonly geometryVertex: Axial[] = []
+	private readonly triangles: LandscapeTriangle<AxialCoord>[] = []
+	private readonly geometryVertex: AxialCoord[] = []
 
 	constructor(
 		private readonly land: Land<Tile>,
@@ -132,7 +134,7 @@ export class Landscaper<Tile extends TileBase> implements LandPart<Tile, unknown
 		land.addPart(this)
 		for (const triangle of sectorTriangles(land.sectorRadius - 1)) {
 			this.triangles.push(triangle)
-			this.geometryVertex.push(...triangle.coords)
+			this.geometryVertex.push(...triangle.points)
 		}
 	}
 	renderSector(sector: Sector<Tile>): void {

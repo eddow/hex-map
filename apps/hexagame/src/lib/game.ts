@@ -1,6 +1,7 @@
 import {
 	type ContentTile,
 	Game,
+	GridTerrain,
 	HeightTerrain,
 	Land,
 	Landscaper,
@@ -11,6 +12,7 @@ import {
 	PerlinHeight,
 	Resourceful,
 	Rivers,
+	type RoadTile,
 	TextureLandscape,
 	TileCursor,
 	TileHandle,
@@ -19,21 +21,20 @@ import {
 } from 'hexaboard'
 import type { Object3D } from 'three'
 import { debugInfo, dockview, games } from './globals.svelte'
-import { seaLevel, terrainHeight, terrains } from './world/textures'
-type MapTuple<T extends any[], U> = {
-	[K in keyof T]: U
-}
+import { roadTypes, seaLevel, terrainHeight, terrains } from './world/textures'
 
-export type GameXLand = Land<ContentTile>
+export type GameXTile = ContentTile & RoadTile
+export type GameXLand = Land<GameXTile>
 
 export function createGame(seed: number) {
-	const land = new Land<ContentTile>(4, 20)
+	const land = new Land<GameXTile>(4, 20)
 	new PerlinHeight(land, terrainHeight, seed, 1000)
 	new HeightTerrain(land, terrainHeight / 10, seed, terrains, 1000)
-	new Landscaper(
+	new GridTerrain(land)
+	new Landscaper<GameXTile>(
 		land,
-		new Rivers(land, seed, seaLevel, terrainHeight, 96, 0.03),
-		new TextureLandscape(terrains, seed),
+		new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),
+		new TextureLandscape<GameXTile>(terrains, roadTypes, seed),
 		new OceanLandscape(seaLevel)
 	)
 	new Resourceful(land, terrains, seed, seaLevel)

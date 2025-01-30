@@ -1,4 +1,11 @@
-import { type ResourcefulTerrain, TerrainDefinition, type TextureTerrain } from 'hexaboard'
+import {
+	type ResourcefulTerrain,
+	type RoadBase,
+	type RoadKey,
+	TerrainDefinition,
+	type TerrainKey,
+	type TextureTerrain,
+} from 'hexaboard'
 import { RepeatWrapping, TextureLoader } from 'three'
 import { Rock, Tree } from './handelable'
 
@@ -17,7 +24,7 @@ const roadTexture = assetTexture('road')
 export const terrainHeight = 160
 export const seaLevel = 70
 
-const terrainTypes: Record<string, TextureTerrain & ResourcefulTerrain> = {
+const terrainTypes: Record<TerrainKey, TextureTerrain & ResourcefulTerrain> = {
 	sand: {
 		color: { r: 0.8, g: 0.8, b: 0 },
 		texture: terrainTexture('sand'),
@@ -78,13 +85,13 @@ const terrainTypes: Record<string, TextureTerrain & ResourcefulTerrain> = {
 
 export const terrains = new TerrainDefinition(terrainTypes)
 
-/*
-export const roadTypes: Record<string, TextureTerrain & ResourcefulTerrain> = {
-	asphalt4: {
+export const roadTypes: Record<RoadKey, RoadBase> = {
+	hc: {
+		width: 0.05,
+		blend: 0.07,
 		color: { r: 0.8, g: 0.8, b: 0 },
-		texture: roadTexture('4lanes'),
-		width: 0.1
+		//texture: roadTexture('4lanes'),
 	},
-}*/
+}
 
 //export const terrains = new TerrainDefinition(terrainTypes)
