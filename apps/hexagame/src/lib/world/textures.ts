@@ -1,6 +1,6 @@
 import {
+	type ColorRoad,
 	type ResourcefulTerrain,
-	type RoadBase,
 	type RoadKey,
 	TerrainDefinition,
 	type TerrainKey,
@@ -85,7 +85,7 @@ const terrainTypes: Record<TerrainKey, TextureTerrain & ResourcefulTerrain> = {
 
 export const terrains = new TerrainDefinition(terrainTypes)
 
-export const roadTypes: Record<RoadKey, RoadBase> = {
+export const roadTypes: Record<RoadKey, ColorRoad> = {
 	hc: {
 		width: 0.05,
 		blend: 0.07,

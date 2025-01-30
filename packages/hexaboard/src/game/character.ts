@@ -5,7 +5,7 @@ import { assert } from '~/utils/debug'
 import { GameEntity } from './game'
 import { costingPath } from './path'
 
-function terrainCost(from: AxialKey, to: AxialKey) {
+function terrainWalkCost(from: AxialKey, to: AxialKey) {
 	return 1
 }
 
@@ -110,7 +110,7 @@ export class AnimationAction extends CharacterAction {
 export async function goTo(this: Character, destination: AxialRef) {
 	do {
 		try {
-			const path = costingPath(this.tileKey, terrainCost, (tileKey) => tileKey === destination)
+			const path = costingPath(this.tileKey, terrainWalkCost, (tileKey) => tileKey === destination)
 			if (!path) throw new ImpossibleMove(this.tileKey, destination)
 
 			if (this.action instanceof WalkToTile) {

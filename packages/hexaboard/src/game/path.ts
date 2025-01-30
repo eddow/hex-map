@@ -47,9 +47,14 @@ export function costingPath(fromTile: AxialRef, cost: Cost, isFound: IsFound) {
 					}
 					origins.set(next, { key: study.key, cost: pathCost })
 					// add in toStudy
-					let i: number
-					for (i = 0; i < toStudy.length; i++) if (toStudy[i].cost > pathCost) break
-					toStudy.splice(i, 0, { key: next, cost: pathCost })
+					let min = 0
+					let max = toStudy.length - 1
+					while (min < max) {
+						const mid = Math.floor((min + max) / 2)
+						if (toStudy[mid].cost < pathCost) min = mid + 1
+						else max = mid - 1
+					}
+					toStudy.splice(min, 0, { key: next, cost: pathCost })
 				}
 			}
 		}

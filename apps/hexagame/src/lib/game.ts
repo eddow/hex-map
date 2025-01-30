@@ -34,7 +34,7 @@ export function createGame(seed: number) {
 		land,
 		new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),
 		new TextureLandscape<GameXTile>(terrains, roadTypes, seed),
-		new ColorRoadGrid<GameXTile>(roadTypes, seed),
+		new ColorRoadGrid<GameXTile>(roadTypes),
 		new OceanLandscape(seaLevel)
 	)
 	new Resourceful(land, terrains, seed, seaLevel)

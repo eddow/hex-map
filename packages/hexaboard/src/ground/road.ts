@@ -9,8 +9,6 @@ export type RoadKey = PropertyKey
 
 export interface RoadBase {
 	width: number
-	blend: number
-	color: { r: number; g: number; b: number }
 }
 
 export interface RoadTile extends TileBase {

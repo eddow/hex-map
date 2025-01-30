@@ -24,15 +24,13 @@ export interface TextureRoad extends RoadBase {
 
 export interface ColorRoad extends RoadBase {
 	color: RGB
+	blend: number
 }
 
 export class ColorRoadGrid<Tile extends RoadTile> extends RoadGrid<Tile> {
 	public readonly material: Material
 
-	constructor(
-		private readonly roadDefinition: Record<RoadKey, RoadBase>,
-		private readonly seed: number
-	) {
+	constructor(private readonly roadDefinition: Record<RoadKey, ColorRoad>) {
 		super()
 		this.material = roadColorMaterial()
 	}
@@ -179,10 +177,8 @@ void main() {
 	if(vInRoadWidth.z > 0.0)
 		road = min(road, smoothstep(vInRoadWidth.z, vInRoadWidth.z + vInRoadBlend.z, 1.0-bary.z));
 	
-	
-	float alpha = mix(1.0, 0.0, road);
-	//if(alpha <= 0.0) discard;
-	gl_FragColor = vec4(roadColor, alpha);
+	if(road >= 1.0) discard;
+	gl_FragColor = vec4(roadColor, 1.0-road);
 
 }
 				`,
