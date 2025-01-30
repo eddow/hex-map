@@ -7,7 +7,7 @@ import type { Land, LandPart, TileBase, TileUpdater } from './land'
 import type { Sector } from './sector'
 
 export interface LandscapeTriangle<A extends AxialCoord = Axial> {
-	side: number
+	side: 0 | 1
 	points: Triplet<A>
 }
 

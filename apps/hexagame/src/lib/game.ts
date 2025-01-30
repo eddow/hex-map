@@ -1,7 +1,7 @@
 import {
+	ColorRoadGrid,
 	type ContentTile,
 	Game,
-	GridTerrain,
 	HeightTerrain,
 	Land,
 	Landscaper,
@@ -30,11 +30,11 @@ export function createGame(seed: number) {
 	const land = new Land<GameXTile>(4, 20)
 	new PerlinHeight(land, terrainHeight, seed, 1000)
 	new HeightTerrain(land, terrainHeight / 10, seed, terrains, 1000)
-	new GridTerrain(land)
 	new Landscaper<GameXTile>(
 		land,
 		new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),
 		new TextureLandscape<GameXTile>(terrains, roadTypes, seed),
+		new ColorRoadGrid<GameXTile>(roadTypes, seed),
 		new OceanLandscape(seaLevel)
 	)
 	new Resourceful(land, terrains, seed, seaLevel)
