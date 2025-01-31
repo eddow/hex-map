@@ -16,7 +16,7 @@ export interface AxialCoord {
 export interface Axial extends AxialCoord {
 	key: AxialKey
 }
-export type AxialRef = AxialKey | AxialCoord
+export type AxialRef = AxialKey | AxialCoord | Axial
 
 /**
  * Position in a triangle: side of the triangle and [u,v] where u+v<=1
@@ -29,6 +29,12 @@ export interface Triangular {
 	u: number
 	v: number
 }
+
+/**
+ * null = on center
+ * 0-5 = on edge
+ */
+export type AxialDirection = null | 0 | 1 | 2 | 3 | 4 | 5
 
 export function cube({ q, r }: AxialCoord) {
 	return { q, r, s: -q - r }
@@ -181,7 +187,7 @@ export const axial = {
 			case 'string':
 				return bitShiftPair(axial.coord(aRef))
 			default:
-				return bitShiftPair(aRef)
+				return (aRef as Axial).key ?? bitShiftPair(aRef)
 		}
 	},
 
@@ -278,7 +284,7 @@ export const axial = {
 		return neighborIndexes[coord.q * 3 + coord.r + 4]
 	},
 }
-const neighborIndexes = [
+const neighborIndexes: (AxialDirection | undefined)[] = [
 	undefined, // q-1 r-1
 	3, // q-1 r 0
 	2, // q-1 r+1

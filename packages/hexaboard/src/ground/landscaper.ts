@@ -2,8 +2,9 @@ import type { Face, Intersection, Object3D, Object3DEventMap } from 'three'
 import type { Game } from '~/game'
 import { MouseHandle, type MouseReactive } from '~/mouse'
 import type { Triplet } from '~/types'
-import { type Axial, type AxialCoord, axial, hexSides } from '~/utils/axial'
-import type { LandPart, TileBase, TileUpdater } from './land'
+import { Eventful } from '~/utils'
+import { type Axial, type AxialCoord, axial } from '~/utils/axial'
+import type { LandPart, RenderedEvent, TileBase, TileUpdater, WalkTimeSpecification } from './land'
 import type { Sector } from './sector'
 
 export interface LandscapeTriangle<A extends AxialCoord = Axial> {
@@ -39,7 +40,7 @@ class SectorMouseHandler<Tile extends TileBase> implements MouseReactive<TileHan
 		private readonly center: AxialCoord
 	) {}
 	mouseHandle(
-		game: Game,
+		game: Game<Tile>,
 		target: any,
 		intersection: Intersection<Object3D<Object3DEventMap>>
 	): TileHandle<Tile> {
@@ -47,17 +48,9 @@ class SectorMouseHandler<Tile extends TileBase> implements MouseReactive<TileHan
 		const facePt = baryArr.indexOf(Math.max(...baryArr))
 		const geomPt = intersection.face!['abc'[facePt] as keyof Face] as number
 		const tileRef = axial.linear(this.center, this.geometryVertex[geomPt])
+		// @ts-ignore Game<TileBase>
 		return new TileHandle(game, target, axial.coordAccess(tileRef))
 	}
-}
-
-function centricIndex(hexIndex: number): AxialCoord {
-	if (hexIndex === 0) return { q: 0, r: 0 }
-	const radius = Math.floor((3 + Math.sqrt(-3 + 12 * hexIndex)) / 6)
-	const previous = 3 * radius * (radius - 1) + 1
-	const sidePos = hexIndex - previous
-	const side = Math.floor(sidePos / radius)
-	return axial.linear([radius, hexSides[side]], [sidePos % radius, hexSides[(side + 2) % 6]])
 }
 
 function* sectorTriangles(maxAxialDistance: number): Generator<LandscapeTriangle<AxialCoord>> {
@@ -121,26 +114,47 @@ function centeredTriangles(
 /**
  * Provide triangle management for the landscape
  */
-export class Landscaper<Tile extends TileBase> implements LandPart<Tile, unknown[]> {
+export class Landscaper<Tile extends TileBase>
+	extends Eventful<RenderedEvent<Tile>>
+	implements LandPart<Tile, unknown[]>
+{
 	private readonly landscapes: Landscape<Tile>[]
 	private readonly triangles: LandscapeTriangle<AxialCoord>[] = []
 	private readonly geometryVertex: AxialCoord[] = []
+	private readonly invalidated = new Map<Sector<Tile>, Set<LandPart<Tile>>>()
 
+	/**
+	 *
+	 * @param sectorRadius
+	 * @param landscapes The order matters as it will set the render order (latter landscapes will be rendered on top)
+	 */
 	constructor(sectorRadius: number, ...landscapes: Landscape<Tile>[]) {
+		super()
 		this.landscapes = landscapes
 		for (const triangle of sectorTriangles(sectorRadius - 1)) {
 			this.triangles.push(triangle)
 			this.geometryVertex.push(...triangle.points)
 		}
+		for (const landscape of landscapes) {
+			landscape.on('invalidatedRender', (landscape, sector) => {
+				if (!this.invalidated.has(sector)) this.invalidated.set(sector, new Set())
+				this.invalidated.get(sector)!.add(landscape)
+				this.emit('invalidatedRender', this, sector)
+			})
+		}
 	}
 	renderSector(sector: Sector<Tile>): void {
 		const mouseHandler = new SectorMouseHandler(this.geometryVertex, sector.center)
 		const sectorTriangles = centeredTriangles(this.triangles, sector.center)
-		for (const landscape of this.landscapes) {
+		let meshOrder = 0
+		const invalidated = this.invalidated.get(sector) as Set<Landscape<Tile>>
+		if (invalidated) this.invalidated.delete(sector)
+		for (const landscape of invalidated ?? this.landscapes) {
 			landscape.renderSector?.(sector)
 			const o3d = landscape.createMesh(sector, sectorTriangles)
+			o3d.renderOrder = meshOrder++
 			if (landscape.mouseReactive) o3d.userData = { mouseHandler, mouseTarget: landscape }
-			sector.add(o3d)
+			sector.add(landscape, o3d)
 		}
 	}
 
@@ -161,5 +175,15 @@ export class Landscaper<Tile extends TileBase> implements LandPart<Tile, unknown
 		for (let i = 0; i < this.landscapes.length; i++)
 			tile = this.landscapes[i].refineTile?.(tile, coord, generationInfo[i]) ?? tile
 		return tile as Tile
+	}
+
+	walkTimeMultiplier(movement: WalkTimeSpecification<Tile>): number {
+		let rv = 1
+		for (const landscape of this.landscapes)
+			if (landscape.walkTimeMultiplier) {
+				rv *= landscape.walkTimeMultiplier(movement) ?? 1
+				if (Number.isNaN(rv)) return Number.NaN
+			}
+		return rv
 	}
 }

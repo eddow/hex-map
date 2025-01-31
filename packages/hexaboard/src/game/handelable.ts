@@ -1,14 +1,15 @@
 import type { Object3D } from 'three'
-import type { TerrainBase } from '~/ground'
+import type { TerrainBase, TileContent } from '~/ground'
 import { meshAsset } from '~/utils/meshes'
 import type { RandGenerator } from '~/utils/numbers'
 
 /**
  * Any thing that can be placed on the map and interacted with by the characters (resources, trees, rocks, artifacts, etc.)
  */
-export abstract class Handelable {
+export abstract class Handelable implements TileContent {
 	protected cachedMesh?: Object3D
 	abstract createMesh(): Object3D
+	walkTimeMultiplier = 1.3
 	protected invalidateMesh() {
 		this.cachedMesh = undefined
 	}
@@ -31,6 +32,7 @@ export interface ResourcefulTerrain extends TerrainBase {
 	resourceDistribution: ResourceDistribution[]
 }
 export class Resource<Terrain extends ResourcefulTerrain = ResourcefulTerrain> extends Handelable {
+	walkTimeMultiplier = 1.7
 	allure: HandelableAllure
 	constructor(allure: HandelableAllure)
 	constructor(gen: RandGenerator, terrain: Terrain)

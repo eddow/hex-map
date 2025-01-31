@@ -1,7 +1,7 @@
-import { Group } from 'three'
-import type { Handelable, ResourcefulTerrain } from '~/game'
-import { LCG, type RandGenerator, genTilePosition } from '~/utils'
-import type { LandPart } from './land'
+import { Group, type Object3D } from 'three'
+import { Handelable, type ResourcefulTerrain } from '~/game'
+import { Eventful, LCG, type RandGenerator, genTilePosition } from '~/utils'
+import type { LandPart, RenderedEvent } from './land'
 import type { Sector } from './sector'
 import type { TerrainDefinition, TerrainTile } from './terrain'
 
@@ -23,8 +23,13 @@ function placeInTile(i: number, gen: RandGenerator) {
 	}
 }
 
+export interface TileContent {
+	readonly mesh?: Object3D
+	readonly walkTimeMultiplier: number
+}
+
 export interface ContentTile extends TerrainTile {
-	content: (Handelable | undefined)[]
+	content?: (TileContent | undefined)[]
 }
 
 function generateResource(gen: RandGenerator, terrain: ResourcefulTerrain) {
@@ -38,15 +43,19 @@ function generateResource(gen: RandGenerator, terrain: ResourcefulTerrain) {
 	}
 }
 export class Resourceful<
-	Tile extends ContentTile = ContentTile,
-	Terrain extends ResourcefulTerrain = ResourcefulTerrain,
-> implements LandPart<ContentTile>
+		Tile extends ContentTile = ContentTile,
+		Terrain extends ResourcefulTerrain = ResourcefulTerrain,
+	>
+	extends Eventful<RenderedEvent<Tile>>
+	implements LandPart<Tile>
 {
 	constructor(
 		private readonly terrainDefinition: TerrainDefinition<Terrain>,
 		private readonly seed: number,
 		private readonly seaLevel: number
-	) {}
+	) {
+		super()
+	}
 
 	*generateResources(gen: RandGenerator, terrain: ResourcefulTerrain) {
 		if (!terrain.resourceDistribution.length) return
@@ -55,7 +64,7 @@ export class Resourceful<
 
 	renderSector(sector: Sector<Tile>): void {
 		const group = new Group()
-		sector.add(group)
+		sector.add(this, group)
 		for (const [tRef, tile] of sector.tiles.entries()) {
 			// Resource content is generated in the `render` phase so that the terrain is completely generated for sure
 			tile.content ??=
@@ -71,10 +80,10 @@ export class Resourceful<
 				const gen = LCG(this.seed, 'placeInTile', tRef)
 				for (let aRef = 0; aRef < tile.content.length; aRef++) {
 					const rsc = tile.content[aRef]
-					if (rsc) {
+					if (rsc instanceof Handelable) {
 						const pos = sector.inTile(tRef, placeInTile(aRef, gen))
 						if (pos && !rsc.builtMesh) {
-							const mesh = rsc.createMesh()
+							const mesh = rsc.mesh
 							mesh.position.copy(pos)
 							group.add(mesh)
 						}

@@ -13,6 +13,7 @@ import {
 import type { HandledMouseEvents } from '~/mouse'
 import type { Triplet } from '~/types'
 import { type AxialKey, Eventful, LCG, axial, numbers } from '~/utils'
+import type { RenderedEvent as RenderedEvents } from './land'
 import type { Landscape, LandscapeTriangle, TileHandle } from './landscaper'
 import type { RoadBase, RoadKey } from './road'
 import type { Sector } from './sector'
@@ -64,15 +65,21 @@ function textureUVs(
 	}
 }
 
+/*type LandscapeEvents<Tile extends TerrainTile> =
+	| HandledMouseEvents<TileHandle<Tile>>
+	| RenderedEvent<Tile>*/
+type LandscapeEvents<Tile extends TerrainTile> = HandledMouseEvents<TileHandle<Tile>> &
+	RenderedEvents<Tile>
+
+// @ts-expect-error No way to cleanly mix the events
 export class TextureLandscape<Tile extends TerrainTile = TerrainTile>
-	extends Eventful<HandledMouseEvents<TileHandle>>
+	extends Eventful<LandscapeEvents<Tile>>
 	implements Landscape<Tile>
 {
 	public readonly material: Material
 	public readonly mouseReactive = true
 	private readonly textures: Texture[]
 	private texturesIndex: Record<TerrainKey, number>
-
 	constructor(
 		private readonly terrainDefinition: TerrainDefinition<TextureTerrain>,
 		private readonly roadDefinition: Record<RoadKey, RoadBase>,

@@ -1,5 +1,6 @@
 import { BufferGeometry, Float32BufferAttribute, Mesh, type Object3D, ShaderMaterial } from 'three'
-import { axial } from '~/utils'
+import { Eventful, axial } from '~/utils'
+import type { RenderedEvent, WalkTimeSpecification } from './land'
 import type { Landscape, LandscapeTriangle } from './landscaper'
 import type { RiverTile } from './rivers'
 import type { Sector } from './sector'
@@ -7,14 +8,19 @@ import type { Sector } from './sector'
 /**
  * For testing purpose
  */
-export class OceanLandscape implements Landscape<RiverTile> {
+export class OceanLandscape<Tile extends RiverTile = RiverTile>
+	extends Eventful<RenderedEvent<Tile>>
+	implements Landscape<Tile>
+{
 	public readonly mouseReactive = false
-	constructor(private readonly seaLevel: number) {}
-	createMesh(sector: Sector<RiverTile>, triangles: LandscapeTriangle[]): Object3D {
+	constructor(private readonly seaLevel: number) {
+		super()
+	}
+	createMesh(sector: Sector<Tile>, triangles: LandscapeTriangle[]): Object3D {
 		const positions: number[] = []
 		const opacities: number[] = []
 		const indices: number[] = []
-		const tileIndices = new Map<RiverTile, number>()
+		const tileIndices = new Map<Tile, number>()
 		const seaLevel = this.seaLevel
 		for (const triangle of triangles) {
 			const triangleTiles = triangle.points.map((coord) => sector.tiles.get(axial.key(coord))!)
@@ -42,6 +48,9 @@ export class OceanLandscape implements Landscape<RiverTile> {
 		geometry.setAttribute('opacity', new Float32BufferAttribute(opacities, 1))
 		geometry.setIndex(indices)
 		return new Mesh(geometry, oceanMaterial)
+	}
+	walkTimeMultiplier(movement: WalkTimeSpecification<Tile>): number | undefined {
+		if (movement.on.position.z < this.seaLevel) return Number.NaN
 	}
 }
 

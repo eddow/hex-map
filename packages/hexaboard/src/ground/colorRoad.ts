@@ -12,8 +12,10 @@ import {
 	UniformsUtils,
 } from 'three'
 import { assert, axial } from '~/utils'
+import type { Land } from './land'
 import type { LandscapeTriangle } from './landscaper'
-import { type RoadBase, RoadGrid, type RoadKey, type RoadTile } from './road'
+import type { ContentTile } from './resourceful'
+import { type RoadBase, RoadContent, RoadGrid, type RoadKey } from './road'
 import type { Sector } from './sector'
 
 export interface TextureRoad extends RoadBase {
@@ -27,11 +29,14 @@ export interface ColorRoad extends RoadBase {
 	blend: number
 }
 
-export class ColorRoadGrid<Tile extends RoadTile> extends RoadGrid<Tile> {
+export class ColorRoadGrid<
+	Tile extends ContentTile,
+	Road extends ColorRoad = ColorRoad,
+> extends RoadGrid<Tile, Road> {
 	public readonly material: Material
 
-	constructor(private readonly roadDefinition: Record<RoadKey, ColorRoad>) {
-		super()
+	constructor(land: Land<Tile>, roadDefinition: Record<RoadKey, Road>) {
+		super(land, roadDefinition)
 		this.material = roadColorMaterial()
 	}
 	createPartialMesh(sector: Sector<Tile>, triangles: LandscapeTriangle[]): Object3D {
@@ -65,9 +70,9 @@ export class ColorRoadGrid<Tile extends RoadTile> extends RoadGrid<Tile> {
 				const tile1 = sector.tiles.get(points[o1].key)!
 				const neighborIndex = axial.neighborIndex(points[o2], points[o1])
 				assert(neighborIndex !== undefined, 'O-s are neighbors')
-				const roadType = tile1.roads[neighborIndex]
-				if (roadType) {
-					const road = this.roadDefinition[roadType]
+				const roadContent = tile1.content?.[(neighborIndex ?? -1) + 1]
+				if (roadContent instanceof RoadContent) {
+					const road = roadContent.road
 					outRoadWidth[p] = road.width
 					outRoadBlend[p] = road.blend
 				} else {
@@ -76,9 +81,9 @@ export class ColorRoadGrid<Tile extends RoadTile> extends RoadGrid<Tile> {
 				}
 				// TODO: Oder by type level (mud road < highway < railroad) and take the highest level
 				// Calculate the road [point] `o1` is in
-				const inRoadType = tile1.roads.find((roadType) => roadType !== undefined)
+				const inRoadType = tile1.content?.find((roadType) => roadType instanceof RoadContent)
 				if (inRoadType) {
-					const road = this.roadDefinition[inRoadType]
+					const road = inRoadType.road
 					inRoadWidth[o1] = road.width
 					inRoadBlend[o1] = road.blend
 				} else {

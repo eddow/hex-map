@@ -1,10 +1,11 @@
 import { type Group, type Object3D, Vector3 } from 'three'
 import { type AxialCoord, type AxialKey, type AxialRef, axial, cartesian, hexSides } from '~/utils'
 import { assert } from '~/utils/debug'
-import type { Land, PositionInTile, TileBase } from './land'
+import type { Land, LandPart, PositionInTile, TileBase } from './land'
 
 export class Sector<Tile extends TileBase> {
 	public group?: Group
+	private parts = new Map<LandPart<Tile>, Object3D>()
 	public readonly attachedTiles = new Set<AxialKey>()
 	constructor(
 		public readonly land: Land<Tile>,
@@ -16,9 +17,15 @@ export class Sector<Tile extends TileBase> {
 	cartesian(aKey: AxialKey, tiles?: Map<AxialKey, Tile>) {
 		return { ...cartesian(aKey, this.land.tileSize), z: tiles?.get(aKey)?.position?.z ?? 0 }
 	}
-	add(o3d: Object3D) {
+	add(part: LandPart<Tile>, o3d: Object3D) {
 		assert(this.group, 'Rendering should happen in an existing sector')
 		this.group.add(o3d)
+		this.parts.set(part, o3d)
+	}
+	invalidate(part: LandPart<Tile>) {
+		const o3d = this.parts.get(part)
+		this.group?.remove(o3d!)
+		this.parts.delete(part)
 	}
 	/**
 	 * Retrieves a point (xyz) inside a rendered tile

@@ -8,7 +8,7 @@ import {
 	type Vector3Like,
 	WebGLRenderer,
 } from 'three'
-import type { Land } from '~/ground/land'
+import type { Land, TileBase } from '~/ground/land'
 import { MouseControl, type MouseEvolution } from '~/mouse'
 
 export type MouseEvolutionEvent<Evolution extends MouseEvolution = MouseEvolution> = (
@@ -20,12 +20,12 @@ export abstract class GameEntity {
 	progress(dt: number) {}
 }
 
-export class Game extends MouseControl {
+export class Game<Tile extends TileBase = TileBase> extends MouseControl {
 	public readonly lights = new Group()
-	private _land: Land
+	private _land: Land<Tile>
 
 	constructor(
-		land: Land,
+		land: Land<Tile>,
 		{ clampCamZ = { min: 150, max: 500 } }: { clampCamZ?: { min: number; max: number } } = {}
 	) {
 		super(clampCamZ)
@@ -109,6 +109,7 @@ export class Game extends MouseControl {
 		canvas?: HTMLCanvasElement,
 		{ near = 0.1, far = 1000 }: { near: number; far: number } = { near: 0.1, far: 1000 }
 	) {
+		// @ts-ignore Ignore tiles for the views
 		const view = new GameView(this, canvas, { near, far })
 		this.listenTo(view)
 		return view
