@@ -13,7 +13,7 @@ import {
 import type { HandledMouseEvents } from '~/mouse'
 import type { Triplet } from '~/types'
 import { type AxialKey, AxialKeyMap, Eventful, LCG, axial, numbers } from '~/utils'
-import type { RenderedEvent as RenderedEvents } from './land'
+import type { RenderedEvents } from './land'
 import type { Landscape, LandscapeTriangle, TileHandle } from './landscaper'
 import type { RoadBase, RoadKey } from './road'
 import type { Sector } from './sector'

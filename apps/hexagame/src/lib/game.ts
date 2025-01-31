@@ -16,6 +16,7 @@ import {
 	Resourceful,
 	type RiverTile,
 	Rivers,
+	type RoadHandle,
 	type RoadTile,
 	TextureLandscape,
 	TileCursor,
@@ -68,7 +69,7 @@ export function createGame(seed: number) {
 		})
 	)
 
-	function markPath(path?: AxialRef[] | null) {
+	function markPath(path?: AxialRef[] | null, radius = 2) {
 		if (pathTube) {
 			game.scene.remove(pathTube)
 			pathTube = undefined
@@ -77,7 +78,7 @@ export function createGame(seed: number) {
 			const pathCurve = new CatmullRomCurve3(
 				path.map((p) => new Vector3().copy(land.tile(p).position))
 			)
-			const pathGeometry = new TubeGeometry(pathCurve, path.length * 5, 2, 8, false)
+			const pathGeometry = new TubeGeometry(pathCurve, path.length * 5, radius, 8, false)
 			const pathMaterial = new MeshBasicMaterial({ color: 0xffff00, wireframe: true })
 			pathTube = new Mesh(pathGeometry, pathMaterial)
 			game.scene.add(pathTube)
@@ -85,6 +86,11 @@ export function createGame(seed: number) {
 	}
 
 	let pathTube: Object3D | undefined
+	grid.on({
+		'mouse:hover'(ev: MouseHoverEvolution<RoadHandle<GameXTile>>) {
+			markPath(ev.handle.points /*, 20 * ev.handle.roadType.road.width*/)
+		},
+	})
 	landscape.on({
 		'mouse:hover'(ev: MouseHoverEvolution<TileHandle<GameXTile>>) {
 			cursor.tile = ev.handle

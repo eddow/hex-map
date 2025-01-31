@@ -30,7 +30,7 @@ export type TileUpdater<Tile extends TileBase> = (
 	modifications?: Partial<Tile>
 ) => void
 
-export type RenderedEvent<Tile extends TileBase> = {
+export type RenderedEvents<Tile extends TileBase> = {
 	invalidatedRender: (part: LandPart<Tile>, sector: Sector<Tile>) => void
 }
 
@@ -54,7 +54,7 @@ export type WalkTimeSpecification<Tile extends TileBase> = {
 }
 
 export interface LandPart<Tile extends TileBase, GenerationInfo = unknown>
-	extends Eventful<RenderedEvent<Tile>> {
+	extends Eventful<RenderedEvents<Tile>> {
 	/**
 	 * Refine tile information
 	 * @param tile

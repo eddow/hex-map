@@ -2,6 +2,7 @@
 
 import type { Intersection, Object3D, Object3DEventMap } from 'three'
 import type { Game, GameView } from '~/game'
+import type { TileBase } from '~/ground'
 import type { Eventful } from '~/utils'
 import type { MouseControl } from '.'
 
@@ -118,15 +119,13 @@ export type MouseEvents = HandledMouseEvents<MouseHandle | undefined> & {
 	'mouse:unlock': (evolution: MouseLockingEvolution) => void
 }
 
-export interface MouseReactive<Handle extends MouseHandle | undefined = MouseHandle | undefined> {
-	mouseHandle(
-		sender: MouseControl,
-		target: Eventful<MouseEvents>,
-		intersection: Intersection<Object3D<Object3DEventMap>>
-	): Handle
-}
+export type MouseHandler<Handle extends MouseHandle | undefined = MouseHandle | undefined> = (
+	sender: MouseControl,
+	target: Eventful<MouseEvents>,
+	intersection: Intersection<Object3D<Object3DEventMap>>
+) => Handle | undefined
 
-export abstract class MouseHandle {
+export abstract class MouseHandle<Tile extends TileBase = TileBase> {
 	constructor(
 		public readonly game: Game,
 		public readonly target: Eventful<HandledMouseEvents>

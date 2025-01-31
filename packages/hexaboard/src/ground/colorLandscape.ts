@@ -8,7 +8,7 @@ import {
 	type RGB,
 } from 'three'
 import { type AxialCoord, Eventful } from '~/utils'
-import type { RenderedEvent, TileBase } from './land'
+import type { RenderedEvents, TileBase } from './land'
 import type { LandscapeTriangle } from './landscaper'
 import type { Landscape } from './landscaper'
 import type { Sector } from './sector'
@@ -21,7 +21,7 @@ interface ColorTile extends TileBase {
  * For testing purpose
  */
 export class ColorLandscape<Tile extends ColorTile = ColorTile>
-	extends Eventful<RenderedEvent<Tile>>
+	extends Eventful<RenderedEvents<Tile>>
 	implements Landscape<Tile>
 {
 	private readonly material: Material

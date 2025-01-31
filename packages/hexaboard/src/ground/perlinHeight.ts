@@ -1,13 +1,13 @@
 import { Eventful, subSeed } from '~/utils'
 import { HeightMap } from '~/utils/perlin'
-import type { LandPart, RenderedEvent, TileBase } from './land'
+import type { LandPart, RenderedEvents, TileBase } from './land'
 
 /**
  * Really simple Perlin noise procedural
  * @todo Make a real terrain generator out of it
  */
 export class PerlinHeight<Tile extends TileBase = TileBase>
-	extends Eventful<RenderedEvent<Tile>>
+	extends Eventful<RenderedEvents<Tile>>
 	implements LandPart<Tile>
 {
 	readonly perlin: HeightMap

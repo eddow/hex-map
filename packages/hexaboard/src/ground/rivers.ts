@@ -1,7 +1,7 @@
 import { BufferGeometry, Float32BufferAttribute, Mesh, type Object3D, ShaderMaterial } from 'three'
 import { costingPath } from '~/game'
 import { type AxialCoord, type AxialKey, Eventful, LCG, axial } from '~/utils'
-import type { Land, RenderedEvent, TileUpdater, WalkTimeSpecification } from './land'
+import type { Land, RenderedEvents, TileUpdater, WalkTimeSpecification } from './land'
 import type { Landscape, LandscapeTriangle } from './landscaper'
 import type { Sector } from './sector'
 import type { TerrainKey, TerrainTile } from './terrain'
@@ -27,7 +27,7 @@ export type RivesOptions = {
 }
 
 export class Rivers<Tile extends RiverTile = RiverTile>
-	extends Eventful<RenderedEvent<Tile>>
+	extends Eventful<RenderedEvents<Tile>>
 	implements Landscape<Tile, Sources>
 {
 	options: RivesOptions

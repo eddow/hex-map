@@ -1,7 +1,7 @@
 import { Group, type Object3D } from 'three'
 import { Handelable, type ResourcefulTerrain } from '~/game'
 import { Eventful, LCG, type RandGenerator, genTilePosition } from '~/utils'
-import type { LandPart, RenderedEvent, WalkTimeSpecification } from './land'
+import type { LandPart, RenderedEvents, WalkTimeSpecification } from './land'
 import type { Sector } from './sector'
 import type { TerrainDefinition, TerrainTile } from './terrain'
 
@@ -46,7 +46,7 @@ export class Resourceful<
 		Tile extends ContentTile = ContentTile,
 		Terrain extends ResourcefulTerrain = ResourcefulTerrain,
 	>
-	extends Eventful<RenderedEvent<Tile>>
+	extends Eventful<RenderedEvents<Tile>>
 	implements LandPart<Tile>
 {
 	constructor(

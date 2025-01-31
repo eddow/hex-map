@@ -1,6 +1,6 @@
 import { BufferGeometry, Float32BufferAttribute, Mesh, type Object3D, ShaderMaterial } from 'three'
 import { Eventful } from '~/utils'
-import type { RenderedEvent, WalkTimeSpecification } from './land'
+import type { RenderedEvents, WalkTimeSpecification } from './land'
 import type { Landscape, LandscapeTriangle } from './landscaper'
 import type { RiverTile } from './rivers'
 import type { Sector } from './sector'
@@ -9,7 +9,7 @@ import type { Sector } from './sector'
  * For testing purpose
  */
 export class OceanLandscape<Tile extends RiverTile = RiverTile>
-	extends Eventful<RenderedEvent<Tile>>
+	extends Eventful<RenderedEvents<Tile>>
 	implements Landscape<Tile>
 {
 	public readonly mouseReactive = false

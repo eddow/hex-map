@@ -1,6 +1,6 @@
 import { Eventful, subSeed } from '~/utils'
 import { HeightMap } from '~/utils/perlin'
-import type { LandPart, RenderedEvent, TileBase, WalkTimeSpecification } from './land'
+import type { LandPart, RenderedEvents, TileBase, WalkTimeSpecification } from './land'
 
 export type TerrainKey = PropertyKey
 
@@ -32,7 +32,7 @@ export class TerrainDefinition<Terrain extends TerrainBase = TerrainBase> {
 }
 
 export class HeightTerrain<Tile extends TerrainTile = TerrainTile>
-	extends Eventful<RenderedEvent<Tile>>
+	extends Eventful<RenderedEvents<Tile>>
 	implements LandPart<Tile>
 {
 	readonly perlin: HeightMap

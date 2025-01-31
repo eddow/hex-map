@@ -1,10 +1,10 @@
 import type { Face, Intersection, Object3D, Object3DEventMap } from 'three'
 import type { Game } from '~/game'
-import { MouseHandle, type MouseReactive } from '~/mouse'
+import { MouseHandle } from '~/mouse'
 import type { Triplet } from '~/types'
 import { Eventful } from '~/utils'
 import { type Axial, type AxialCoord, axial } from '~/utils/axial'
-import type { LandPart, RenderedEvent, TileBase, TileUpdater, WalkTimeSpecification } from './land'
+import type { LandPart, RenderedEvents, TileBase, TileUpdater, WalkTimeSpecification } from './land'
 import type { Sector } from './sector'
 
 export interface LandscapeTriangle<A extends AxialCoord = Axial> {
@@ -20,7 +20,7 @@ export interface Landscape<Tile extends TileBase, GenerationInfo = unknown>
 
 export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
 	constructor(
-		game: Game,
+		game: Game<Tile>,
 		target: any,
 		public readonly point: Axial
 	) {
@@ -34,12 +34,12 @@ export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
 	}
 }
 
-class SectorMouseHandler<Tile extends TileBase> implements MouseReactive<TileHandle<Tile>> {
-	constructor(
-		private readonly geometryVertex: AxialCoord[],
-		private readonly center: AxialCoord
-	) {}
-	mouseHandle(
+// TODO: Should be between here and Color/Terxure-Landscape (complete landscapes)
+function sectorMouseHandler<Tile extends TileBase>(
+	geometryVertex: AxialCoord[],
+	center: AxialCoord
+) {
+	return function mouseHandle(
 		game: Game<Tile>,
 		target: any,
 		intersection: Intersection<Object3D<Object3DEventMap>>
@@ -47,7 +47,7 @@ class SectorMouseHandler<Tile extends TileBase> implements MouseReactive<TileHan
 		const baryArr = intersection.barycoord!.toArray()
 		const facePt = baryArr.indexOf(Math.max(...baryArr))
 		const geomPt = intersection.face!['abc'[facePt] as keyof Face] as number
-		const tileRef = axial.linear(this.center, this.geometryVertex[geomPt])
+		const tileRef = axial.linear(center, geometryVertex[geomPt])
 		// @ts-ignore Game<TileBase>
 		return new TileHandle(game, target, axial.coordAccess(tileRef))
 	}
@@ -115,7 +115,7 @@ function centeredTriangles(
  * Provide triangle management for the landscape
  */
 export class Landscaper<Tile extends TileBase>
-	extends Eventful<RenderedEvent<Tile>>
+	extends Eventful<RenderedEvents<Tile>>
 	implements LandPart<Tile, unknown[]>
 {
 	private readonly landscapes: Landscape<Tile>[]
@@ -144,15 +144,14 @@ export class Landscaper<Tile extends TileBase>
 		}
 	}
 	renderSector(sector: Sector<Tile>): void {
-		const mouseHandler = new SectorMouseHandler(this.geometryVertex, sector.center)
+		const mouseHandler = sectorMouseHandler(this.geometryVertex, sector.center)
 		const sectorTriangles = centeredTriangles(this.triangles, sector.center)
-		let meshOrder = 0
 		const invalidated = this.invalidated.get(sector) as Set<Landscape<Tile>>
 		if (invalidated) this.invalidated.delete(sector)
 		for (const landscape of invalidated ?? this.landscapes) {
 			landscape.renderSector?.(sector)
 			const o3d = landscape.createMesh(sector, sectorTriangles)
-			o3d.renderOrder = meshOrder++
+			o3d.renderOrder = this.landscapes.indexOf(landscape)
 			if (landscape.mouseReactive) o3d.userData = { mouseHandler, mouseTarget: landscape }
 			sector.add(landscape, o3d)
 		}

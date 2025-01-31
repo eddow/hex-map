@@ -14,11 +14,11 @@ import {
 	type MouseEvents,
 	type MouseEvolution,
 	type MouseHandle,
+	type MouseHandler,
 	type MouseHoverEvolution,
 	type MouseLockButtons,
 	type MouseMoveEvolution,
 	type MousePosition,
-	type MouseReactive,
 	type MouseWheelEvolution,
 	type PositionedMouseEvolution,
 	modKeys,
@@ -192,13 +192,19 @@ export class MouseControl extends Eventful<MouseEvents> {
 	mouseInteract({ gameView, mousePosition: position }: PositionedMouseEvolution) {
 		const intersections = this.mouseIntersections(gameView, position).filter(
 			(i) =>
-				i.object?.userData?.mouseHandler?.mouseHandle &&
+				i.object?.userData?.mouseHandler &&
 				this.drag?.dropValidation?.(this.drag, i.object?.userData?.mouseHandler) !== false
 		)
+		intersections.sort((a, b) =>
+			a.distance !== b.distance
+				? a.distance - b.distance
+				: b.object.renderOrder - a.object.renderOrder
+		)
+		// TODO: filter by distance THEN by o3d.renderOrder
 		for (const intersection of intersections) {
 			const userData = intersection.object.userData
-			const target = userData.mouseHandler as MouseReactive
-			const handle = target.mouseHandle(this, userData.mouseTarget, intersection)
+			const handler = userData.mouseHandler as MouseHandler
+			const handle = handler(this, userData.mouseTarget, intersection)
 			if (handle)
 				return {
 					intersection: intersection,
