@@ -3,8 +3,10 @@ import {
 	assert,
 	type Axial,
 	type AxialCoord,
+	type AxialDirection,
 	type AxialKey,
 	type AxialRef,
+	type Eventful,
 	axial,
 	cartesian,
 	debugInformation,
@@ -18,7 +20,7 @@ import { Sector } from './sector'
 export interface TileBase {
 	position: Vector3Like
 	// Number of sectors it has been generated in (find an alternative solution, many "1" to store)
-	sectors: Sector<TileBase>[]
+	sectors: Sector<any>[]
 }
 
 export type TileUpdater<Tile extends TileBase> = (
@@ -27,7 +29,31 @@ export type TileUpdater<Tile extends TileBase> = (
 	modifications?: Partial<Tile>
 ) => void
 
-export interface LandPart<Tile extends TileBase, GenerationInfo = unknown> {
+export type RenderedEvent<Tile extends TileBase> = {
+	invalidatedRender: (part: LandPart<Tile>, sector: Sector<Tile>) => void
+}
+
+/**
+ * Used to calculate the time it takes to walk between two tiles
+ */
+export type WalkTimeSpecification<Tile extends TileBase> = {
+	/**
+	 * Starting tile
+	 */
+	from: Tile
+	/**
+	 * Destination tile
+	 */
+	to: Tile
+	/**
+	 * The tile the calculation occurs on (`from` or `to)
+	 */
+	on: Tile
+	direction: AxialDirection
+}
+
+export interface LandPart<Tile extends TileBase, GenerationInfo = unknown>
+	extends Eventful<RenderedEvent<Tile>> {
 	/**
 	 * Refine tile information
 	 * @param tile
@@ -47,6 +73,8 @@ export interface LandPart<Tile extends TileBase, GenerationInfo = unknown> {
 	 * @param updateTile Function to call when a tile is modified
 	 */
 	spreadGeneration?(updateTile: TileUpdater<Tile>, generationInfo: GenerationInfo): void
+
+	walkTimeMultiplier?(movement: WalkTimeSpecification<Tile>): number | undefined
 }
 
 function distance(p1: { x: number; y: number }, p2: { x: number; y: number }): number {
@@ -257,6 +285,10 @@ export class Land<Tile extends TileBase = TileBase> {
 	}
 	addPart(...parts: LandPart<Tile>[]) {
 		this.parts.push(...parts)
+		for (const part of parts)
+			part.on('invalidatedRender', (part: LandPart<Tile>, sector: Sector<Tile>) => {
+				// TODO
+			})
 	}
 
 	progress(dt: number) {
@@ -278,4 +310,53 @@ export class Land<Tile extends TileBase = TileBase> {
 	}
 
 	// #endregion
+
+	/**
+	 * Calculate the half-way cost between a tile center and its border
+	 * @param from From which tile we start(ed)
+	 * @param to Which tile we end on/head to
+	 * @param on `from` or `to` depending
+	 */
+	walkTileCost(movement: WalkTimeSpecification<Tile>) {
+		let rv = 1
+		for (const part of this.parts)
+			if (part.walkTimeMultiplier) {
+				rv *= part.walkTimeMultiplier(movement) ?? 1
+				if (Number.isNaN(rv)) return Number.NaN
+			}
+		return rv
+	}
+
+	halfTileCost(
+		from: Axial,
+		to: Axial,
+		direction: 'enter' | 'exit',
+		tiles?: { from: Tile; to: Tile }
+	) {
+		tiles ??= {
+			from: this.tile(from),
+			to: this.tile(to),
+		}
+		return this.walkTileCost({
+			from: tiles.from,
+			to: tiles.to,
+			on: direction === 'enter' ? tiles.to : tiles.from,
+			direction:
+				direction === 'enter'
+					? (axial.neighborIndex(from, to) ?? null)
+					: (axial.neighborIndex(to, from) ?? null),
+		})
+	}
+
+	static walkCost(land: Land) {
+		return (from: Axial, to: Axial) => {
+			const tiles = {
+				from: land.tile(from),
+				to: land.tile(to),
+			}
+			return (
+				land.halfTileCost(from, to, 'exit', tiles) + land.halfTileCost(from, to, 'enter', tiles)
+			)
+		}
+	}
 }

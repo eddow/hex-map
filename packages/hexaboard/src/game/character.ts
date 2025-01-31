@@ -1,13 +1,9 @@
-import type { Object3D, Vector3, Vector3Like } from 'three'
-import type { Land, TileBase } from '~/ground'
-import { type AxialKey, type AxialRef, axial } from '~/utils/axial'
+import { type Object3D, Vector3, type Vector3Like } from 'three'
+import { Land, type TileBase } from '~/ground'
+import { type Axial, type AxialDirection, type AxialRef, axial } from '~/utils/axial'
 import { assert } from '~/utils/debug'
 import { GameEntity } from './game'
 import { costingPath } from './path'
-
-function terrainWalkCost(from: AxialKey, to: AxialKey) {
-	return 1
-}
 
 function characterActionError<Details extends any[] = []>(msg: string) {
 	return class CharacterActionError extends Error {
@@ -69,20 +65,17 @@ export abstract class CharacterAction {
 	abstract set progression(alpha: number)
 }
 
-export class WalkToTile extends CharacterAction {
+export class Walk3 extends CharacterAction {
 	private start: Vector3
-	private end: Vector3Like
 	constructor(
 		character: Character,
 		duration: number,
-		public readonly destination: AxialKey
+		public readonly end: Vector3Like
 	) {
 		super(character, duration)
 		this.start = character.o3d.position
-		this.end = character.land.tile(destination).position
 	}
 	set progression(alpha: number) {
-		if (alpha >= 0.5) this.character.tileKey = this.destination
 		this.character.o3d.position.lerpVectors(this.start, this.end, alpha)
 	}
 }
@@ -110,18 +103,20 @@ export class AnimationAction extends CharacterAction {
 export async function goTo(this: Character, destination: AxialRef) {
 	do {
 		try {
-			const path = costingPath(this.tileKey, terrainWalkCost, (tileKey) => tileKey === destination)
-			if (!path) throw new ImpossibleMove(this.tileKey, destination)
-
-			if (this.action instanceof WalkToTile) {
-				if (this.action.destination === path[1]) path.shift()
-				else {
-					// TODO calculate time for walkTo current tile knowing we might be on a road (trip between current tile and destination)
+			const path = costingPath(
+				this.point,
+				Land.walkCost(this.land),
+				(tileKey) => tileKey === destination
+			)
+			if (!path) throw new ImpossibleMove(this.point, destination)
+			if (this.direction !== undefined) {
+				if (this.direction === null) {
+					path.shift() // Skip the "go to starting tile", we are there
 				}
-			} else {
-				// TODO calculate time for walkTo current tile within tile without road
+				//TODO: calculate half-way actions
 			}
-			for (const tileKey of path) await this.act(new WalkToTile(this, 1, tileKey))
+
+			for (const point of path) await this.act(new Walk3(this, 1, this.land.tile(point).position))
 		} catch (e) {
 			if (e instanceof BrokenPath) continue
 			throw e
@@ -132,20 +127,32 @@ export async function goTo(this: Character, destination: AxialRef) {
 
 export class Character<Tile extends TileBase = TileBase> extends GameEntity {
 	//public action: CharacterAction = idle
-	public tileKey: AxialKey
+	public point: Axial
 	public action?: CharacterAction
 	public availableDt = 0
+	/**
+	 * - undefined = anywhere on the tile
+	 * - null = exactly on the center of the tile
+	 * - 0-5 = on the road toward a neighbor
+	 */
+	public direction?: AxialDirection
 	constructor(
 		public readonly land: Land<Tile>,
 		o3d: Object3D,
-		tileKey?: AxialKey
+		point?: Axial
 	) {
 		super(o3d)
-		if (tileKey !== undefined) {
-			const tile = land.tile(tileKey)
-			this.tileKey = tileKey
+		if (point !== undefined) {
+			const tile = land.tile(point)
+			this.point = point
 			o3d.position.copy(tile.position)
-		} else this.tileKey = axial.key(land.tileAt(o3d.position))
+			this.direction = null
+		} else {
+			this.point = axial.coordAccess(land.tileAt(o3d.position))
+			this.direction = new Vector3().copy(land.tile(this.point).position).equals(o3d.position)
+				? null
+				: undefined
+		}
 	}
 
 	get position() {
@@ -153,7 +160,7 @@ export class Character<Tile extends TileBase = TileBase> extends GameEntity {
 	}
 
 	get tile() {
-		return this.land.tile(this.tileKey)
+		return this.land.tile(this.point)
 	}
 
 	progress(dt: number) {

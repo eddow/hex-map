@@ -1,7 +1,7 @@
 import { BufferGeometry, Float32BufferAttribute, Mesh, type Object3D, ShaderMaterial } from 'three'
 import { costingPath } from '~/game'
-import { type AxialCoord, type AxialKey, LCG, axial } from '~/utils'
-import type { Land, TileUpdater } from './land'
+import { type AxialCoord, type AxialKey, Eventful, LCG, axial } from '~/utils'
+import type { Land, RenderedEvent, TileUpdater, WalkTimeSpecification } from './land'
 import type { Landscape, LandscapeTriangle } from './landscaper'
 import type { Sector } from './sector'
 import type { TerrainKey, TerrainTile } from './terrain'
@@ -26,7 +26,10 @@ export type RivesOptions = {
 	minStreamSlope: number
 }
 
-export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Tile, Sources> {
+export class Rivers<Tile extends RiverTile = RiverTile>
+	extends Eventful<RenderedEvent<Tile>>
+	implements Landscape<Tile, Sources>
+{
 	options: RivesOptions
 	constructor(
 		private readonly land: Land<Tile>,
@@ -42,6 +45,7 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 			minStreamSlope = 1,
 		}: Partial<RivesOptions> = {}
 	) {
+		super()
 		this.options = { riverTerrain, minLength, minBankSlope, minStreamSlope }
 	}
 	readonly mouseReactive = false
@@ -95,27 +99,27 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 			}
 			if (path && path.length > 4) {
 				// Last tile in the path
-				const ultimatePosition = this.land.tile(path[0]).position
+				const ultimatePosition = this.land.tile(path[path.length - 1]).position
 				// Last processed tile
 				let lastTile = this.land.tile(source)
-				let lastTileKey = axial.key(source)
+				let lastPoint = source
 				updateTile([], source, {
 					terrain: this.options.riverTerrain,
 					riverHeight: lastTile.position.z,
 				} as Partial<Tile>)
 				const bank = new Set<AxialKey>()
 				for (let step = 1; step < path.length; step++) {
-					const tileKey = path[step]!
-					const tile = this.land.tile(tileKey)
+					const point = path[step]!
+					const tile = this.land.tile(point)
 					if (tile.originalZ === undefined) tile.originalZ = tile.position.z
-					const tileNeighborsKeys = axial
-						.neighbors(tileKey)
-						.map((c) => axial.key(c))
-						.filter((p) => ![path[step + 1], lastTileKey].includes(p))
+					const tileNeighbors = axial
+						.neighbors(point)
+						.map((c) => axial.coordAccess(c))
+						.filter((p) => ![path[step + 1], lastPoint].includes(p))
 
-					for (const neighborKey of tileNeighborsKeys) bank.add(neighborKey)
+					for (const neighbor of tileNeighbors) bank.add(neighbor.key)
 					const minNeighborZ = Math.min(
-						...tileNeighborsKeys.map((key) => this.land.tile(key).position.z)
+						...tileNeighbors.map((key) => this.land.tile(key).position.z)
 					)
 
 					// enforce minimum slope
@@ -134,14 +138,14 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 					)
 					if (riverHeight < minRiverHeight) minRiverHeight = riverHeight
 					if (riverHeight > maxRiverHeight) maxRiverHeight = riverHeight
-					updateTile(sourceSectors, tileKey, {
+					updateTile(sourceSectors, point, {
 						terrain: this.options.riverTerrain,
 						riverHeight,
 						position: { ...tile.position, z },
 					} as Partial<Tile>)
 
 					lastTile = tile
-					lastTileKey = tileKey
+					lastPoint = point
 				}
 				for (const key of bank) {
 					const tile = this.land.tile(key)
@@ -150,9 +154,14 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 						.map((p) => this.land.tile(p))
 						.filter((t) => t.terrain === this.options.riverTerrain)
 						.map((t) => t.riverHeight!)
-					updateTile(sourceSectors, key, {
-						riverHeight: river.reduce((a, b) => a + b, 0) / river.length,
-					} as Partial<Tile>)
+					const riverHeight = river.reduce((a, b) => a + b, 0) / river.length
+					if (!tile.riverHeight || tile.riverHeight < riverHeight) {
+						// We can have sources appearing as neighbors
+						// TODO: possible to avoid it ?
+						updateTile(sourceSectors, key, {
+							riverHeight,
+						} as Partial<Tile>)
+					}
 				}
 			}
 		}
@@ -204,6 +213,9 @@ export class Rivers<Tile extends RiverTile = RiverTile> implements Landscape<Til
 		geometry.setAttribute('color', new Float32BufferAttribute(colors, 3))
 		geometry.setIndex(indices)
 		return new Mesh(geometry, riverMaterial)
+	}
+	walkTimeMultiplier(movement: WalkTimeSpecification<RiverTile>): number | undefined {
+		if (movement.on.terrain === this.options.riverTerrain) return Number.NaN
 	}
 }
 

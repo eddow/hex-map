@@ -32,6 +32,7 @@ const terrainTypes: Record<TerrainKey, TextureTerrain & ResourcefulTerrain> = {
 		appearHeight: Number.NEGATIVE_INFINITY,
 		//variance: 0.1,
 		resourceDistribution: [[Rock, 0.1]],
+		walkTimeMultiplier: 1.1,
 	},
 	grass: {
 		color: { r: 0.4, g: 0.8, b: 0.4 },
@@ -54,6 +55,7 @@ const terrainTypes: Record<TerrainKey, TextureTerrain & ResourcefulTerrain> = {
 			[Rock, 0.1],
 			[Tree, 1.5],
 		],
+		walkTimeMultiplier: 1.3,
 	},
 	stone: {
 		color: { r: 0.6, g: 0.4, b: 0.1 },
@@ -65,6 +67,7 @@ const terrainTypes: Record<TerrainKey, TextureTerrain & ResourcefulTerrain> = {
 			[Rock, 1.5],
 			[Tree, 0.2],
 		],
+		walkTimeMultiplier: 1.5,
 	},
 	snow: {
 		color: { r: 0.9, g: 0.9, b: 0.9 },
@@ -73,6 +76,7 @@ const terrainTypes: Record<TerrainKey, TextureTerrain & ResourcefulTerrain> = {
 		appearHeight: 130,
 		//variance: 1.5,
 		resourceDistribution: [[Rock, 0.2]],
+		walkTimeMultiplier: 2,
 	},
 	river: {
 		color: { r: 0.8, g: 0.8, b: 0 },
@@ -91,6 +95,7 @@ export const roadTypes: Record<RoadKey, ColorRoad> = {
 		blend: 0.07,
 		color: { r: 0.8, g: 0.8, b: 0 },
 		//texture: roadTexture('4lanes'),
+		walkTimeMultiplier: 0.8,
 	},
 }
 

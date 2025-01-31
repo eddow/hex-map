@@ -22,7 +22,8 @@ export interface MousePosition {
 export interface PositionedMouseEvolution<
 	Handle extends MouseHandle | undefined = MouseHandle | undefined,
 > extends MouseEvolution {
-	position: MousePosition
+	mousePosition: MousePosition
+	intersection?: Intersection
 	handle: Handle
 }
 
@@ -39,28 +40,45 @@ export interface MouseButtonEvolution<
 	buttons: MouseButtons
 }
 
-export interface MouseDragHandle extends MouseHandle {
-	dropValidation?: (target: any) => boolean
+export interface MouseDrag {
+	handle: MouseHandle | undefined
+	button: MouseButton
+	dropValidation?: (drag: MouseDrag, target: Eventful<MouseEvents>) => boolean
+	cancel: (evolution: MouseDragEvolution) => void
+	dragDrop: (evolution: MouseDragEvolution) => void
+	over: (evolution: MouseDragEvolution) => void
+}
+
+export function mouseDrag(button: MouseButton): MouseDrag {
+	return {
+		handle: null!, // `will be filled by evolutions` generator
+		button,
+		cancel(evolution) {
+			evolution.handle?.target?.emit(
+				'mouse:dragCancel',
+				evolution as MouseDragEvolution<MouseHandle>
+			)
+		},
+		dragDrop(evolution) {
+			evolution.handle?.target?.emit('mouse:dragDrop', evolution as MouseDragEvolution<MouseHandle>)
+		},
+		over(evolution) {
+			evolution.handle?.target?.emit('mouse:dragOver', evolution as MouseDragEvolution<MouseHandle>)
+		},
+	}
 }
 
 export interface MouseDragEvolution<
 	Handle extends MouseHandle | undefined = MouseHandle | undefined,
 > extends MouseControlledEvolution<Handle> {
-	type: 'dragStart' | 'dragEnd' | 'dragOver'
-	dragStartHandle: MouseDragHandle
-	button: MouseButton
+	type: 'startDrag' | 'dragCancel' | 'dragOver' | 'dragDrop'
+	drag: MouseDrag
 }
 
 export interface MouseHoverEvolution<
 	Handle extends MouseHandle | undefined = MouseHandle | undefined,
 > extends PositionedMouseEvolution<Handle> {
 	type: 'enter' | 'leave' | 'hover'
-}
-
-export interface MouseZoomEvolution<
-	Handle extends MouseHandle | undefined = MouseHandle | undefined,
-> extends PositionedMouseEvolution<Handle> {
-	type: 'zoom'
 }
 
 export interface MouseMoveEvolution<
@@ -85,9 +103,10 @@ export type HandledMouseEvents<Handle extends MouseHandle | undefined = MouseHan
 	'mouse:click': (evolution: MouseButtonEvolution<Handle>) => void
 	'mouse:up': (evolution: MouseButtonEvolution<Handle>) => void
 	'mouse:down': (evolution: MouseButtonEvolution<Handle>) => void
-	'mouse:dragStart': (evolution: MouseDragEvolution<Handle>) => void
-	'mouse:dragEnd': (evolution: MouseDragEvolution<Handle>) => void
+	'mouse:startDrag': (evolution: MouseDragEvolution<Handle>) => void
+	'mouse:dragCancel': (evolution: MouseDragEvolution<Handle>) => void
 	'mouse:dragOver': (evolution: MouseDragEvolution<Handle>) => void
+	'mouse:dragDrop': (evolution: MouseDragEvolution<Handle>) => void
 	'mouse:enter': (evolution: MouseHoverEvolution<Handle>) => void
 	'mouse:hover': (evolution: MouseHoverEvolution<Handle>) => void
 	'mouse:leave': (evolution: MouseHoverEvolution<Handle>) => void

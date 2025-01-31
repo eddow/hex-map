@@ -1,12 +1,13 @@
-import { subSeed } from '~/utils'
+import { Eventful, subSeed } from '~/utils'
 import { HeightMap } from '~/utils/perlin'
-import type { LandPart, TileBase } from './land'
+import type { LandPart, RenderedEvent, TileBase, WalkTimeSpecification } from './land'
 
 export type TerrainKey = PropertyKey
 
 export interface TerrainBase {
 	color: { r: number; g: number; b: number }
 	appearHeight?: number
+	walkTimeMultiplier?: number
 }
 
 export interface TerrainTile extends TileBase {
@@ -30,7 +31,10 @@ export class TerrainDefinition<Terrain extends TerrainBase = TerrainBase> {
 	}
 }
 
-export class HeightTerrain<Tile extends TerrainTile = TerrainTile> implements LandPart<Tile> {
+export class HeightTerrain<Tile extends TerrainTile = TerrainTile>
+	extends Eventful<RenderedEvent<Tile>>
+	implements LandPart<Tile>
+{
 	readonly perlin: HeightMap
 	constructor(
 		private readonly variation: number,
@@ -38,6 +42,7 @@ export class HeightTerrain<Tile extends TerrainTile = TerrainTile> implements La
 		private readonly terrains: TerrainDefinition,
 		scale = 10
 	) {
+		super()
 		this.perlin = new HeightMap(subSeed(seed, 'terrainH'), scale, [-variation, variation])
 	}
 	refineTile(tile: TileBase): Tile {
@@ -47,5 +52,8 @@ export class HeightTerrain<Tile extends TerrainTile = TerrainTile> implements La
 			...tile,
 			terrain: this.terrains.terrainType(z + add),
 		} as Tile
+	}
+	walkTimeMultiplier(movement: WalkTimeSpecification<Tile>): number | undefined {
+		return this.terrains.types[movement.on.terrain].walkTimeMultiplier
 	}
 }

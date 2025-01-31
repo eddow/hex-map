@@ -1,12 +1,15 @@
 import {
+	type AxialRef,
 	ColorRoadGrid,
 	type ContentTile,
 	Game,
 	HeightTerrain,
 	Land,
+	type Landscape,
 	Landscaper,
 	MouseButton,
 	type MouseButtonEvolution,
+	type MouseDragEvolution,
 	type MouseHoverEvolution,
 	OceanLandscape,
 	PerlinHeight,
@@ -18,9 +21,17 @@ import {
 	TileCursor,
 	TileHandle,
 	axial,
+	costingPath,
 	icosahedron,
 } from 'hexaboard'
-import type { Object3D } from 'three'
+import {
+	CatmullRomCurve3,
+	Mesh,
+	MeshBasicMaterial,
+	type Object3D,
+	TubeGeometry,
+	Vector3,
+} from 'three'
 import { debugInfo, dockview, games } from './globals.svelte'
 import { roadTypes, seaLevel, terrainHeight, terrains } from './world/textures'
 
@@ -37,9 +48,9 @@ export function createGame(seed: number) {
 		new Landscaper<GameXTile>(
 			land.sectorRadius,
 			new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),
-			landscape,
-			new ColorRoadGrid<GameXTile>(roadTypes),
-			new OceanLandscape(seaLevel)
+			landscape as Landscape<GameXTile>,
+			new ColorRoadGrid<GameXTile>(land, roadTypes),
+			new OceanLandscape<GameXTile>(seaLevel)
 		),
 		new Resourceful(terrains, seed, seaLevel)
 	)
@@ -56,18 +67,27 @@ export function createGame(seed: number) {
 		})
 	)
 
-	/*function axialV3(aRef: AxialRef) {
-		return tileSpec(aRef).center
-	}*/
+	function markPath(path?: AxialRef[] | null) {
+		if (pathTube) {
+			game.scene.remove(pathTube)
+			pathTube = undefined
+		}
+		if (path && path.length > 1) {
+			const pathCurve = new CatmullRomCurve3(
+				path.map((p) => new Vector3().copy(land.tile(p).position))
+			)
+			const pathGeometry = new TubeGeometry(pathCurve, path.length * 5, 2, 8, false)
+			const pathMaterial = new MeshBasicMaterial({ color: 0xffff00, wireframe: true })
+			pathTube = new Mesh(pathGeometry, pathMaterial)
+			game.scene.add(pathTube)
+		}
+	}
+
 	let pathTube: Object3D | undefined
 	landscape.on({
-		'mouse:hover': (ev: MouseHoverEvolution<TileHandle>) => {
+		'mouse:hover'(ev: MouseHoverEvolution<TileHandle<GameXTile>>) {
 			cursor.tile = ev.handle
 
-			if (pathTube) {
-				game.scene.remove(pathTube)
-				pathTube = undefined
-			}
 			//if (pawn.tile !== cursor.tile.hexIndex) {
 			/*try {
 				/* straight path
@@ -98,13 +118,26 @@ export function createGame(seed: number) {
 			debugInfo.axial = cursor.tile?.point
 			const tile = ev.handle.tile
 			debugInfo.tilePos = tile.position
-			debugInfo.riverHeight = (tile as GameXTile).riverHeight
+			debugInfo.riverHeight = tile.riverHeight
 		},
-		'mouse:leave': (ev: MouseHoverEvolution<TileHandle>) => {
+		'mouse:leave'() {
 			cursor.tile = undefined
 			debugInfo.axial = undefined
 			debugInfo.tilePos = undefined
-			debugInfo.riverHeight = undefined
+		},
+		'mouse:dragOver'(ev: MouseDragEvolution<TileHandle>) {
+			const src = ev.drag.handle
+			const dst = ev.handle.point.key
+			if (src instanceof TileHandle) {
+				const path = costingPath(src.point, Land.walkCost(land), (at) => at.key === dst)
+				markPath(path)
+			}
+		},
+		'mouse:dragCancel': (ev: MouseDragEvolution<TileHandle>) => {
+			markPath()
+		},
+		'mouse:dragDrop': (ev: MouseDragEvolution<TileHandle>) => {
+			markPath()
 		},
 	})
 	game.on('mouse:click', (ev: MouseButtonEvolution) => {

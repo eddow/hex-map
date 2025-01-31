@@ -1,4 +1,11 @@
-import { type AxialCoord, type AxialKey, type AxialRef, axial, hexSides } from '~/utils/axial'
+import {
+	type Axial,
+	type AxialCoord,
+	type AxialKey,
+	type AxialRef,
+	axial,
+	hexSides,
+} from '~/utils/axial'
 
 export function straightPath(fromTile: AxialRef, toTile: AxialRef) {
 	const from = axial.coord(fromTile)
@@ -9,43 +16,44 @@ export function straightPath(fromTile: AxialRef, toTile: AxialRef) {
 	return rv
 }
 
-export type IsFound = (aRef: AxialKey) => boolean
+export type IsFound = (at: Axial) => boolean
 /**
  * Cost function: Gets the cost from a tile to another
  * - Strictly positive
  * - NaN if no path
  */
-export type Cost = (from: AxialKey, to: AxialKey) => number
+export type Cost = (from: Axial, to: Axial) => number
 
-type HexCost<O = AxialKey> = { key: O; cost: number }
+type HexCost<O = Axial> = { point: O; cost: number }
 
 // TODO: add list of shortcuts like train-stations
 const epsilon = 1e-6
-export function costingPath(fromTile: AxialRef, cost: Cost, isFound: IsFound) {
-	const fromKey = axial.key(fromTile)
-	if (isFound(fromKey)) return [fromKey]
-	const toStudy: HexCost[] = [{ key: fromKey, cost: 0 }]
-	const origins = new Map<AxialKey, HexCost<AxialKey | null>>([[fromKey, { key: null, cost: 0 }]])
-	let found: { tile: AxialKey; cost: number } | undefined
+export function costingPath(start: AxialRef, cost: Cost, isFound: IsFound, maxCost = 100) {
+	const from = axial.access(start)
+	if (isFound(from)) return [from]
+	const toStudy: HexCost[] = [{ point: from, cost: 0 }]
+	const origins = new Map<AxialKey, HexCost<Axial | null>>([[from.key, { point: null, cost: 0 }]])
+	let found: { point: Axial; cost: number } | undefined
 	while (toStudy.length && (!found || found.cost > toStudy[0].cost)) {
 		const study = toStudy.shift()!
-		const coord = axial.coord(study.key)
+		const coord = axial.coord(study.point)
 		for (const hexSide of hexSides) {
-			const next = axial.key(axial.linear([1, coord], [1, hexSide]))
-			if (next !== origins.get(study.key)?.key) {
-				let nextCost = cost(study.key, next)
+			const next = axial.coordAccess(axial.linear([1, coord], [1, hexSide]))
+			if (next.key !== origins.get(study.point.key)?.point?.key) {
+				let nextCost = cost(study.point, next)
 				if (Number.isNaN(nextCost)) continue
 				if (nextCost < 0) throw new Error('negative or null cost')
 				if (nextCost === 0) nextCost = epsilon
 				const pathCost = study.cost + nextCost
+				if (pathCost > maxCost) continue
 				if (isFound(next) && (!found || found.cost > pathCost))
-					found = { tile: next, cost: pathCost }
-				if (!origins.has(next) || origins.get(next)!.cost > pathCost) {
-					if (origins.has(next)) {
-						const tsIndex = toStudy.findIndex((ts) => ts.key === next)
+					found = { point: next, cost: pathCost }
+				if (!origins.has(next.key) || origins.get(next.key)!.cost > pathCost) {
+					if (origins.has(next.key)) {
+						const tsIndex = toStudy.findIndex((ts) => ts.point === next)
 						if (tsIndex !== -1) toStudy.splice(tsIndex, 1)
 					}
-					origins.set(next, { key: study.key, cost: pathCost })
+					origins.set(next.key, { point: study.point, cost: pathCost })
 					// add in toStudy
 					let min = 0
 					let max = toStudy.length - 1
@@ -54,17 +62,17 @@ export function costingPath(fromTile: AxialRef, cost: Cost, isFound: IsFound) {
 						if (toStudy[mid].cost < pathCost) min = mid + 1
 						else max = mid - 1
 					}
-					toStudy.splice(min, 0, { key: next, cost: pathCost })
+					toStudy.splice(min, 0, { point: next, cost: pathCost })
 				}
 			}
 		}
 	}
 	if (!found) return null
-	const path: AxialKey[] = [found.tile]
-	let origin = origins.get(found.tile)!
-	while (origin.key !== null) {
-		path.push(origin.key)
-		origin = origins.get(origin.key)!
+	const path: Axial[] = [found.point]
+	let origin = origins.get(found.point.key)!
+	while (origin.point !== null) {
+		path.push(origin.point)
+		origin = origins.get(origin.point.key)!
 	}
 	return path.reverse()
 }
