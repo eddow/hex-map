@@ -1,5 +1,5 @@
 import { BufferGeometry, Float32BufferAttribute, Mesh, type Object3D, ShaderMaterial } from 'three'
-import { Eventful, axial } from '~/utils'
+import { Eventful } from '~/utils'
 import type { RenderedEvent, WalkTimeSpecification } from './land'
 import type { Landscape, LandscapeTriangle } from './landscaper'
 import type { RiverTile } from './rivers'
@@ -23,7 +23,7 @@ export class OceanLandscape<Tile extends RiverTile = RiverTile>
 		const tileIndices = new Map<Tile, number>()
 		const seaLevel = this.seaLevel
 		for (const triangle of triangles) {
-			const triangleTiles = triangle.points.map((coord) => sector.tiles.get(axial.key(coord))!)
+			const triangleTiles = triangle.points.map((coord) => sector.tiles.get(coord)!)
 			if (
 				!triangleTiles.some((tile) => tile.position.z < seaLevel) ||
 				triangleTiles.some((tile) => tile.riverHeight !== undefined)

@@ -1,11 +1,12 @@
 import {
 	type Axial,
 	type AxialCoord,
-	type AxialKey,
+	AxialKeyMap,
 	type AxialRef,
+	HeapMin,
 	axial,
 	hexSides,
-} from '~/utils/axial'
+} from '~/utils'
 
 export function straightPath(fromTile: AxialRef, toTile: AxialRef) {
 	const from = axial.coord(fromTile)
@@ -28,41 +29,28 @@ type HexCost<O = Axial> = { point: O; cost: number }
 
 // TODO: add list of shortcuts like train-stations
 const epsilon = 1e-6
-export function costingPath(start: AxialRef, cost: Cost, isFound: IsFound, maxCost = 100) {
+export function costingPath(start: AxialRef, cost: Cost, isFound: IsFound, maxCost = 200) {
 	const from = axial.access(start)
 	if (isFound(from)) return [from]
-	const toStudy: HexCost[] = [{ point: from, cost: 0 }]
-	const origins = new Map<AxialKey, HexCost<Axial | null>>([[from.key, { point: null, cost: 0 }]])
+	const toStudy = new HeapMin([[from, 0 as number]])
+	const origins = new AxialKeyMap<HexCost<Axial | null>>([[from.key, { point: null, cost: 0 }]])
 	let found: { point: Axial; cost: number } | undefined
-	while (toStudy.length && (!found || found.cost > toStudy[0].cost)) {
-		const study = toStudy.shift()!
-		const coord = axial.coord(study.point)
+	while (!toStudy.isEmpty && (!found || found.cost > toStudy.top!)) {
+		const [study, studyCost] = toStudy.pop()!
 		for (const hexSide of hexSides) {
-			const next = axial.coordAccess(axial.linear([1, coord], [1, hexSide]))
-			if (next.key !== origins.get(study.point.key)?.point?.key) {
-				let nextCost = cost(study.point, next)
+			const next = axial.coordAccess(axial.linear([1, study], [1, hexSide]))
+			if (next.key !== origins.get(study)?.point?.key) {
+				let nextCost = cost(study, next)
 				if (Number.isNaN(nextCost)) continue
 				if (nextCost < 0) throw new Error('negative or null cost')
 				if (nextCost === 0) nextCost = epsilon
-				const pathCost = study.cost + nextCost
+				const pathCost = studyCost + nextCost
 				if (pathCost > maxCost) continue
 				if (isFound(next) && (!found || found.cost > pathCost))
 					found = { point: next, cost: pathCost }
-				if (!origins.has(next.key) || origins.get(next.key)!.cost > pathCost) {
-					if (origins.has(next.key)) {
-						const tsIndex = toStudy.findIndex((ts) => ts.point === next)
-						if (tsIndex !== -1) toStudy.splice(tsIndex, 1)
-					}
-					origins.set(next.key, { point: study.point, cost: pathCost })
-					// add in toStudy
-					let min = 0
-					let max = toStudy.length - 1
-					while (min < max) {
-						const mid = Math.floor((min + max) / 2)
-						if (toStudy[mid].cost < pathCost) min = mid + 1
-						else max = mid - 1
-					}
-					toStudy.splice(min, 0, { point: next, cost: pathCost })
+				if (!origins.has(next) || origins.get(next)!.cost > pathCost) {
+					origins.set(next.key, { point: study, cost: pathCost })
+					toStudy.set(next, pathCost)
 				}
 			}
 		}

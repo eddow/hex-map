@@ -5,7 +5,9 @@ import {
 	type AxialCoord,
 	type AxialDirection,
 	type AxialKey,
+	AxialKeyMap,
 	type AxialRef,
+	AxialSet,
 	type Eventful,
 	axial,
 	cartesian,
@@ -14,7 +16,6 @@ import {
 	hexTiles,
 } from '~/utils'
 import { logPerformances, resetPerformances } from '~/utils/decorators'
-import { DMap } from '~/utils/mapDebug'
 import { Sector } from './sector'
 
 export interface TileBase {
@@ -124,10 +125,10 @@ function scaleAxial({ q, r }: AxialCoord, scale: number) {
 }
 
 export class Land<Tile extends TileBase = TileBase> {
-	public readonly tiles = new DMap<AxialKey, Tile>()
+	public readonly tiles = new AxialKeyMap<Tile>()
 	private readonly parts: LandPart<Tile>[] = []
 	public readonly group = new Group()
-	private readonly sectors = new Map<AxialKey, Sector<Tile>>()
+	private readonly sectors = new AxialKeyMap<Sector<Tile>>()
 	public readonly sectorRadius: number
 	public readonly sectorTiles: number
 
@@ -148,9 +149,9 @@ export class Land<Tile extends TileBase = TileBase> {
 		return axial.round(scaleAxial(axial.coord(aRef), 1 / (3 * (this.sectorRadius - 1))))
 	}
 
-	createSectors(added: Map<AxialKey, AxialCoord>, generationInfos: Map<LandPart<Tile>, any>) {
+	createSectors(added: AxialSet, generationInfos: Map<LandPart<Tile>, any>) {
 		const tileRefiners = this.parts.filter((part) => part.refineTile)
-		for (const [key, toSee] of added) {
+		for (const toSee of added) {
 			const center = this.sector2tile(toSee)
 			const sectorTiles = axial.enum(this.sectorRadius - 1).map((lclCoord): [AxialKey, Tile] => {
 				const point = axial.coordAccess(axial.linear(center, lclCoord))
@@ -167,8 +168,8 @@ export class Land<Tile extends TileBase = TileBase> {
 				return [point.key, completeTile]
 			})
 			const st = Array.from(sectorTiles)
-			const sector = new Sector(this, center, new Map(st))
-			this.sectors.set(key, sector)
+			const sector = new Sector(this, center, new AxialKeyMap(st))
+			this.sectors.set(toSee, sector)
 			this.sectorsToRender.add(sector)
 		}
 	}
@@ -202,7 +203,7 @@ export class Land<Tile extends TileBase = TileBase> {
 	 * @param cameras Cameras to check distance with
 	 * @param marginBufferSize Distance of removal ration (2 = let the sectors twice the visible distance existing)
 	 */
-	pruneSectors(removed: Set<AxialKey>, cameras: PerspectiveCamera[], marginBufferSize: number) {
+	pruneSectors(removed: AxialSet, cameras: PerspectiveCamera[], marginBufferSize: number) {
 		for (const key of removed) {
 			const deletedSector = this.sectors.get(key)!
 			const centerCartesian = cartesian(deletedSector.center, this.tileSize)
@@ -224,20 +225,19 @@ export class Land<Tile extends TileBase = TileBase> {
 	sectorsToRender = new Set<Sector<Tile>>()
 	updateViews(cameras: PerspectiveCamera[]) {
 		// At first, plan to remove all sectors
-		const removed = new Set(this.sectors.keys())
+		const removed = new AxialSet(this.sectors.keys())
 		const generationInfos = new Map<LandPart<Tile>, any>()
 		resetPerformances()
-		const added = new Map<AxialKey, AxialCoord>()
+		const added = new AxialSet()
 		for (const camera of cameras)
 			for (const toSee of viewedSectors(
 				this.tile2sector(fromCartesian(camera.position, this.tileSize)),
 				camera,
 				this.tileSize * this.sectorRadius
 			)) {
-				const key = axial.key(toSee)
 				// If we cannot cancel the deletion of a sector, it means we need to add it
-				removed.delete(key)
-				if (!this.sectors.has(key) && !added.has(key)) added.set(key, toSee)
+				removed.delete(toSee)
+				if (!this.sectors.has(toSee)) added.add(toSee)
 			}
 		if (added.size > 0) {
 			for (const part of this.parts)
@@ -251,7 +251,7 @@ export class Land<Tile extends TileBase = TileBase> {
 		logPerformances()
 	}
 
-	temporaryTiles = new Map<AxialKey, Tile>()
+	temporaryTiles = new AxialKeyMap<Tile>()
 	generateOneTile(aRef: AxialRef) {
 		const point = axial.access(aRef)
 		const generationInfos = new Map<LandPart<Tile>, any>()
@@ -270,7 +270,7 @@ export class Land<Tile extends TileBase = TileBase> {
 			if (part.spreadGeneration)
 				part.spreadGeneration((sectors, aRef, modifications) => {
 					const tile = this.tileUpdater(sectors, aRef, modifications)
-					if (!tile.sectors.length) this.temporaryTiles.set(axial.key(aRef), tile)
+					if (!tile.sectors.length) this.temporaryTiles.set(aRef, tile)
 				}, generationInfos.get(part))
 		return completeTile
 	}
@@ -281,7 +281,7 @@ export class Land<Tile extends TileBase = TileBase> {
 		for (const sector of sectors)
 			if (!tile.sectors.includes(sector)) {
 				tile.sectors.push(sector)
-				sector.attachedTiles.add(axial.key(aRef))
+				sector.attachedTiles.add(aRef)
 			}
 		for (const sector of tile.sectors) {
 			this.sectorsToRender.add(sector as Sector<Tile>)
@@ -306,8 +306,7 @@ export class Land<Tile extends TileBase = TileBase> {
 	// #region Tile access
 
 	tile(aRef: AxialRef): Tile {
-		const key = axial.key(aRef)
-		const renderedTile = this.tiles.get(key)
+		const renderedTile = this.tiles.get(aRef)
 		if (renderedTile) return renderedTile
 		return this.generateOneTile(aRef)
 	}

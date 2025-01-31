@@ -1,8 +1,5 @@
 export class Eventful<Events extends Record<string, (...args: any[]) => void>> {
-	public readonly events = new Map<
-		keyof Events,
-		((...args: Parameters<Events[keyof Events]>) => void)[]
-	>()
+	public readonly events = new Map<PropertyKey, ((...args: any[]) => void)[]>()
 	public on(events: Partial<Events>): void
 	public on<EventType extends keyof Events>(event: EventType, cb: Events[EventType]): () => void
 	public on<EventType extends keyof Events>(

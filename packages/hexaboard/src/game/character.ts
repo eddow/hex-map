@@ -110,6 +110,7 @@ export async function goTo(this: Character, destination: AxialRef) {
 			)
 			if (!path) throw new ImpossibleMove(this.point, destination)
 			if (this.direction !== undefined) {
+				// null -> center
 				if (this.direction === null) {
 					path.shift() // Skip the "go to starting tile", we are there
 				}

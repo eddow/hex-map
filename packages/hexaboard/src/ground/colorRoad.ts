@@ -29,6 +29,8 @@ export interface ColorRoad extends RoadBase {
 	blend: number
 }
 
+// TODO: TextureRoadGrid
+
 export class ColorRoadGrid<
 	Tile extends ContentTile,
 	Road extends ColorRoad = ColorRoad,
@@ -165,7 +167,8 @@ varying vec3 vOutRoadWidth;
 varying vec3 vOutRoadBlend;
 varying vec3 vInRoadWidth;
 varying vec3 vInRoadBlend;
-
+// TODO: Soften the curves
+// TODO: Use color information
 void main() {
 	float road = 1.0;
 	if(vOutRoadWidth.x > 0.0)

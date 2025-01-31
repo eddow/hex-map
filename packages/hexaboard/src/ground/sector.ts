@@ -1,5 +1,14 @@
 import { type Group, type Object3D, Vector3 } from 'three'
-import { type AxialCoord, type AxialKey, type AxialRef, axial, cartesian, hexSides } from '~/utils'
+import {
+	type AxialCoord,
+	type AxialKey,
+	type AxialKeyMap,
+	type AxialRef,
+	AxialSet,
+	axial,
+	cartesian,
+	hexSides,
+} from '~/utils'
 import { assert } from '~/utils/debug'
 import type { Land, LandPart, PositionInTile, TileBase } from './land'
 
@@ -7,11 +16,11 @@ export class Sector<Tile extends TileBase> {
 	public group?: Group
 	private parts = new Map<LandPart<Tile>, Object3D>()
 	public invalidParts?: Set<LandPart<Tile>>
-	public readonly attachedTiles = new Set<AxialKey>()
+	public readonly attachedTiles = new AxialSet()
 	constructor(
 		public readonly land: Land<Tile>,
 		public readonly center: AxialCoord,
-		public readonly tiles: Map<AxialKey, Tile>
+		public readonly tiles: AxialKeyMap<Tile>
 	) {
 		for (const [_, tile] of this.tiles) tile.sectors.push(this)
 	}
@@ -37,10 +46,10 @@ export class Sector<Tile extends TileBase> {
 	 */
 	inTile(aRef: AxialRef, { s, u, v }: PositionInTile) {
 		const coord = axial.coord(aRef)
-		const next1 = axial.key(axial.linear(coord, hexSides[s]))
-		const next2 = axial.key(axial.linear(coord, hexSides[(s + 1) % 6]))
+		const next1 = axial.linear(coord, hexSides[s])
+		const next2 = axial.linear(coord, hexSides[(s + 1) % 6])
 		if (!this.tiles.has(next1) || !this.tiles.has(next2)) return null
-		const pos = new Vector3().copy(this.tiles.get(axial.key(aRef))!.position)
+		const pos = new Vector3().copy(this.tiles.get(aRef)!.position)
 		const next1dir = new Vector3()
 			.copy(this.tiles.get(next1)!.position)
 			.sub(pos)
@@ -53,15 +62,14 @@ export class Sector<Tile extends TileBase> {
 	}
 	freeTiles() {
 		const { tiles } = this.land
-		const removeTiles = (bunch: Iterable<AxialKey>) => {
-			for (const tileKey of bunch) {
-				const tile = tiles.get(tileKey)!
+		const removeTiles = (bunch: Iterable<AxialRef>) => {
+			for (const point of bunch) {
+				const tile = tiles.get(point)!
 				tile.sectors = tile.sectors.filter((sector) => sector !== this)
-				if (tile.sectors.length === 0) tiles.delete(tileKey)
+				if (tile.sectors.length === 0) tiles.delete(point)
 			}
 		}
-		const sectorTileKeys = this.tiles.keys()
-		removeTiles(sectorTileKeys)
+		removeTiles(this.tiles.keys())
 		removeTiles(this.attachedTiles)
 	}
 }

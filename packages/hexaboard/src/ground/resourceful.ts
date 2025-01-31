@@ -1,7 +1,7 @@
 import { Group, type Object3D } from 'three'
 import { Handelable, type ResourcefulTerrain } from '~/game'
 import { Eventful, LCG, type RandGenerator, genTilePosition } from '~/utils'
-import type { LandPart, RenderedEvent } from './land'
+import type { LandPart, RenderedEvent, WalkTimeSpecification } from './land'
 import type { Sector } from './sector'
 import type { TerrainDefinition, TerrainTile } from './terrain'
 
@@ -91,5 +91,9 @@ export class Resourceful<
 				}
 			}
 		}
+	}
+	walkTimeMultiplier({ on, direction }: WalkTimeSpecification<Tile>): number | undefined {
+		const center = on.content?.[0]?.walkTimeMultiplier ?? 1
+		return direction !== null ? center * (on.content?.[direction]?.walkTimeMultiplier ?? 1) : center
 	}
 }

@@ -157,7 +157,7 @@ export class Rivers<Tile extends RiverTile = RiverTile>
 					const riverHeight = river.reduce((a, b) => a + b, 0) / river.length
 					if (!tile.riverHeight || tile.riverHeight < riverHeight) {
 						// We can have sources appearing as neighbors
-						// TODO: possible to avoid it ?
+						// TODO: Is it possible to avoid sources appearing as neighbors ?
 						updateTile(sourceSectors, key, {
 							riverHeight,
 						} as Partial<Tile>)
@@ -174,10 +174,7 @@ export class Rivers<Tile extends RiverTile = RiverTile>
 		const tileIndices = new Map<RiverTile, number>()
 		const seaLevel = this.seaLevel
 		for (const triangle of triangles) {
-			const triangleKeys = triangle.points.map((coord) => axial.key(coord))
-			//if (triangleKeys.filter((key) => [2490346].includes(key)).length) debugger
-			const x = triangleKeys
-			const triangleTiles = triangle.points.map((coord) => sector.tiles.get(axial.key(coord))!)
+			const triangleTiles = triangle.points.map((point) => sector.tiles.get(point)!)
 			const nbrRiverHeights = triangleTiles.reduce(
 				(nbr, tile) => nbr + (tile.riverHeight !== undefined ? 1 : 0),
 				0

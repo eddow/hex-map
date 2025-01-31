@@ -151,10 +151,9 @@ export const axial = {
 	},
 	coordAccess(aRef: AxialCoord): Axial {
 		if ('key' in aRef) return aRef as Axial
-		return {
-			...aRef,
+		return Object.assign(aRef, {
 			key: bitShiftPair(aRef),
-		}
+		})
 	},
 	/**
 	 * Get the axial-ref as an axial: an object `{q, r}`
@@ -187,7 +186,7 @@ export const axial = {
 			case 'string':
 				return bitShiftPair(axial.coord(aRef))
 			default:
-				return (aRef as Axial).key ?? bitShiftPair(aRef)
+				return axial.coordAccess(aRef as Axial).key // cache it
 		}
 	},
 

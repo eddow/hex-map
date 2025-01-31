@@ -12,7 +12,7 @@ import {
 } from 'three'
 import type { HandledMouseEvents } from '~/mouse'
 import type { Triplet } from '~/types'
-import { type AxialKey, Eventful, LCG, axial, numbers } from '~/utils'
+import { type AxialKey, AxialKeyMap, Eventful, LCG, axial, numbers } from '~/utils'
 import type { RenderedEvent as RenderedEvents } from './land'
 import type { Landscape, LandscapeTriangle, TileHandle } from './landscaper'
 import type { RoadBase, RoadKey } from './road'
@@ -65,15 +65,8 @@ function textureUVs(
 	}
 }
 
-/*type LandscapeEvents<Tile extends TerrainTile> =
-	| HandledMouseEvents<TileHandle<Tile>>
-	| RenderedEvent<Tile>*/
-type LandscapeEvents<Tile extends TerrainTile> = HandledMouseEvents<TileHandle<Tile>> &
-	RenderedEvents<Tile>
-
-// @ts-expect-error No way to cleanly mix the events
 export class TextureLandscape<Tile extends TerrainTile = TerrainTile>
-	extends Eventful<LandscapeEvents<Tile>>
+	extends Eventful<HandledMouseEvents<TileHandle<Tile>> & RenderedEvents<Tile>>
 	implements Landscape<Tile>
 {
 	public readonly material: Material
@@ -100,25 +93,29 @@ export class TextureLandscape<Tile extends TerrainTile = TerrainTile>
 		)
 	}
 	createMesh(sector: Sector<Tile>, triangles: LandscapeTriangle[]): Object3D {
-		const textureUvCache = new Map(
-			sector.tiles.entries().map(([i, tile]) => {
-				const coord = axial.coord(i)
-				const gen = LCG(this.seed, 'terrainTextures', coord.q, coord.r)
-				return [
-					i,
-					{
-						alpha: gen(Math.PI * 2),
-						inTextureRadius: this.terrainDefinition.types[tile.terrain].inTextureRadius,
-						center: {
-							u: gen(),
-							v: gen(),
+		// Gather the texture positions
+		const { seed, terrainDefinition } = this
+		const textureUvCache = new AxialKeyMap(
+			(function* () {
+				for (const [i, tile] of sector.tiles) {
+					const coord = axial.keyAccess(i)
+					const gen = LCG(seed, 'terrainTextures', coord.q, coord.r)
+					yield [
+						i,
+						{
+							alpha: gen(Math.PI * 2),
+							inTextureRadius: terrainDefinition.types[tile.terrain].inTextureRadius,
+							center: {
+								u: gen(),
+								v: gen(),
+							},
 						},
-					},
-				]
-			})
+					]
+				}
+			})()
 		)
 		const neighborsMap = new Map<AxialKey, Triplet<number>[]>()
-		// 1- gather the neighbors in order to compute the hexagonal normal in the vertex shader
+		// Gather the neighbors in order to compute the hexagonal normal in the vertex shader
 		for (const [i, tile] of sector.tiles.entries()) {
 			neighborsMap.set(
 				i,
@@ -152,7 +149,7 @@ export class TextureLandscape<Tile extends TerrainTile = TerrainTile>
 		for (const triangle of triangles) {
 			// Calculate the 3 terrain textures parameters
 			const { points, side } = triangle
-			const [A, B, C] = points.map((coord) => textureUvCache.get(axial.key(coord))!)
+			const [A, B, C] = points.map((point) => textureUvCache.get(point)!)
 			uvA.set(textureUVs(A, side, 0), index * 2)
 			uvB.set(textureUVs(B, side, 4), index * 2)
 			uvC.set(textureUVs(C, side, 2), index * 2)
