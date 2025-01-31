@@ -185,10 +185,13 @@ export class Land<Tile extends TileBase = TileBase> {
 	renderSectors() {
 		const sectorRenderers = this.parts.filter((part) => part.renderSector)
 		for (const sector of this.sectorsToRender) {
-			if (sector.group) this.group.remove(sector.group)
-			sector.group = new Group()
-			for (const part of sectorRenderers) part.renderSector!(sector)
-			this.group.add(sector.group)
+			if (!sector.invalidParts) {
+				if (sector.group) this.group.remove(sector.group)
+				sector.group = new Group()
+			}
+			for (const part of sector.invalidParts ?? sectorRenderers) part.renderSector!(sector)
+			sector.invalidParts = new Set()
+			this.group.add(sector.group!)
 		}
 		this.sectorsToRender.clear()
 	}
@@ -280,14 +283,18 @@ export class Land<Tile extends TileBase = TileBase> {
 				tile.sectors.push(sector)
 				sector.attachedTiles.add(axial.key(aRef))
 			}
-		for (const sector of tile.sectors) this.sectorsToRender.add(sector as Sector<Tile>)
+		for (const sector of tile.sectors) {
+			this.sectorsToRender.add(sector as Sector<Tile>)
+			sector.invalidParts = undefined
+		}
 		return tile
 	}
 	addPart(...parts: LandPart<Tile>[]) {
 		this.parts.push(...parts)
 		for (const part of parts)
 			part.on('invalidatedRender', (part: LandPart<Tile>, sector: Sector<Tile>) => {
-				// TODO
+				sector.invalidate(part)
+				this.sectorsToRender.add(sector)
 			})
 	}
 

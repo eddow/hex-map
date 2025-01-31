@@ -41,6 +41,7 @@ export type GameXLand = Land<GameXTile>
 export function createGame(seed: number) {
 	const land = new Land<GameXTile>(4, 20)
 	const landscape = new TextureLandscape<GameXTile>(terrains, roadTypes, seed)
+	const grid = new ColorRoadGrid(land, roadTypes)
 	land.addPart(
 		new PerlinHeight<GameXTile>(terrainHeight, seed, 1000),
 		new HeightTerrain<GameXTile>(terrainHeight / 10, seed, terrains, 1000),
@@ -49,7 +50,7 @@ export function createGame(seed: number) {
 			land.sectorRadius,
 			new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),
 			landscape as Landscape<GameXTile>,
-			new ColorRoadGrid<GameXTile>(land, roadTypes),
+			grid,
 			new OceanLandscape<GameXTile>(seaLevel)
 		),
 		new Resourceful(terrains, seed, seaLevel)
@@ -138,6 +139,15 @@ export function createGame(seed: number) {
 		},
 		'mouse:dragDrop': (ev: MouseDragEvolution<TileHandle>) => {
 			markPath()
+			const src = ev.drag.handle
+			const dst = ev.handle.point.key
+			if (src instanceof TileHandle) {
+				const path = costingPath(src.point, Land.walkCost(land), (at) => at.key === dst)
+				if (path)
+					for (let step = 1; step < path.length; step++) {
+						grid.link(path[step - 1], path[step], 'hc')
+					}
+			}
 		},
 	})
 	game.on('mouse:click', (ev: MouseButtonEvolution) => {

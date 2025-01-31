@@ -42,9 +42,13 @@ export abstract class RoadGrid<Tile extends ContentTile, Road extends RoadBase>
 		}
 	}
 	createMesh(sector: Sector<Tile>, triangles: LandscapeTriangle[]): Object3D {
-		const roadTriangles = triangles.filter((t) =>
-			t.points.some((p) => sector.tiles.get(p.key)?.content?.some((r) => r instanceof RoadContent))
+		const roadPoints = new Set(
+			sector.tiles
+				.entries()
+				.filter(([k, t]) => t.content?.some((r) => r instanceof RoadContent))
+				.map(([k, t]) => k)
 		)
+		const roadTriangles = triangles.filter((t) => t.points.some((p) => roadPoints.has(p.key)))
 		if (!roadTriangles.length) return new Object3D()
 		// TODO: generate the indexing for mouse handling
 		// TODO: Generalize this for even ocean and rivers (partial landscapes)
@@ -53,13 +57,22 @@ export abstract class RoadGrid<Tile extends ContentTile, Road extends RoadBase>
 	}
 	abstract createPartialMesh(sector: Sector<Tile>, triangles: LandscapeTriangle[]): Object3D
 	link(A: Axial, B: Axial, road?: RoadKey): void {
+		const sectors = new Set<Sector<Tile>>()
 		const AtoB = axial.neighborIndex(A, B)
-		assert(AtoB, `Linked tiles ${A.key} and ${B.key} are not neighbors`)
+		assert(
+			AtoB !== undefined && AtoB !== null,
+			`Linked tiles ${A.key} and ${B.key} are not neighbors`
+		)
 		const tiles = { A: this.land.tile(A), B: this.land.tile(B) }
+		for (const sector of [...tiles.A.sectors, ...tiles.B.sectors]) {
+			if (sector.tiles.has(A.key) || sector.tiles.has(B.key)) sectors.add(sector)
+		}
 		tiles.A.content ??= []
 		tiles.A.content[1 + ((AtoB + 3) % 6)] = road ? this.roadIndex[road] : undefined
 		tiles.B.content ??= []
 		tiles.B.content[1 + AtoB] = road ? this.roadIndex[road] : undefined
-		// TODO: invalidate mesh
+		for (const sector of sectors) {
+			this.emit('invalidatedRender', this, sector)
+		}
 	}
 }

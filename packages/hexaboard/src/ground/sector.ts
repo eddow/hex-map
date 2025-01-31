@@ -6,6 +6,7 @@ import type { Land, LandPart, PositionInTile, TileBase } from './land'
 export class Sector<Tile extends TileBase> {
 	public group?: Group
 	private parts = new Map<LandPart<Tile>, Object3D>()
+	public invalidParts?: Set<LandPart<Tile>>
 	public readonly attachedTiles = new Set<AxialKey>()
 	constructor(
 		public readonly land: Land<Tile>,
@@ -24,7 +25,8 @@ export class Sector<Tile extends TileBase> {
 	}
 	invalidate(part: LandPart<Tile>) {
 		const o3d = this.parts.get(part)
-		this.group?.remove(o3d!)
+		if (o3d) this.group?.remove(o3d)
+		this.invalidParts?.add(part)
 		this.parts.delete(part)
 	}
 	/**
