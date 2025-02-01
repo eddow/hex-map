@@ -5,6 +5,7 @@
 	function debugged(value: any) {
 		if (typeof value === 'number') return value.toFixed(2)
 		if (typeof value !== 'object') return value
+		if (!value) return '' + value
 		return Object.entries(value)
 			.map(([k, v]): string => `${k}: ${debugged(v)}`)
 			.join(' | ')

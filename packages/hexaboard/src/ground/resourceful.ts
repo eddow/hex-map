@@ -29,7 +29,21 @@ export interface TileContent {
 }
 
 export interface ContentTile extends TerrainTile {
+	/**
+	 * @deprecated `setTileContent` and `getTileContent` should be prefered as it is source of much errors
+	 */
 	content?: (TileContent | undefined)[]
+}
+
+export function setTileContent(tile: ContentTile, direction: number | null, content?: TileContent) {
+	tile.content ??= new Array(placesInTile)
+	tile.content[direction === null ? 0 : (direction % 6) + 1] = content
+}
+export function getTileContent(
+	tile: ContentTile,
+	direction: number | null
+): TileContent | undefined {
+	return tile.content?.[direction === null ? 0 : (direction % 6) + 1]
 }
 
 function generateResource(gen: RandGenerator, terrain: ResourcefulTerrain) {

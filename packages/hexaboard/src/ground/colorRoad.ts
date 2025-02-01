@@ -14,7 +14,7 @@ import {
 import { assert, axial } from '~/utils'
 import type { Land } from './land'
 import type { LandscapeTriangle } from './landscaper'
-import type { ContentTile } from './resourceful'
+import { type ContentTile, getTileContent } from './resourceful'
 import { type RoadBase, RoadContent, RoadGrid, type RoadKey } from './road'
 import type { Sector } from './sector'
 
@@ -72,7 +72,7 @@ export class ColorRoadGrid<
 				const tile1 = sector.tiles.get(points[o1].key)!
 				const neighborIndex = axial.neighborIndex(points[o2], points[o1])
 				assert(neighborIndex !== undefined, 'O-s are neighbors')
-				const roadContent = tile1.content?.[(neighborIndex ?? -1) + 1]
+				const roadContent = getTileContent(tile1, neighborIndex)
 				if (roadContent instanceof RoadContent) {
 					const road = roadContent.road
 					outRoadWidth[p] = road.width

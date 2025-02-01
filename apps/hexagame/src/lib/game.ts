@@ -88,7 +88,10 @@ export function createGame(seed: number) {
 	let pathTube: Object3D | undefined
 	grid.on({
 		'mouse:hover'(ev: MouseHoverEvolution<RoadHandle<GameXTile>>) {
-			markPath(ev.handle.points /*, 20 * ev.handle.roadType.road.width*/)
+			markPath(ev.handle.points, 2 * 20 * ev.handle.roadType.road.width)
+		},
+		'mouse:leave'() {
+			markPath()
 		},
 	})
 	landscape.on({
