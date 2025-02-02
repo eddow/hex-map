@@ -1,7 +1,8 @@
 import { BufferGeometry, Float32BufferAttribute, ShaderMaterial } from 'three'
 import type { WalkTimeSpecification } from '../land'
 import type { Sector } from '../sector'
-import { ContinuousLandscape, type LandscapeTriangle } from './landscape'
+import type { LandscapeTriangle } from './landscape'
+import { ContinuousPartialLandscape } from './partialLandscape'
 import type { RiverTile } from './rivers'
 
 const oceanMaterial = new ShaderMaterial({
@@ -34,7 +35,9 @@ void main() {
 })
 
 // TODO: become a partialLandscape
-export class OceanLandscape<Tile extends RiverTile = RiverTile> extends ContinuousLandscape<Tile> {
+export class OceanLandscape<
+	Tile extends RiverTile = RiverTile,
+> extends ContinuousPartialLandscape<Tile> {
 	protected readonly material = oceanMaterial
 	constructor(
 		sectorRadius: number,
@@ -42,7 +45,17 @@ export class OceanLandscape<Tile extends RiverTile = RiverTile> extends Continuo
 	) {
 		super(sectorRadius)
 	}
-	createGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
+	filterTriangles(sector: Sector<Tile>): (triangle: LandscapeTriangle) => boolean {
+		const seaLevel = this.seaLevel
+		return (triangle) => {
+			const triangleTiles = triangle.points.map((point) => sector.tiles.get(point)!)
+			return (
+				triangleTiles.some((tile) => tile.position.z < seaLevel) &&
+				triangleTiles.every((tile) => tile.riverHeight === undefined)
+			)
+		}
+	}
+	createPartialGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
 		const positions: number[] = []
 		const opacities: number[] = []
 		const indices: number[] = []
@@ -50,11 +63,6 @@ export class OceanLandscape<Tile extends RiverTile = RiverTile> extends Continuo
 		const seaLevel = this.seaLevel
 		for (const triangle of triangles) {
 			const triangleTiles = triangle.points.map((coord) => sector.tiles.get(coord)!)
-			if (
-				!triangleTiles.some((tile) => tile.position.z < seaLevel) ||
-				triangleTiles.some((tile) => tile.riverHeight !== undefined)
-			)
-				continue
 			for (const tile of triangleTiles) {
 				let tileVertex = tileIndices.get(tile)
 				if (tileVertex === undefined) {

@@ -8,13 +8,12 @@ import {
 	UniformsLib,
 	UniformsUtils,
 } from 'three'
-import type { HandledMouseEvents } from '~/mouse'
 import type { Triplet } from '~/types'
-import { type Axial, type AxialKey, AxialKeyMap, LCG, axial, numbers } from '~/utils'
-import { TileHandle } from '../landscaper'
+import { type AxialKey, AxialKeyMap, LCG, axial, numbers } from '~/utils'
 import type { Sector } from '../sector'
 import type { TerrainBase, TerrainDefinition, TerrainKey, TerrainTile } from '../terrain'
-import { ContinuousLandscape, type LandscapeTriangle } from './landscape'
+import { CompleteLandscape } from './completeLandscape'
+import type { LandscapeTriangle } from './landscape'
 import type { RoadBase, RoadKey } from './road'
 
 interface TexturePosition {
@@ -65,7 +64,7 @@ function textureUVs(
 
 export class ContinuousTextureLandscape<
 	Tile extends TerrainTile = TerrainTile,
-> extends ContinuousLandscape<Tile, HandledMouseEvents<TileHandle<Tile>>> {
+> extends CompleteLandscape<Tile> {
 	public readonly material: Material
 	private readonly textures: Texture[]
 	private texturesIndex: Record<TerrainKey, number>
@@ -191,13 +190,6 @@ export class ContinuousTextureLandscape<
 		geometry.setAttribute('n5', new BufferAttribute(n5, 3))
 		geometry.setAttribute('n6', new BufferAttribute(n6, 3))*/
 		return geometry
-	}
-	mouseHandler?(
-		sector: Sector<Tile>,
-		points: Triplet<Axial>,
-		bary: Triplet<number>
-	): TileHandle<Tile> {
-		return new TileHandle(this, sector, points[bary.indexOf(Math.max(...bary))])
 	}
 }
 

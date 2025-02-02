@@ -165,7 +165,6 @@ export function createGame(seed: number) {
 	game.on('mouse:click', (ev: MouseButtonEvolution) => {
 		if (ev.handle instanceof TileHandle) {
 			const hKey = ev.handle?.point.key
-			const game = ev.handle?.game
 			if (hKey)
 				switch (ev.button) {
 					case MouseButton.Left:

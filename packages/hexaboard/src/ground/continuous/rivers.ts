@@ -4,7 +4,8 @@ import { type AxialCoord, type AxialKey, LCG, axial } from '~/utils'
 import type { Land, TileUpdater, WalkTimeSpecification } from '../land'
 import type { Sector } from '../sector'
 import type { TerrainKey, TerrainTile } from '../terrain'
-import { ContinuousLandscape, type LandscapeTriangle } from './landscape'
+import type { LandscapeTriangle } from './landscape'
+import { ContinuousPartialLandscape } from './partialLandscape'
 
 // TODO: avoid ending in a puddle
 type Sources = AxialCoord[]
@@ -57,7 +58,7 @@ export type RivesOptions = {
 	minStreamSlope: number
 }
 // TODO: become a partialLandscape
-export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousLandscape<Tile> {
+export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousPartialLandscape<Tile> {
 	options: RivesOptions
 	protected readonly material = riverMaterial
 	constructor(
@@ -194,14 +195,9 @@ export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousLandsc
 			}
 		}
 	}
-	createGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
-		const positions: number[] = []
-		const opacities: number[] = []
-		const colors: number[] = []
-		const indices: number[] = []
-		const tileIndices = new Map<RiverTile, number>()
+	filterTriangles(sector: Sector<Tile>): (triangle: LandscapeTriangle) => boolean {
 		const seaLevel = this.seaLevel
-		for (const triangle of triangles) {
+		return (triangle) => {
 			const triangleTiles = triangle.points.map((point) => sector.tiles.get(point)!)
 			const nbrRiverHeights = triangleTiles.reduce(
 				(nbr, tile) => nbr + (tile.riverHeight !== undefined ? 1 : 0),
@@ -211,7 +207,19 @@ export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousLandsc
 				(nbr, tile) => nbr + ((tile.originalZ ?? tile.position.z) < seaLevel ? 1 : 0),
 				0
 			)
-			if (nbrRiverHeights < 3 && (nbrRiverHeights < 1 || nbrOcean < 1)) continue
+			return nbrRiverHeights === 3 || (nbrRiverHeights > 0 && nbrOcean > 0)
+			//if (nbrRiverHeights < 3 && (nbrRiverHeights < 1 || nbrOcean < 1)) continue
+		}
+	}
+	createPartialGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
+		const positions: number[] = []
+		const opacities: number[] = []
+		const colors: number[] = []
+		const indices: number[] = []
+		const tileIndices = new Map<RiverTile, number>()
+		const seaLevel = this.seaLevel
+		for (const triangle of triangles) {
+			const triangleTiles = triangle.points.map((point) => sector.tiles.get(point)!)
 			for (const tile of triangleTiles) {
 				let tileVertex = tileIndices.get(tile)
 				if (tileVertex === undefined) {

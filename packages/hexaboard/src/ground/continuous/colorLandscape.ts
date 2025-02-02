@@ -1,22 +1,19 @@
 import { BufferAttribute, BufferGeometry, type Material, MeshBasicMaterial, type RGB } from 'three'
-import type { HandledMouseEvents } from '~/mouse'
 import type { Triplet } from '~/types'
 import type { Axial, AxialCoord } from '~/utils'
 import type { TileBase } from '../land'
 import { TileHandle } from '../landscaper'
 import type { Sector } from '../sector'
-import { ContinuousLandscape, type LandscapeTriangle } from './landscape'
+import { CompleteLandscape } from './completeLandscape'
+import type { LandscapeTriangle } from './landscape'
 
 interface ColorTile extends TileBase {
 	color: RGB
 }
 
-/**
- * For testing purpose
- */
 export class ContinuousColorLandscape<
 	Tile extends ColorTile = ColorTile,
-> extends ContinuousLandscape<Tile, HandledMouseEvents<TileHandle<Tile>>> {
+> extends CompleteLandscape<Tile> {
 	protected readonly material: Material
 	constructor(sectorRadius: number) {
 		super(sectorRadius)

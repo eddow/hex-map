@@ -15,12 +15,17 @@
 	import { games } from '$lib/globals.svelte'
 
 	$effect(() => {
+		const disposable = api.onDidLayoutChange(() => {
+			const layout = api.toJSON()
+			localStorage.setItem('layout', JSON.stringify(layout))
+		})
 		return () => {
 			for (const game of Object.values(games)) {
 				// TODO: Not enough done: hmr does not free the resources
 				game.disengageAll()
 				game.running = false
 			}
+			disposable.dispose()
 		}
 	})
 
@@ -72,18 +77,15 @@
 			})
 		}
 	})
-	$effect(() => {
-		const disposable = api.onDidLayoutChange(() => {
-			const layout = api.toJSON()
-			localStorage.setItem('layout', JSON.stringify(layout))
-		})
-
-		return () => disposable.dispose()
-	})
+	function preventDefault(event: MouseEvent) {
+		if (event.button === 4 || event.button === 3) {
+			event.preventDefault()
+		}
+	}
 </script>
 
-<!-- Prevent default navigation behaviors associated to buttons 4 & 5 -->
-<svelte:document on:mousedown={(e) => e.preventDefault()} />
+<!-- Prevent default navigation behaviors associated to buttons 3 & 4 -->
+<svelte:body onmouseup={preventDefault} onmousedown={preventDefault} />
 <div class="screen bg-white dark:bg-gray-900">
 	<Toolbar>
 		<ToolbarGroup>

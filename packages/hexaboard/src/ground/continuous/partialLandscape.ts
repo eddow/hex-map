@@ -36,5 +36,5 @@ export abstract class ContinuousPartialLandscape<
 		sector: Sector<Tile>,
 		triangles: LandscapeTriangle[]
 	): BufferGeometry
-	abstract material: Material
+	protected abstract material: Material
 }
