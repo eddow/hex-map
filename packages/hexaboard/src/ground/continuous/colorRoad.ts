@@ -3,8 +3,6 @@ import {
 	BufferGeometry,
 	Color,
 	type Material,
-	Mesh,
-	type Object3D,
 	type RGB,
 	ShaderMaterial,
 	type Texture,
@@ -12,11 +10,10 @@ import {
 	UniformsUtils,
 } from 'three'
 import { assert, axial } from '~/utils'
-import type { Land } from './land'
-import type { LandscapeTriangle } from './landscaper'
+import type { Sector } from '../sector'
+import type { LandscapeTriangle } from './landscape'
 import { type ContentTile, getTileContent } from './resourceful'
 import { type RoadBase, RoadContent, RoadGrid, type RoadKey } from './road'
-import type { Sector } from './sector'
 
 export interface TextureRoad extends RoadBase {
 	texture: Texture
@@ -37,11 +34,11 @@ export class ColorRoadGrid<
 > extends RoadGrid<Tile, Road> {
 	public readonly material: Material
 
-	constructor(land: Land<Tile>, roadDefinition: Record<RoadKey, Road>) {
-		super(land, roadDefinition)
+	constructor(sectorRadius: number, roadDefinition: Record<RoadKey, Road>) {
+		super(sectorRadius, roadDefinition)
 		this.material = roadColorMaterial()
 	}
-	createPartialMesh(sector: Sector<Tile>, triangles: LandscapeTriangle[]): Object3D {
+	createPartialGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
 		const positions = new Float32Array(triangles.length * 3 * 3)
 		const outRoadWidths = new Float32Array(triangles.length * 3 * 3)
 		const outRoadBlends = new Float32Array(triangles.length * 3 * 3)
@@ -118,7 +115,7 @@ export class ColorRoadGrid<
 		geometry.setAttribute('inRoadBlends', new BufferAttribute(inRoadBlends, 3))
 		// per point
 		geometry.setAttribute('position', new BufferAttribute(positions, 3))
-		return new Mesh(geometry, this.material)
+		return geometry
 	}
 }
 

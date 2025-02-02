@@ -1,23 +1,18 @@
-import type { Intersection, Object3D, Object3DEventMap } from 'three'
 import type { Game } from '~/game'
-import { MouseHandle, type MouseHandler } from '~/mouse'
-import type { Sextuplet } from '~/types'
+import { type HandledMouseEvents, MouseHandle } from '~/mouse'
+import type { Triplet } from '~/types'
 import { assert, type Axial, type AxialDirection, type AxialRef, AxialSet, axial } from '~/utils'
 import { cached } from '~/utils/decorators'
-import type { Land, TileBase } from './land'
-import type { Landscape, LandscapeTriangle } from './landscaper'
-import { PartialLandscape } from './partialLandscape'
+import type { Land } from '../land'
+import type { Sector } from '../sector'
+import type { LandscapeTriangle } from './landscape'
+import { ContinuousPartialLandscape } from './partialLandscape'
 import { type ContentTile, type TileContent, getTileContent, setTileContent } from './resourceful'
-import type { Sector } from './sector'
 
 export type RoadKey = PropertyKey
 
 export interface RoadBase extends TileContent {
 	width: number
-}
-
-export interface RoadTile extends TileBase {
-	roads: Sextuplet<RoadKey | undefined>
 }
 
 export class RoadContent<Road extends RoadBase> implements TileContent {
@@ -63,16 +58,16 @@ export class RoadHandle<
 	}
 }
 
-export abstract class RoadGrid<Tile extends ContentTile, Road extends RoadBase>
-	extends PartialLandscape<Tile, RoadHandle<Tile, Road>>
-	implements Landscape<Tile>
-{
+export abstract class RoadGrid<
+	Tile extends ContentTile,
+	Road extends RoadBase,
+> extends ContinuousPartialLandscape<Tile, HandledMouseEvents<RoadHandle<Tile, Road>>> {
 	private roadIndex: Record<RoadKey, RoadContent<Road>> = {}
 	constructor(
-		protected readonly land: Land<Tile>,
+		sectorRadius: number,
 		protected readonly roadDefinition: Record<RoadKey, Road>
 	) {
-		super()
+		super(sectorRadius)
 		for (const [key, road] of Object.entries(this.roadDefinition)) {
 			this.roadIndex[key] = new RoadContent(key, road)
 		}
@@ -87,45 +82,40 @@ export abstract class RoadGrid<Tile extends ContentTile, Road extends RoadBase>
 		)
 		return (t) => t.points.some((p) => roadPoints.has(p.key))
 	}
-	mouseHandler(sector: Sector<Tile>): MouseHandler<RoadHandle<Tile>> {
-		return (
-			sender,
-			target: any,
-			intersection: Intersection<Object3D<Object3DEventMap>>
-		): RoadHandle<Tile, Road> | undefined => {
-			const game = sender as Game<Tile>
-			const baryArr = intersection.barycoord!.toArray()
-			const keys = this.axialKeys(intersection.face!.a)
-			const points = keys.map((k) => axial.keyAccess(k))
-			const tiles = points.map((p) => game.land.tile(p))
-			let min:
-				| {
-						proximity: number
-						from: Axial
-						to: Axial
-				  }
-				| undefined
-			let direction = axial.neighborIndex(points[1], points[0]) as number
-			for (let p = 0; p < 3; p++) {
-				direction = (direction + 2) % 6
-				const next = (p + 1) % 3
-				const content = getTileContent(tiles[next], direction as AxialDirection)
-				// We calculate the "scaled-in-road": from 0-1, it's in the road. So, it's bary(0-1)/roadWidth
-				if (content instanceof RoadContent) {
-					const scaledInRoad = baryArr[p] / (content.road.width * 2)
-					if (scaledInRoad < (min?.proximity ?? 1))
-						min = {
-							proximity: scaledInRoad,
-							from: points[next],
-							to: points[(next + 1) % 3],
-						}
-				}
+	mouseHandler(
+		game: Game<Tile>,
+		sector: Sector<Tile>,
+		points: Triplet<Axial>,
+		bary: Triplet<number>
+	) {
+		const tiles = points.map((p) => game.land.tile(p))
+		let min:
+			| {
+					proximity: number
+					from: Axial
+					to: Axial
+			  }
+			| undefined
+		let direction = axial.neighborIndex(points[1], points[0]) as number
+		for (let p = 0; p < 3; p++) {
+			direction = (direction + 2) % 6
+			const next = (p + 1) % 3
+			const content = getTileContent(tiles[next], direction as AxialDirection)
+			// We calculate the "scaled-in-road": from 0-1, it's in the road. So, it's bary(0-1)/roadWidth
+			if (content instanceof RoadContent) {
+				const scaledInRoad = bary[p] / (content.road.width * 2)
+				if (scaledInRoad < (min?.proximity ?? 1))
+					min = {
+						proximity: scaledInRoad,
+						from: points[next],
+						to: points[(next + 1) % 3],
+					}
 			}
-
-			if (min) return new RoadHandle(game, target, [min.from, min.to])
 		}
+
+		if (min) return new RoadHandle(game, this, [min.from, min.to])
 	}
-	link(A: Axial, B: Axial, road?: RoadKey): void {
+	link(land: Land<Tile>, A: Axial, B: Axial, road?: RoadKey): void {
 		const sectors = new Set<Sector<Tile>>()
 		const roadContent = road ? this.roadIndex[road] : undefined
 		const AtoB = axial.neighborIndex(A, B)
@@ -133,7 +123,7 @@ export abstract class RoadGrid<Tile extends ContentTile, Road extends RoadBase>
 			AtoB !== undefined && AtoB !== null,
 			`Linked tiles ${A.key} and ${B.key} are not neighbors`
 		)
-		const tiles = { A: this.land.tile(A), B: this.land.tile(B) }
+		const tiles = { A: land.tile(A), B: land.tile(B) }
 		for (const sector of [...tiles.A.sectors, ...tiles.B.sectors]) {
 			if (sector.tiles.has(A.key) || sector.tiles.has(B.key)) sectors.add(sector)
 		}

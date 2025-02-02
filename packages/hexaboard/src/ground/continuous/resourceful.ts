@@ -1,9 +1,9 @@
 import { Group, type Object3D } from 'three'
 import { Handelable, type ResourcefulTerrain } from '~/game'
 import { Eventful, LCG, type RandGenerator, genTilePosition } from '~/utils'
-import type { LandPart, RenderedEvents, WalkTimeSpecification } from './land'
-import type { Sector } from './sector'
-import type { TerrainDefinition, TerrainTile } from './terrain'
+import type { LandPart, RenderedEvents, WalkTimeSpecification } from '../land'
+import type { Sector } from '../sector'
+import type { TerrainDefinition, TerrainTile } from '../terrain'
 
 // Hardcoded to have 7 (center + 6 sides) places for stuff (resources, supplies, ...) roughly placed at the same place
 const placesInTile = 7

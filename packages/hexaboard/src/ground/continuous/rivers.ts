@@ -1,10 +1,10 @@
-import { BufferGeometry, Float32BufferAttribute, Mesh, type Object3D, ShaderMaterial } from 'three'
+import { BufferGeometry, Float32BufferAttribute, ShaderMaterial } from 'three'
 import { costingPath } from '~/game'
-import { type AxialCoord, type AxialKey, Eventful, LCG, axial } from '~/utils'
-import type { Land, RenderedEvents, TileUpdater, WalkTimeSpecification } from './land'
-import type { Landscape, LandscapeTriangle } from './landscaper'
-import type { Sector } from './sector'
-import type { TerrainKey, TerrainTile } from './terrain'
+import { type AxialCoord, type AxialKey, LCG, axial } from '~/utils'
+import type { Land, TileUpdater, WalkTimeSpecification } from '../land'
+import type { Sector } from '../sector'
+import type { TerrainKey, TerrainTile } from '../terrain'
+import { ContinuousLandscape, type LandscapeTriangle } from './landscape'
 
 // TODO: avoid ending in a puddle
 type Sources = AxialCoord[]
@@ -16,6 +16,37 @@ export interface RiverTile extends TerrainTile {
 
 let [minRiverHeight, maxRiverHeight] = [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]
 
+const riverMaterial = new ShaderMaterial({
+	transparent: true,
+	uniforms: {
+		shoreOpacity: { value: 0.1 },
+	},
+	vertexShader: `
+attribute float opacity;
+attribute vec3 color;
+varying float alpha;
+varying vec3 vColor;
+
+void main() {
+	alpha = opacity;
+	vColor = color;
+	gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+				`,
+	fragmentShader: `
+uniform float shoreOpacity;
+varying float alpha;
+varying vec3 vColor;
+
+void main() {
+
+	// Apply the weights to the colors
+	if(alpha < 0.00) discard;
+	gl_FragColor = vec4(vColor, clamp(shoreOpacity + alpha * (1.0-shoreOpacity), shoreOpacity, 1.0));
+}
+						`,
+})
+
 export type RivesOptions = {
 	riverTerrain: TerrainKey
 	minLength: number
@@ -25,12 +56,10 @@ export type RivesOptions = {
 	minBankSlope: number
 	minStreamSlope: number
 }
-
-export class Rivers<Tile extends RiverTile = RiverTile>
-	extends Eventful<RenderedEvents<Tile>>
-	implements Landscape<Tile, Sources>
-{
+// TODO: become a partialLandscape
+export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousLandscape<Tile> {
 	options: RivesOptions
+	protected readonly material = riverMaterial
 	constructor(
 		private readonly land: Land<Tile>,
 		private readonly seed: number,
@@ -45,10 +74,9 @@ export class Rivers<Tile extends RiverTile = RiverTile>
 			minStreamSlope = 1,
 		}: Partial<RivesOptions> = {}
 	) {
-		super()
+		super(land.sectorRadius)
 		this.options = { riverTerrain, minLength, minBankSlope, minStreamSlope }
 	}
-	readonly mouseReactive = false
 	beginGeneration() {
 		return []
 	}
@@ -166,7 +194,7 @@ export class Rivers<Tile extends RiverTile = RiverTile>
 			}
 		}
 	}
-	createMesh(sector: Sector<Tile>, triangles: LandscapeTriangle[]): Object3D {
+	createGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
 		const positions: number[] = []
 		const opacities: number[] = []
 		const colors: number[] = []
@@ -209,40 +237,9 @@ export class Rivers<Tile extends RiverTile = RiverTile>
 		geometry.setAttribute('opacity', new Float32BufferAttribute(opacities, 1))
 		geometry.setAttribute('color', new Float32BufferAttribute(colors, 3))
 		geometry.setIndex(indices)
-		return new Mesh(geometry, riverMaterial)
+		return geometry
 	}
 	walkTimeMultiplier(movement: WalkTimeSpecification<RiverTile>): number | undefined {
 		if (movement.on.terrain === this.options.riverTerrain) return Number.NaN
 	}
 }
-
-const riverMaterial = new ShaderMaterial({
-	transparent: true,
-	uniforms: {
-		shoreOpacity: { value: 0.1 },
-	},
-	vertexShader: `
-attribute float opacity;
-attribute vec3 color;
-varying float alpha;
-varying vec3 vColor;
-
-void main() {
-	alpha = opacity;
-	vColor = color;
-	gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-				`,
-	fragmentShader: `
-uniform float shoreOpacity;
-varying float alpha;
-varying vec3 vColor;
-
-void main() {
-
-	// Apply the weights to the colors
-	if(alpha < 0.00) discard;
-	gl_FragColor = vec4(vColor, clamp(shoreOpacity + alpha * (1.0-shoreOpacity), shoreOpacity, 1.0));
-}
-						`,
-})

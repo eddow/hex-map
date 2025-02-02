@@ -3,21 +3,20 @@ import {
 	BufferGeometry,
 	Color,
 	type Material,
-	Mesh,
-	type Object3D,
 	ShaderMaterial,
 	type Texture,
 	UniformsLib,
 	UniformsUtils,
 } from 'three'
+import type { Game } from '~/game'
 import type { HandledMouseEvents } from '~/mouse'
 import type { Triplet } from '~/types'
-import { type AxialKey, AxialKeyMap, Eventful, LCG, axial, numbers } from '~/utils'
-import type { RenderedEvents } from './land'
-import type { Landscape, LandscapeTriangle, TileHandle } from './landscaper'
+import { type Axial, type AxialKey, AxialKeyMap, LCG, axial, numbers } from '~/utils'
+import { TileHandle } from '../landscaper'
+import type { Sector } from '../sector'
+import type { TerrainBase, TerrainDefinition, TerrainKey, TerrainTile } from '../terrain'
+import { ContinuousLandscape, type LandscapeTriangle } from './landscape'
 import type { RoadBase, RoadKey } from './road'
-import type { Sector } from './sector'
-import type { TerrainBase, TerrainDefinition, TerrainKey, TerrainTile } from './terrain'
 
 interface TexturePosition {
 	alpha: number
@@ -65,20 +64,19 @@ function textureUVs(
 	}
 }
 
-export class TextureLandscape<Tile extends TerrainTile = TerrainTile>
-	extends Eventful<HandledMouseEvents<TileHandle<Tile>> & RenderedEvents<Tile>>
-	implements Landscape<Tile>
-{
+export class ContinuousTextureLandscape<
+	Tile extends TerrainTile = TerrainTile,
+> extends ContinuousLandscape<Tile, HandledMouseEvents<TileHandle<Tile>>> {
 	public readonly material: Material
-	public readonly mouseReactive = true
 	private readonly textures: Texture[]
 	private texturesIndex: Record<TerrainKey, number>
 	constructor(
+		sectorRadius: number,
 		private readonly terrainDefinition: TerrainDefinition<TextureTerrain>,
 		private readonly roadDefinition: Record<RoadKey, RoadBase>,
 		private readonly seed: number
 	) {
-		super()
+		super(sectorRadius)
 		this.textures = Array.from(
 			new Set(Object.values(terrainDefinition.types).map((t) => t.texture))
 		)
@@ -92,7 +90,7 @@ export class TextureLandscape<Tile extends TerrainTile = TerrainTile>
 			])
 		)
 	}
-	createMesh(sector: Sector<Tile>, triangles: LandscapeTriangle[]): Object3D {
+	createGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]): BufferGeometry {
 		// Gather the texture positions
 		const { seed, terrainDefinition } = this
 		const textureUvCache = new AxialKeyMap(
@@ -193,7 +191,15 @@ export class TextureLandscape<Tile extends TerrainTile = TerrainTile>
 		geometry.setAttribute('n4', new BufferAttribute(n4, 3))
 		geometry.setAttribute('n5', new BufferAttribute(n5, 3))
 		geometry.setAttribute('n6', new BufferAttribute(n6, 3))*/
-		return new Mesh(geometry, this.material)
+		return geometry
+	}
+	mouseHandler?(
+		game: Game<Tile>,
+		sector: Sector<Tile>,
+		points: Triplet<Axial>,
+		bary: Triplet<number>
+	): TileHandle<Tile> {
+		return new TileHandle(game, this, points[bary.indexOf(Math.max(...bary))])
 	}
 }
 

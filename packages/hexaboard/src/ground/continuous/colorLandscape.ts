@@ -1,17 +1,12 @@
-import {
-	BufferAttribute,
-	BufferGeometry,
-	type Material,
-	Mesh,
-	MeshBasicMaterial,
-	type Object3D,
-	type RGB,
-} from 'three'
-import { type AxialCoord, Eventful } from '~/utils'
-import type { RenderedEvents, TileBase } from './land'
-import type { LandscapeTriangle } from './landscaper'
-import type { Landscape } from './landscaper'
-import type { Sector } from './sector'
+import { BufferAttribute, BufferGeometry, type Material, MeshBasicMaterial, type RGB } from 'three'
+import type { Game } from '~/game'
+import type { Triplet } from '~/types'
+import type { Axial, AxialCoord } from '~/utils'
+import type { TileBase } from '../land'
+import { TileHandle } from '../landscaper'
+import type { Sector } from '../sector'
+import { ContinuousLandscape, type LandscapeTriangle } from './landscape'
+import type { HandledMouseEvents } from '~/mouse'
 
 interface ColorTile extends TileBase {
 	color: RGB
@@ -20,20 +15,18 @@ interface ColorTile extends TileBase {
 /**
  * For testing purpose
  */
-export class ColorLandscape<Tile extends ColorTile = ColorTile>
-	extends Eventful<RenderedEvents<Tile>>
-	implements Landscape<Tile>
-{
-	private readonly material: Material
-	public readonly mouseReactive = true
-	constructor() {
-		super()
+export class ContinuousColorLandscape<
+	Tile extends ColorTile = ColorTile,
+> extends ContinuousLandscape<Tile, HandledMouseEvents<TileHandle<Tile>>> {
+	protected readonly material: Material
+	constructor(sectorRadius: number) {
+		super(sectorRadius)
 		this.material = new MeshBasicMaterial({
 			vertexColors: true,
 			wireframe: true,
 		})
 	}
-	createMesh(sector: Sector<Tile>, triangles: LandscapeTriangle[]): Object3D {
+	createGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
 		const positions = new Float32Array(triangles.length * 9)
 		const colors = new Float32Array(triangles.length * 9)
 		let index = 0
@@ -50,7 +43,7 @@ export class ColorLandscape<Tile extends ColorTile = ColorTile>
 		const geometry = new BufferGeometry()
 		geometry.setAttribute('position', new BufferAttribute(positions, 3))
 		geometry.setAttribute('color', new BufferAttribute(colors, 3))
-		return new Mesh(geometry, this.material)
+		return geometry
 	}
 	refineTile(tile: TileBase, coord: AxialCoord): Tile {
 		const h01 = Math.min(1, Math.max(0, tile.position.z / 150))
@@ -62,5 +55,13 @@ export class ColorLandscape<Tile extends ColorTile = ColorTile>
 				b: 1 - h01,
 			},
 		} as Tile
+	}
+	mouseHandler?(
+		game: Game<Tile>,
+		sector: Sector<Tile>,
+		points: Triplet<Axial>,
+		bary: Triplet<number>
+	): TileHandle<Tile> {
+		return new TileHandle(game, this, points[bary.indexOf(Math.max(...bary))])
 	}
 }

@@ -2,6 +2,7 @@ import {
 	type AxialRef,
 	ColorRoadGrid,
 	type ContentTile,
+	ContinuousTextureLandscape,
 	Game,
 	HeightTerrain,
 	Land,
@@ -17,8 +18,6 @@ import {
 	type RiverTile,
 	Rivers,
 	type RoadHandle,
-	type RoadTile,
-	TextureLandscape,
 	TileCursor,
 	TileHandle,
 	axial,
@@ -36,23 +35,27 @@ import {
 import { debugInfo, dockview, games } from './globals.svelte'
 import { roadTypes, seaLevel, terrainHeight, terrains } from './world/textures'
 
-export type GameXTile = ContentTile & RoadTile & RiverTile
+export type GameXTile = ContentTile & RiverTile
 export type GameXLand = Land<GameXTile>
 
 export function createGame(seed: number) {
 	const land = new Land<GameXTile>(4, 20)
-	const landscape = new TextureLandscape<GameXTile>(terrains, roadTypes, seed)
-	const grid = new ColorRoadGrid(land, roadTypes)
+	const landscape = new ContinuousTextureLandscape<GameXTile>(
+		land.sectorRadius,
+		terrains,
+		roadTypes,
+		seed
+	)
+	const grid = new ColorRoadGrid(land.sectorRadius, roadTypes)
 	land.addPart(
 		new PerlinHeight<GameXTile>(terrainHeight, seed, 1000),
 		new HeightTerrain<GameXTile>(terrainHeight / 10, seed, terrains, 1000),
 
 		new Landscaper<GameXTile>(
-			land.sectorRadius,
 			new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),
 			landscape as Landscape<GameXTile>,
 			grid,
-			new OceanLandscape<GameXTile>(seaLevel)
+			new OceanLandscape<GameXTile>(land.sectorRadius, seaLevel)
 		),
 		new Resourceful(terrains, seed, seaLevel)
 	)
@@ -154,7 +157,7 @@ export function createGame(seed: number) {
 				const path = costingPath(src.point, Land.walkCost(land), (at) => at.key === dst)
 				if (path)
 					for (let step = 1; step < path.length; step++) {
-						grid.link(path[step - 1], path[step], 'hc')
+						grid.link(land, path[step - 1], path[step], 'hc')
 					}
 			}
 		},
