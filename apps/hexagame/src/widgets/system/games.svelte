@@ -2,7 +2,7 @@
 	import { Button } from 'flowbite-svelte'
 	import { dockview } from '$lib/globals.svelte'
 
-	function createGame() {
+	function newView() {
 		dockview.api.addPanel({
 			id: `game.${crypto.randomUUID()}`,
 			component: 'gameView',
@@ -17,4 +17,4 @@
 	}
 </script>
 
-<Button onclick={createGame}>New view</Button>
+<Button onclick={newView}>New view</Button>

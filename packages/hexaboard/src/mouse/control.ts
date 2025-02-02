@@ -32,7 +32,9 @@ function isModKeyCombination(e: MouseEvent, c: ModKeyCombination) {
 }
 // Use browse/compare in order to have the reference who can be compared with ===
 function modKeysCombinations(e: MouseEvent) {
-	for (const c in modKeysComb) if (isModKeyCombination(e, modKeysComb[c])) return modKeysComb[c]
+	for (const c in modKeysComb)
+		if (isModKeyCombination(e, modKeysComb[c as keyof typeof modKeysComb]))
+			return modKeysComb[c as keyof typeof modKeysComb]
 	throw new Error('mod keys combination not found')
 }
 function isCombination(e: MouseEvent, c: ButtonsCombination) {
@@ -159,6 +161,7 @@ export class MouseControl extends Eventful<MouseEvents> {
 			contextmenu: (e: MouseEvent) => this.contextMenu(e),
 			wheel: (e: WheelEvent) => this.mouseWheel(e),
 			mouseleave: (e: MouseEvent) => this.mouseLeave(e),
+			dblclick: (e: MouseEvent) => this.doubleClick(e),
 		} as Record<string, (event: any) => void>
 		for (const eventType in events) canvas.addEventListener(eventType, events[eventType])
 		;(gameView as MouseEventsView)[mouseListeners] = events
@@ -187,20 +190,22 @@ export class MouseControl extends Eventful<MouseEvents> {
 		)
 		this.rayCaster.setFromCamera(mouse, camera)
 
-		return this.rayCaster.intersectObjects(this.scene.children)
+		return this.rayCaster
+			.intersectObjects(this.scene.children)
+			.filter(
+				(i) =>
+					i.object?.userData?.mouseHandler &&
+					this.drag?.dropValidation?.(this.drag, i.object?.userData?.mouseHandler) !== false
+			)
 	}
 	mouseInteract({ gameView, mousePosition: position }: PositionedMouseEvolution) {
-		const intersections = this.mouseIntersections(gameView, position).filter(
-			(i) =>
-				i.object?.userData?.mouseHandler &&
-				this.drag?.dropValidation?.(this.drag, i.object?.userData?.mouseHandler) !== false
-		)
+		const intersections = this.mouseIntersections(gameView, position)
+		// Filter by distance THEN by o3d.renderOrder
 		intersections.sort((a, b) =>
 			a.distance !== b.distance
 				? a.distance - b.distance
 				: b.object.renderOrder - a.object.renderOrder
 		)
-		// TODO: filter by distance THEN by o3d.renderOrder
 		for (const intersection of intersections) {
 			const userData = intersection.object.userData
 			const handler = userData.mouseHandler as MouseHandler
@@ -236,9 +241,26 @@ export class MouseControl extends Eventful<MouseEvents> {
 			}
 		}
 	})
+
+	private lookAtCenter?: Vector3
+	willLock(action: keyof MouseLockButtons, event: MouseEvent) {
+		if (action === 'lookAt') {
+			const center = this.mouseIntersections(this.hovered!, {
+				x: event.offsetX,
+				y: event.offsetY,
+			})[0]
+			if (!center) return false
+			this.lookAtCenter = center.point
+		}
+		return true
+	}
 	private reLock(event: MouseEvent) {
-		const shouldLock = Object.values(mouseConfig.lockButtons).some((c) => isCombination(event, c))
-		if (!!this.lockSemaphore.locked !== shouldLock)
+		const shouldLock = Object.entries(mouseConfig.lockButtons).find(([k, c]) =>
+			isCombination(event, c)
+		)
+		const lockConditions =
+			shouldLock && this.willLock(shouldLock[0] as keyof MouseLockButtons, event)
+		if (!!this.lockSemaphore.locked !== lockConditions)
 			this.lockSemaphore.lock(shouldLock ? (event.target as Element) : null)
 		return shouldLock
 	}
@@ -292,18 +314,9 @@ export class MouseControl extends Eventful<MouseEvents> {
 				break
 			}
 			case 'lookAt': {
-				/*
-			TODO: Take the look-at point (at least x/y) at mousedown event
-				const lookAt = this.hoveredHandle?.position.clone() || camera.position.clone()
-				// Rotate camera
-				// x: movement rotates the camera around the word's Z axis
-				camera.position
-					.copy(lookAt)
-					.add(new Vector3(dx * displacement, -dy * displacement, 0))
-					.sub(lookAt)
-					.normalize()
-					.multiplyScalar(camera.position.distanceTo(lookAt))
-				camera.lookAt(lookAt)*/
+				const lookAt = this.lookAtCenter!
+				//TODO: Take the look-at point (at least x/y) at mousedown event
+				break
 			}
 		}
 	}
@@ -423,8 +436,10 @@ export class MouseControl extends Eventful<MouseEvents> {
 					mouseConfig.zoomWheel.axis === axis &&
 					isModKeyCombination(event, mouseConfig.zoomWheel.modifiers)
 				) {
-					const position = { x: event.offsetX, y: event.offsetY }
-					const center = this.mouseIntersections(this.hovered!, position)[0]
+					const center = this.mouseIntersections(this.hovered!, {
+						x: event.offsetX,
+						y: event.offsetY,
+					})[0]
 					const camera = this.hovered!.camera
 					if (center) {
 						const dist = camera.position.clone().sub(center.point)
@@ -456,6 +471,17 @@ export class MouseControl extends Eventful<MouseEvents> {
 				handle: this.hoveredHandle,
 			})
 		}
+	}
+
+	private doubleClick(event: MouseEvent) {
+		this.evolve<MouseButtonEvolution>({
+			type: 'dblClick',
+			button: event.button,
+			buttons: event.buttons as MouseButtons,
+			modKeyCombination: modKeysCombinations(event),
+			mousePosition: { x: event.offsetX, y: event.offsetY },
+			handle: this.hoveredHandle,
+		})
 	}
 
 	// #endregion

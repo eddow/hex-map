@@ -1,7 +1,7 @@
 import { Object3D } from 'three'
 import type { HandledMouseEvents, MouseHandle, MouseHandler } from '~/mouse'
 import type { Triplet } from '~/types'
-import { type AxialKey, Eventful } from '~/utils'
+import { assert, type AxialKey, Eventful } from '~/utils'
 import type { RenderedEvents } from './land'
 import type { Landscape, LandscapeTriangle } from './landscaper'
 import type { ContentTile } from './resourceful'
@@ -17,6 +17,7 @@ export abstract class PartialLandscape<
 	private vertexMatch?: Int32Array
 	readonly mouseReactive = false
 	protected axialKeys(v: number): Triplet<AxialKey> {
+		assert(v < this.vertexMatch!.length, 'Invalid vertex index')
 		const vm = this.vertexMatch!
 		return [vm[v], vm[v + 1], vm[v + 2]]
 	}

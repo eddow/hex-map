@@ -82,7 +82,7 @@ export abstract class RoadGrid<Tile extends ContentTile, Road extends RoadBase>
 		const roadPoints = new AxialSet(
 			sector.tiles
 				.entries()
-				.filter(([k, t]) => t.content?.some((r) => r instanceof RoadContent))
+				.filter(([k, t]) => getTileContent(t, null) instanceof RoadContent)
 				.map(([k, t]) => k)
 		)
 		return (t) => t.points.some((p) => roadPoints.has(p.key))
@@ -139,8 +139,12 @@ export abstract class RoadGrid<Tile extends ContentTile, Road extends RoadBase>
 		}
 		setTileContent(tiles.A, AtoB + 3, roadContent)
 		setTileContent(tiles.B, AtoB, roadContent)
+		// TODO: Road priority -> only set if max - if downgrading, check the max(priority) in all the roads
+		setTileContent(tiles.A, null, roadContent)
+		setTileContent(tiles.B, null, roadContent)
 		for (const sector of sectors) {
 			this.emit('invalidatedRender', this, sector)
+			// TODO: invalidate Resourceful?
 		}
 	}
 }

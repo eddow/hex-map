@@ -22,6 +22,8 @@ export function cache(object: Object, propertyKey: PropertyKey, value: any) {
 	Object.defineProperty(object, propertyKey, { value })
 }
 
+// #region performance & debug
+
 const performanceMeasures: Record<string, PerformanceMeasure[]> = {}
 
 export function resetPerformances() {
@@ -58,3 +60,20 @@ export function performanceMeasured(name: string) {
 	}
 	//return (t) => t
 }
+
+export function catchReturn<Type, Producer extends (...args: any[]) => Type>(
+	op: (rv: Type) => void
+) {
+	return (
+		original: (...args: any[]) => Type,
+		context: ClassMethodDecoratorContext<unknown, Producer>
+	) => {
+		return function (this: any, ...args: any[]) {
+			const rv = original.apply(this, args)
+			op(rv)
+			return rv
+		}
+	}
+}
+
+// #endregion

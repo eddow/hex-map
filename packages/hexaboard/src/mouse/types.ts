@@ -2,7 +2,6 @@
 
 import type { Intersection, Object3D, Object3DEventMap } from 'three'
 import type { Game, GameView } from '~/game'
-import type { TileBase } from '~/ground'
 import type { Eventful } from '~/utils'
 import type { MouseControl } from '.'
 
@@ -36,7 +35,7 @@ interface MouseControlledEvolution<Handle extends MouseHandle | undefined = Mous
 export interface MouseButtonEvolution<
 	Handle extends MouseHandle | undefined = MouseHandle | undefined,
 > extends MouseControlledEvolution<Handle> {
-	type: 'click' | 'up' | 'down'
+	type: 'click' | 'up' | 'down' | 'dblClick'
 	button: MouseButton
 	buttons: MouseButtons
 }
@@ -102,6 +101,7 @@ export interface MouseWheelEvolution<
 export type HandledMouseEvents<Handle extends MouseHandle | undefined = MouseHandle> = {
 	'mouse:move': (evolution: MouseMoveEvolution<Handle>) => void
 	'mouse:click': (evolution: MouseButtonEvolution<Handle>) => void
+	'mouse:dblClick': (evolution: MouseButtonEvolution<Handle>) => void
 	'mouse:up': (evolution: MouseButtonEvolution<Handle>) => void
 	'mouse:down': (evolution: MouseButtonEvolution<Handle>) => void
 	'mouse:startDrag': (evolution: MouseDragEvolution<Handle>) => void
@@ -125,7 +125,7 @@ export type MouseHandler<Handle extends MouseHandle | undefined = MouseHandle | 
 	intersection: Intersection<Object3D<Object3DEventMap>>
 ) => Handle | undefined
 
-export abstract class MouseHandle<Tile extends TileBase = TileBase> {
+export abstract class MouseHandle {
 	constructor(
 		public readonly game: Game,
 		public readonly target: Eventful<HandledMouseEvents>
@@ -140,18 +140,20 @@ export enum MouseButton {
 	Left = 0,
 	Middle = 1,
 	Right = 2,
+	Back = 3,
+	Forward = 4,
 }
 export enum MouseButtons {
 	Left = 1,
 	Right = 2,
 	Middle = 4,
-	th4 = 8,
-	th5 = 16,
+	Back = 8,
+	Forward = 16,
 }
 export const modKeys = ['shift', 'alt', 'ctrl'] as const
 export type ModKey = (typeof modKeys)[number]
-export type ModKeyCombination = Record<ModKey, boolean>
-export const modKeysComb: Record<string, ModKeyCombination> = {
+export type ModKeyCombination = Partial<Record<ModKey, boolean>>
+export const modKeysComb = {
 	none: { alt: false, ctrl: false, shift: false },
 	alt: { alt: true, ctrl: false, shift: false },
 	ctrl: { alt: false, ctrl: true, shift: false },

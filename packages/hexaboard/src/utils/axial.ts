@@ -150,6 +150,7 @@ export const axial = {
 		}
 	},
 	coordAccess(aRef: AxialCoord): Axial {
+		assert(!('key' in aRef) || aRef.key !== undefined, 'key must be defined if set')
 		if ('key' in aRef) return aRef as Axial
 		return Object.assign(aRef, {
 			key: bitShiftPair(aRef),

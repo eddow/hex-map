@@ -34,7 +34,7 @@ export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
 	}
 }
 
-// TODO: Should be between here and Color/Terxure-Landscape (complete landscapes)
+// TODO: mouseHandler should be between here and Color/Terxure-Landscape (complete landscapes)
 function sectorMouseHandler<Tile extends TileBase>(
 	geometryVertex: AxialCoord[],
 	center: AxialCoord

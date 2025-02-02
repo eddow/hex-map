@@ -1,6 +1,6 @@
 import { Eventful, subSeed } from '~/utils'
 import { HeightMap } from '~/utils/perlin'
-import type { LandPart, RenderedEvents, TileBase } from './land'
+import type { LandPart, RenderedEvents, TileBase, WalkTimeSpecification } from './land'
 
 /**
  * Really simple Perlin noise procedural
@@ -26,5 +26,10 @@ export class PerlinHeight<Tile extends TileBase = TileBase>
 			...tile,
 			position: { ...tile.position, z },
 		} as Tile
+	}
+	// TODO: pass a user-parameter (no-resource-clean, no-road, ...)
+	walkTimeMultiplier(movement: WalkTimeSpecification<Tile>): number | undefined {
+		// TODO: Slope multiplier
+		return 1
 	}
 }

@@ -15,11 +15,11 @@ function placeInTile(i: number, gen: RandGenerator) {
 		return genTilePosition(gen, tp)
 	}
 	const t = gen(tp, 1 - tp)
-	const u = gen(t)
+	const s = gen(t)
 	return {
 		s: i - 1,
-		u,
-		v: 1 - u,
+		u: s,
+		v: t - s,
 	}
 }
 
@@ -92,6 +92,7 @@ export class Resourceful<
 					: []
 			if (tile.content.some((r) => r)) {
 				const gen = LCG(this.seed, 'placeInTile', tRef)
+				//const gen = () => 0.5	// TODO test road & resources on the same side (so that in-mem replacement = in-3d replacement)
 				for (let aRef = 0; aRef < tile.content.length; aRef++) {
 					const rsc = tile.content[aRef]
 					if (rsc instanceof Handelable) {

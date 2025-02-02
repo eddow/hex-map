@@ -82,6 +82,8 @@
 	})
 </script>
 
+<!-- Prevent default navigation behaviors associated to buttons 4 & 5 -->
+<svelte:document on:mousedown={(e) => e.preventDefault()} />
 <div class="screen bg-white dark:bg-gray-900">
 	<Toolbar>
 		<ToolbarGroup>
