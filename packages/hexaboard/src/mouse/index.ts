@@ -1,4 +1,5 @@
 export * from './control'
+export * from './d2buffer'
 export * from './lockSemaphore'
-export * from './types'
 export * from './mode'
+export * from './types'

@@ -1,5 +1,5 @@
 import { type Intersection, Raycaster, Scene, Vector2, Vector3 } from 'three'
-import type { GameView } from '~/game/game'
+import type { GameView } from '~/game/gameView'
 import { complete } from '~/utils'
 import { Eventful } from '../utils/events'
 import { LockSemaphore } from './lockSemaphore'
@@ -21,8 +21,8 @@ import {
 	type MousePosition,
 	type MouseWheelEvolution,
 	type PositionedMouseEvolution,
+	modKeyCombination,
 	modKeys,
-	modKeysComb,
 	mouseConfig,
 	mouseDrag,
 } from './types'
@@ -32,9 +32,9 @@ function isModKeyCombination(e: MouseEvent, c: ModKeyCombination) {
 }
 // Use browse/compare in order to have the reference who can be compared with ===
 function modKeysCombinations(e: MouseEvent) {
-	for (const c in modKeysComb)
-		if (isModKeyCombination(e, modKeysComb[c as keyof typeof modKeysComb]))
-			return modKeysComb[c as keyof typeof modKeysComb]
+	for (const c in modKeyCombination)
+		if (isModKeyCombination(e, modKeyCombination[c as keyof typeof modKeyCombination]))
+			return modKeyCombination[c as keyof typeof modKeyCombination]
 	throw new Error('mod keys combination not found')
 }
 function isCombination(e: MouseEvent, c: ButtonsCombination) {
@@ -156,10 +156,10 @@ export class MouseControl extends Eventful<MouseEvents> {
 		const canvas = gameView.canvas
 		const events = {
 			mousemove: (e: MouseEvent) => this.mouseMove(e),
+			wheel: (e: WheelEvent) => this.mouseWheel(e),
 			mousedown: (e: MouseEvent) => this.mouseDown(e),
 			mouseup: (e: MouseEvent) => this.mouseUp(e),
 			contextmenu: (e: MouseEvent) => this.contextMenu(e),
-			wheel: (e: WheelEvent) => this.mouseWheel(e),
 			mouseleave: (e: MouseEvent) => this.mouseLeave(e),
 			dblclick: (e: MouseEvent) => this.doubleClick(e),
 		} as Record<string, (event: any) => void>
@@ -269,6 +269,7 @@ export class MouseControl extends Eventful<MouseEvents> {
 		const { camera } = gameView
 		// Relative mouse movement
 		const { dx, dy } = { dx: event.movementX, dy: event.movementY } // Relative mouse event
+		const delta = { x: event.movementX, y: event.movementY } // Relative mouse event
 		let movement: undefined | keyof MouseLockButtons
 		for (const key in mouseConfig.lockButtons) {
 			const comb = mouseConfig.lockButtons[key as keyof MouseLockButtons]
@@ -278,20 +279,9 @@ export class MouseControl extends Eventful<MouseEvents> {
 			}
 		}
 		switch (movement) {
-			case 'turn': {
-				// Rotate camera
-				// x: movement rotates the camera around the word's Z axis
-				camera.rotateOnWorldAxis(new Vector3(0, 0, -1), dx * 0.01)
-				// y: camera tilts between horizontal (plan: z=0) and vertical (look along Z axis) positions
-				camera.rotateX(-dy * 0.01) // Apply tilt rotation
-				// clamp down/horizon
-				const upVector = new Vector3(0, 1, 0).applyQuaternion(camera.quaternion)
-				if (upVector.z < 0) camera.rotateX(-Math.asin(upVector.z))
-				const frontVector = new Vector3(0, 0, 1).applyQuaternion(camera.quaternion)
-				// clamp to "nearly horizontal"
-				if (frontVector.z < 0.1) camera.rotateX(Math.asin(frontVector.z - 0.1))
+			case 'turn':
+				gameView.turn(delta)
 				break
-			}
 			case 'pan': {
 				const displacement = camera.position.z / 1000
 				const xv = new Vector3(1, 0, 0)
@@ -349,7 +339,7 @@ export class MouseControl extends Eventful<MouseEvents> {
 					}
 				: {
 						buttons: 0,
-						modKeyCombination: modKeysComb.none,
+						modKeyCombination: modKeyCombination.none,
 						mousePosition: null,
 					}),
 		} as MouseMoveEvolution

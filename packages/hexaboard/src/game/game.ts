@@ -4,12 +4,11 @@ import {
 	DirectionalLight,
 	Group,
 	type Object3D,
-	PerspectiveCamera,
 	type Vector3Like,
-	WebGLRenderer,
 } from 'three'
 import type { Land, TileBase } from '~/ground/land'
 import { MouseControl, type MouseEvolution } from '~/mouse'
+import { GameView } from './gameView'
 
 export type MouseEvolutionEvent<Evolution extends MouseEvolution = MouseEvolution> = (
 	evolution: Evolution
@@ -119,34 +118,4 @@ export class Game<Tile extends TileBase = TileBase> extends MouseControl {
 	}
 
 	// #endregion
-}
-
-export class GameView {
-	public readonly camera
-	private readonly renderer
-	constructor(
-		public readonly game: Game,
-		canvas?: HTMLCanvasElement,
-		{ near = 0.1, far = 1000 }: { near: number; far: number } = { near: 0.1, far: 1000 }
-	) {
-		this.camera = new PerspectiveCamera(75, 1, near, far)
-		this.renderer = new WebGLRenderer({ canvas, antialias: true })
-	}
-	get canvas() {
-		return this.renderer.domElement
-	}
-	resize(width: number, height: number) {
-		this.camera.aspect = width / height
-		this.camera.updateProjectionMatrix()
-		this.renderer.setSize(width, height)
-	}
-	render() {
-		// Don't rely on the `dispose` mechanism to stop rendering on a canvas when they are removed
-		const canvas = this.renderer.domElement
-		if (!document.body.contains(canvas) || canvas.offsetWidth === 0 || canvas.offsetHeight === 0)
-			return
-		const style = window.getComputedStyle(canvas)
-		if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return
-		this.renderer.render(this.game.scene, this.camera)
-	}
 }

@@ -131,23 +131,24 @@ export abstract class MouseHandle {
 }
 
 export enum MouseButton {
-	Left = 0,
-	Middle = 1,
-	Right = 2,
-	Back = 3,
-	Forward = 4,
+	left = 0,
+	middle = 1,
+	right = 2,
+	rd3 = 3,
+	th4 = 4,
 }
 export enum MouseButtons {
-	Left = 1,
-	Right = 2,
-	Middle = 4,
-	Back = 8,
-	Forward = 16,
+	none = 0,
+	left = 1,
+	right = 2,
+	middle = 4,
+	rd3 = 8,
+	th4 = 16,
 }
 export const modKeys = ['shift', 'alt', 'ctrl'] as const
 export type ModKey = (typeof modKeys)[number]
-export type ModKeyCombination = Partial<Record<ModKey, boolean>>
-export const modKeysComb = {
+export type ModKeyCombination = Record<ModKey, boolean>
+export const modKeyCombination = {
 	none: { alt: false, ctrl: false, shift: false },
 	alt: { alt: true, ctrl: false, shift: false },
 	ctrl: { alt: false, ctrl: true, shift: false },
@@ -179,10 +180,10 @@ export interface MouseConfig {
 }
 export const mouseConfig: MouseConfig = {
 	lockButtons: {
-		pan: { buttons: MouseButtons.Right | MouseButtons.Left, modifiers: modKeysComb.none },
-		turn: { buttons: MouseButtons.Middle, modifiers: modKeysComb.none },
+		pan: { buttons: MouseButtons.right | MouseButtons.left, modifiers: modKeyCombination.none },
+		turn: { buttons: MouseButtons.middle, modifiers: modKeyCombination.none },
 		//lookAt: { buttons: MouseButtons.Right, modifiers: modKeysComb.none },
 	},
-	zoomWheel: { axis: 'y', modifiers: modKeysComb.none },
+	zoomWheel: { axis: 'y', modifiers: modKeyCombination.none },
 	zoomSpeed: 1.2,
 }
