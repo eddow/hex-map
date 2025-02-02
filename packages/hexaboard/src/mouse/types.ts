@@ -1,7 +1,7 @@
 // #region Evolutions
 
 import type { Intersection, Object3D, Object3DEventMap } from 'three'
-import type { Game, GameView } from '~/game'
+import type { GameView } from '~/game'
 import type { Eventful } from '~/utils'
 import type { MouseControl } from '.'
 
@@ -54,16 +54,16 @@ export function mouseDrag(button: MouseButton): MouseDrag {
 		handle: null!, // `will be filled by evolutions` generator
 		button,
 		cancel(evolution) {
-			evolution.handle?.target?.emit(
+			evolution.handle?.sender?.emit(
 				'mouse:dragCancel',
 				evolution as MouseDragEvolution<MouseHandle>
 			)
 		},
 		dragDrop(evolution) {
-			evolution.handle?.target?.emit('mouse:dragDrop', evolution as MouseDragEvolution<MouseHandle>)
+			evolution.handle?.sender?.emit('mouse:dragDrop', evolution as MouseDragEvolution<MouseHandle>)
 		},
 		over(evolution) {
-			evolution.handle?.target?.emit('mouse:dragOver', evolution as MouseDragEvolution<MouseHandle>)
+			evolution.handle?.sender?.emit('mouse:dragOver', evolution as MouseDragEvolution<MouseHandle>)
 		},
 	}
 }
@@ -126,13 +126,7 @@ export type MouseHandler<Handle extends MouseHandle | undefined = MouseHandle | 
 ) => Handle | undefined
 
 export abstract class MouseHandle {
-	constructor(
-		public readonly game: Game,
-		public readonly target: Eventful<HandledMouseEvents>
-	) {}
-	get land() {
-		return this.game.land
-	}
+	constructor(public readonly sender: Eventful<HandledMouseEvents>) {}
 	abstract equals(other: MouseHandle): boolean
 }
 

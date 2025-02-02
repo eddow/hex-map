@@ -1,12 +1,11 @@
 import { BufferAttribute, BufferGeometry, type Material, MeshBasicMaterial, type RGB } from 'three'
-import type { Game } from '~/game'
+import type { HandledMouseEvents } from '~/mouse'
 import type { Triplet } from '~/types'
 import type { Axial, AxialCoord } from '~/utils'
 import type { TileBase } from '../land'
 import { TileHandle } from '../landscaper'
 import type { Sector } from '../sector'
 import { ContinuousLandscape, type LandscapeTriangle } from './landscape'
-import type { HandledMouseEvents } from '~/mouse'
 
 interface ColorTile extends TileBase {
 	color: RGB
@@ -57,11 +56,10 @@ export class ContinuousColorLandscape<
 		} as Tile
 	}
 	mouseHandler?(
-		game: Game<Tile>,
 		sector: Sector<Tile>,
 		points: Triplet<Axial>,
 		bary: Triplet<number>
 	): TileHandle<Tile> {
-		return new TileHandle(game, this, points[bary.indexOf(Math.max(...bary))])
+		return new TileHandle(this, sector, points[bary.indexOf(Math.max(...bary))])
 	}
 }

@@ -8,7 +8,6 @@ import {
 	UniformsLib,
 	UniformsUtils,
 } from 'three'
-import type { Game } from '~/game'
 import type { HandledMouseEvents } from '~/mouse'
 import type { Triplet } from '~/types'
 import { type Axial, type AxialKey, AxialKeyMap, LCG, axial, numbers } from '~/utils'
@@ -194,12 +193,11 @@ export class ContinuousTextureLandscape<
 		return geometry
 	}
 	mouseHandler?(
-		game: Game<Tile>,
 		sector: Sector<Tile>,
 		points: Triplet<Axial>,
 		bary: Triplet<number>
 	): TileHandle<Tile> {
-		return new TileHandle(game, this, points[bary.indexOf(Math.max(...bary))])
+		return new TileHandle(this, sector, points[bary.indexOf(Math.max(...bary))])
 	}
 }
 

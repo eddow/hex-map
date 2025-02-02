@@ -1,5 +1,4 @@
 import type { BufferGeometry, Intersection, Material, Object3D, Object3DEventMap } from 'three'
-import type { Game } from '~/game'
 import type { MouseHandle } from '~/mouse'
 import type { Triplet } from '~/types'
 import { type Axial, axial } from '~/utils'
@@ -22,7 +21,6 @@ export abstract class ContinuousPartialLandscape<
 		return this.createPartialGeometry(sector, filteredTriangles)
 	}
 	rawMouseHandler(
-		game: Game<Tile>,
 		sector: Sector<Tile>,
 		intersection: Intersection<Object3D<Object3DEventMap>>
 	): MouseHandle | undefined {
@@ -31,7 +29,7 @@ export abstract class ContinuousPartialLandscape<
 		const v = intersection.face!.a
 		const keys = [vm[v], vm[v + 1], vm[v + 2]]
 		const points = keys.map((k) => axial.keyAccess(k))
-		return this.mouseHandler!(game, sector, points as Triplet<Axial>, bary)
+		return this.mouseHandler!(sector, points as Triplet<Axial>, bary)
 	}
 	abstract filterTriangles(sector: Sector<Tile>): (triangle: LandscapeTriangle) => boolean
 	abstract createPartialGeometry(

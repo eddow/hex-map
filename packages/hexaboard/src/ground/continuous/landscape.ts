@@ -126,26 +126,21 @@ export abstract class ContinuousLandscape<Tile extends TileBase, MouseEvents ext
 					game: Game<Tile>,
 					target: any,
 					intersection: Intersection<Object3D<Object3DEventMap>>
-				) => this.rawMouseHandler(game, sector, intersection),
+				) => this.rawMouseHandler(sector, intersection),
 				mouseTarget: this,
 			}
 		return mesh
 	}
-	rawMouseHandler(
-		game: Game<Tile>,
-		sector: Sector<Tile>,
-		intersection: Intersection<Object3D<Object3DEventMap>>
-	) {
+	rawMouseHandler(sector: Sector<Tile>, intersection: Intersection<Object3D<Object3DEventMap>>) {
 		const baryArr = intersection.barycoord!.toArray()
 		const v = intersection.face!.a
 		assert(v < this.geometryVertex!.length, 'Invalid vertex index')
 		const vm = this.geometryVertex!
 		const keys = [vm[v], vm[v + 1], vm[v + 2]]
 		const points = keys.map((k) => axial.coordAccess(axial.linear(sector.center, k)))
-		return this.mouseHandler!(game, sector, points as Triplet<Axial>, baryArr)
+		return this.mouseHandler!(sector, points as Triplet<Axial>, baryArr)
 	}
 	mouseHandler?(
-		game: Game<Tile>,
 		sector: Sector<Tile>,
 		points: Triplet<Axial>,
 		bary: Triplet<number>

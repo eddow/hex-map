@@ -146,7 +146,7 @@ export class MouseControl extends Eventful<MouseEvents> {
 							}[mde.type] as keyof MouseDrag
 						] as (evolution: MouseDragEvolution) => void
 					)(mde)
-				} else e.handle.target.emit(`mouse:${e.type}` as keyof HandledMouseEvents, e as any)
+				} else e.handle.sender.emit(`mouse:${e.type}` as keyof HandledMouseEvents, e as any)
 			}
 		}
 	}

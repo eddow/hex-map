@@ -13,14 +13,14 @@ export interface Landscape<Tile extends TileBase, GenerationInfo = unknown>
 
 export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
 	constructor(
-		game: Game<Tile>,
 		target: any,
+		private readonly sector: Sector<Tile>,
 		public readonly point: Axial
 	) {
-		super(game, target)
+		super(target)
 	}
 	get tile() {
-		return this.land.tile(this.point.key) as Tile
+		return this.sector.tiles.get(this.point.key) as Tile
 	}
 	equals(other: MouseHandle): boolean {
 		return other instanceof TileHandle && this.point.key === other.point.key

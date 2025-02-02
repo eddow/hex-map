@@ -1,4 +1,3 @@
-import type { Game } from '~/game'
 import { type HandledMouseEvents, MouseHandle } from '~/mouse'
 import type { Triplet } from '~/types'
 import { assert, type Axial, type AxialDirection, type AxialRef, AxialSet, axial } from '~/utils'
@@ -30,13 +29,17 @@ export class RoadHandle<
 	Road extends RoadBase = RoadBase,
 > extends MouseHandle {
 	public readonly points: [Axial, Axial]
-	constructor(game: Game<Tile>, target: any, points: [AxialRef, AxialRef]) {
-		super(game, target)
+	constructor(
+		target: any,
+		private readonly sector: Sector<Tile>,
+		points: [AxialRef, AxialRef]
+	) {
+		super(target)
 		this.points = points.map(axial.access).sort((a, b) => a.key - b.key) as [Axial, Axial]
 	}
 	@cached()
 	get tiles() {
-		return this.points.map((p) => this.game.land.tile(p)) as [Tile, Tile]
+		return this.points.map((p) => this.sector.tiles.get(p)) as [Tile, Tile]
 	}
 	@cached()
 	get directions(): [AxialDirection, AxialDirection] | null {
@@ -82,13 +85,8 @@ export abstract class RoadGrid<
 		)
 		return (t) => t.points.some((p) => roadPoints.has(p.key))
 	}
-	mouseHandler(
-		game: Game<Tile>,
-		sector: Sector<Tile>,
-		points: Triplet<Axial>,
-		bary: Triplet<number>
-	) {
-		const tiles = points.map((p) => game.land.tile(p))
+	mouseHandler(sector: Sector<Tile>, points: Triplet<Axial>, bary: Triplet<number>) {
+		const tiles = points.map((p) => sector.tiles.get(p))
 		let min:
 			| {
 					proximity: number
@@ -100,7 +98,7 @@ export abstract class RoadGrid<
 		for (let p = 0; p < 3; p++) {
 			direction = (direction + 2) % 6
 			const next = (p + 1) % 3
-			const content = getTileContent(tiles[next], direction as AxialDirection)
+			const content = getTileContent(tiles[next]!, direction as AxialDirection)
 			// We calculate the "scaled-in-road": from 0-1, it's in the road. So, it's bary(0-1)/roadWidth
 			if (content instanceof RoadContent) {
 				const scaledInRoad = bary[p] / (content.road.width * 2)
@@ -113,7 +111,7 @@ export abstract class RoadGrid<
 			}
 		}
 
-		if (min) return new RoadHandle(game, this, [min.from, min.to])
+		if (min) return new RoadHandle(this, sector, [min.from, min.to])
 	}
 	link(land: Land<Tile>, A: Axial, B: Axial, road?: RoadKey): void {
 		const sectors = new Set<Sector<Tile>>()
