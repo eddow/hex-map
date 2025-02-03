@@ -5,7 +5,7 @@ import {
 	type Vector3Like,
 	WebGLRenderer,
 } from 'three'
-import type { InputInteraction } from '~/input/d3events'
+import type { InputInteraction } from '~/input/inputInteraction'
 import type { Game } from './game'
 
 export class GameView {

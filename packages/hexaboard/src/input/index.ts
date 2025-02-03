@@ -1,6 +1,6 @@
 export * from './control'
 export * from './d2buffer'
-export * from './d3events'
+export * from './actions'
 export * from './lockSemaphore'
 export * from './inputInteraction'
 export * from './types'

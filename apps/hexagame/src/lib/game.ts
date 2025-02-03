@@ -8,6 +8,7 @@ import {
 	type HoverAction,
 	type InputActions,
 	InputInteraction,
+	InputMode,
 	type InterfaceConfigurations,
 	Land,
 	type Landscape,
@@ -29,7 +30,6 @@ import {
 	modKeyCombination,
 	pointActions,
 } from 'hexaboard'
-import { InputMode } from 'hexaboard'
 import {
 	CatmullRomCurve3,
 	Mesh,
@@ -84,7 +84,7 @@ const cfg: InterfaceConfigurations<GameXActions> = {
 
 export function createGame(seed: number) {
 	const mainGameInputMode = new InputMode<GameXActions>(
-		handledActions(TileHandle)({
+		handledActions(TileHandle)<GameXActions>({
 			select(target, event) {},
 		}),
 		pointActions({

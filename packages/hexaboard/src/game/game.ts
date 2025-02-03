@@ -9,7 +9,7 @@ import {
 } from 'three'
 import type { Land, TileBase } from '~/ground/land'
 import type { MouseEvolution } from '~/input'
-import type { InputInteraction } from '~/input/d3events'
+import type { InputInteraction } from '~/input/inputInteraction'
 import { Eventful } from '~/utils'
 import { GameView } from './gameView'
 
