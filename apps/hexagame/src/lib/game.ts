@@ -88,7 +88,9 @@ export function createGame(seed: number) {
 			select(target, event) {},
 		}),
 		pointActions({
-			zoom(target, event) {},
+			zoom(point, event) {
+				event.gameView.zoom(point, event.delta, { min: 150, max: 1000 })
+			},
 		})
 	)
 

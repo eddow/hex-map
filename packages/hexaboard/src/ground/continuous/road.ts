@@ -1,4 +1,4 @@
-import { type HandledMouseEvents, MouseHandle } from '~/input'
+import { MouseHandle } from '~/input'
 import type { Triplet } from '~/types'
 import { assert, type Axial, type AxialDirection, type AxialRef, AxialSet, axial } from '~/utils'
 import { cached } from '~/utils/decorators'
@@ -64,7 +64,7 @@ export class RoadHandle<
 export abstract class RoadGrid<
 	Tile extends ContentTile,
 	Road extends RoadBase,
-> extends ContinuousPartialLandscape<Tile, HandledMouseEvents<RoadHandle<Tile, Road>>> {
+> extends ContinuousPartialLandscape<Tile> {
 	private roadIndex: Record<RoadKey, RoadContent<Road>> = {}
 	constructor(
 		sectorRadius: number,

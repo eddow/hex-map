@@ -1,4 +1,3 @@
-export * from './control'
 export * from './d2buffer'
 export * from './actions'
 export * from './lockSemaphore'

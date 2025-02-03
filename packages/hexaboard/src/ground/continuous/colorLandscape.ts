@@ -1,8 +1,6 @@
 import { BufferAttribute, BufferGeometry, type Material, MeshBasicMaterial, type RGB } from 'three'
-import type { Triplet } from '~/types'
-import type { Axial, AxialCoord } from '~/utils'
+import type { AxialCoord } from '~/utils'
 import type { TileBase } from '../land'
-import { TileHandle } from '../landscaper'
 import type { Sector } from '../sector'
 import { CompleteLandscape } from './completeLandscape'
 import type { LandscapeTriangle } from './landscape'
@@ -51,12 +49,5 @@ export class ContinuousColorLandscape<
 				b: 1 - h01,
 			},
 		} as Tile
-	}
-	mouseHandler?(
-		sector: Sector<Tile>,
-		points: Triplet<Axial>,
-		bary: Triplet<number>
-	): TileHandle<Tile> {
-		return new TileHandle(this, sector, points[bary.indexOf(Math.max(...bary))])
 	}
 }

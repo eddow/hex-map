@@ -7,8 +7,7 @@ import {
 	type Object3DEventMap,
 	type RGB,
 } from 'three'
-import type { Game } from '~/game'
-import type { MouseHandle } from '~/input'
+import type { MouseHandle, MouseHandler } from '~/input'
 import type { Triplet } from '~/types'
 import { assert, type Axial, type AxialCoord, Eventful, axial } from '~/utils'
 import type { RenderedEvents, TileBase } from '../land'
@@ -90,8 +89,8 @@ function centeredTriangles(
 	return rv
 }
 
-export abstract class ContinuousLandscape<Tile extends TileBase, MouseEvents extends {} = {}>
-	extends Eventful<RenderedEvents<Tile> & MouseEvents>
+export abstract class ContinuousLandscape<Tile extends TileBase>
+	extends Eventful<RenderedEvents<Tile>>
 	implements Landscape<Tile>
 {
 	private readonly triangles: LandscapeTriangle<AxialCoord>[]
@@ -122,12 +121,8 @@ export abstract class ContinuousLandscape<Tile extends TileBase, MouseEvents ext
 
 		if (this.mouseHandler)
 			mesh.userData = {
-				mouseHandler: (
-					game: Game<Tile>,
-					target: any,
-					intersection: Intersection<Object3D<Object3DEventMap>>
-				) => this.rawMouseHandler(sector, intersection),
-				mouseTarget: this,
+				mouseHandler: ((intersection: Intersection<Object3D<Object3DEventMap>>) =>
+					this.rawMouseHandler(sector, intersection)) satisfies MouseHandler,
 			}
 		return mesh
 	}

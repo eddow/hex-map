@@ -8,14 +8,9 @@ import {
 	type Vector3Like,
 } from 'three'
 import type { Land, TileBase } from '~/ground/land'
-import type { MouseEvolution } from '~/input'
 import type { InputInteraction } from '~/input/inputInteraction'
 import { Eventful } from '~/utils'
 import { GameView } from './gameView'
-
-export type MouseEvolutionEvent<Evolution extends MouseEvolution = MouseEvolution> = (
-	evolution: Evolution
-) => void
 
 export abstract class GameEntity {
 	constructor(public readonly o3d: Object3D) {}

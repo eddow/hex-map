@@ -8,8 +8,7 @@ import type { ContentTile } from './resourceful'
 
 export abstract class ContinuousPartialLandscape<
 	Tile extends ContentTile,
-	MouseEvents extends {} = {},
-> extends ContinuousLandscape<Tile, MouseEvents> {
+> extends ContinuousLandscape<Tile> {
 	private vertexMatch?: Int32Array
 	createGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]): BufferGeometry | undefined {
 		const filteredTriangles = triangles.filter(this.filterTriangles(sector))

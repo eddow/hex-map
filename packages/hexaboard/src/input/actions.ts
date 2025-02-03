@@ -38,7 +38,7 @@ export type InterfaceTargetedEvents<Target, Actions extends InputActions = Input
 	[K in keyof Actions]: (target: Target, event: ExtractActionEvent<Actions[K]>) => void
 }
 export type InterfaceConfigurations<Actions extends InputActions = InputActions> = {
-	[K in keyof Actions]: [ExtractActionConfiguration<Actions[K]>]
+	[K in keyof Actions]: ExtractActionConfiguration<Actions[K]>[]
 }
 
 // #endregion
@@ -62,7 +62,7 @@ export interface MouseHoverConfiguration extends ActionConfiguration {
 }
 
 export interface KeyIdentifier {
-	name: string
+	key?: string
 	code: string
 }
 
@@ -150,12 +150,16 @@ export const scroll2DAction: Scroll2DAction = {
 type HandleType = new (...args: any) => MouseHandle
 
 export abstract class SelectiveAction<Actions extends InputActions> {
+	constructor(protected readonly events: Partial<Record<keyof Actions, any>>) {}
+	get eventKeys() {
+		return Object.keys(this.events)
+	}
 	public abstract acceptHandle(handle: MouseHandle): boolean
 	public abstract acceptNoHandle(pointless: boolean): boolean
 	public abstract apply(
 		action: keyof Actions,
-		handle: MouseHandle,
-		intersection: Vector3Like,
+		handle: MouseHandle | undefined,
+		intersection: Vector3Like | undefined,
 		event: D3InputEvent
 	): void
 }
@@ -166,10 +170,10 @@ class HandleSelectiveAction<
 > extends SelectiveAction<Actions> {
 	constructor(
 		private readonly handleType: HandleType,
-		private readonly events: Partial<InterfaceTargetedEvents<InstanceType<T>, Actions>>,
+		protected readonly events: Partial<InterfaceTargetedEvents<InstanceType<T>, Actions>>,
 		private readonly secondaryAccepter?: (handle: InstanceType<T>) => boolean
 	) {
-		super()
+		super(events)
 	}
 	public acceptNoHandle(pointless: boolean): boolean {
 		return false
@@ -182,8 +186,8 @@ class HandleSelectiveAction<
 	}
 	public apply(
 		action: keyof Actions,
-		handle: MouseHandle,
-		intersection: Vector3Like,
+		handle: MouseHandle | undefined,
+		intersection: Vector3Like | undefined,
 		event: D3InputEvent
 	): void {
 		this.events[action]?.(
@@ -203,23 +207,23 @@ export function handledActions<T extends HandleType>(
 }
 
 class PointSelectiveAction<Actions extends InputActions> extends SelectiveAction<Actions> {
-	constructor(private readonly events: Partial<InterfaceTargetedEvents<Vector3, Actions>>) {
-		super()
+	constructor(protected readonly events: Partial<InterfaceTargetedEvents<Vector3, Actions>>) {
+		super(events)
 	}
 	public acceptNoHandle(pointless: boolean): boolean {
 		return !pointless
 	}
 	public acceptHandle(handle: any): boolean {
-		return true
+		return false
 	}
 	public apply(
 		action: keyof Actions,
-		handle: MouseHandle,
-		intersection: Vector3Like,
+		handle: MouseHandle | undefined,
+		intersection: Vector3Like | undefined,
 		event: D3InputEvent
 	): void {
 		this.events[action]?.(
-			new Vector3().copy(intersection),
+			new Vector3().copy(intersection!),
 			event as ExtractActionEvent<Actions[keyof Actions]>
 		)
 	}
@@ -232,19 +236,19 @@ export function pointActions<Actions extends InputActions>(
 }
 
 class NotSelectiveAction<Actions extends InputActions> extends SelectiveAction<Actions> {
-	constructor(private readonly events: Partial<InterfaceEvents<Actions>>) {
-		super()
+	constructor(protected readonly events: Partial<InterfaceEvents<Actions>>) {
+		super(events)
 	}
 	public acceptNoHandle(pointless: boolean): boolean {
-		return true
+		return pointless
 	}
 	public acceptHandle(handle: any): boolean {
-		return true
+		return false
 	}
 	public apply(
 		action: keyof Actions,
-		handle: MouseHandle,
-		intersection: Vector3Like,
+		handle: MouseHandle | undefined,
+		intersection: Vector3Like | undefined,
 		event: D3InputEvent
 	): void {
 		this.events[action]?.(event as ExtractActionEvent<Actions[keyof Actions]>)

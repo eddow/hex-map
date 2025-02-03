@@ -1,8 +1,7 @@
-import type { Face, Intersection, Object3D, Object3DEventMap } from 'three'
-import type { Game } from '~/game'
+import type { Object3D } from 'three'
 import { MouseHandle } from '~/input'
 import { Eventful } from '~/utils'
-import { type Axial, type AxialCoord, axial } from '~/utils/axial'
+import type { Axial } from '~/utils/axial'
 import type { LandPart, RenderedEvents, TileBase, TileUpdater, WalkTimeSpecification } from './land'
 import type { Sector } from './sector'
 
@@ -13,36 +12,17 @@ export interface Landscape<Tile extends TileBase, GenerationInfo = unknown>
 
 export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
 	constructor(
-		target: any,
+		sender: any,
 		private readonly sector: Sector<Tile>,
 		public readonly point: Axial
 	) {
-		super(target)
+		super(sender)
 	}
 	get tile() {
 		return this.sector.tiles.get(this.point.key) as Tile
 	}
 	equals(other: MouseHandle): boolean {
 		return other instanceof TileHandle && this.point.key === other.point.key
-	}
-}
-
-// TODO: mouseHandler should be between here and Color/Terxure-Landscape (complete landscapes)
-function sectorMouseHandler<Tile extends TileBase>(
-	geometryVertex: AxialCoord[],
-	center: AxialCoord
-) {
-	return function mouseHandle(
-		game: Game<Tile>,
-		target: any,
-		intersection: Intersection<Object3D<Object3DEventMap>>
-	): TileHandle<Tile> {
-		const baryArr = intersection.barycoord!.toArray()
-		const facePt = baryArr.indexOf(Math.max(...baryArr))
-		const geomPt = intersection.face!['abc'[facePt] as keyof Face] as number
-		const tileRef = axial.linear(center, geometryVertex[geomPt])
-		// @ts-ignore Game<TileBase>
-		return new TileHandle(game, target, axial.coordAccess(tileRef))
 	}
 }
 /**
