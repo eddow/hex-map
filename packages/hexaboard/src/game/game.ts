@@ -4,10 +4,13 @@ import {
 	DirectionalLight,
 	Group,
 	type Object3D,
+	Scene,
 	type Vector3Like,
 } from 'three'
 import type { Land, TileBase } from '~/ground/land'
-import { MouseControl, type MouseEvolution } from '~/mouse'
+import type { MouseEvolution } from '~/input'
+import type { InputInteraction } from '~/input/d3events'
+import { Eventful } from '~/utils'
 import { GameView } from './gameView'
 
 export type MouseEvolutionEvent<Evolution extends MouseEvolution = MouseEvolution> = (
@@ -19,15 +22,21 @@ export abstract class GameEntity {
 	progress(dt: number) {}
 }
 
-export class Game<Tile extends TileBase = TileBase> extends MouseControl {
+export type GameEvents = {
+	progress(dt: number): void
+}
+
+export class Game<Tile extends TileBase = TileBase> extends Eventful<GameEvents> {
+	public readonly views = new Map<GameView, InputInteraction | null>()
 	public readonly lights = new Group()
+	public readonly scene = new Scene()
 	private _land: Land<Tile>
 
 	constructor(
 		land: Land<Tile>,
-		{ clampCamZ = { min: 150, max: 500 } }: { clampCamZ?: { min: number; max: number } } = {}
+		private readonly mainGameInteraction: InputInteraction
 	) {
-		super(clampCamZ)
+		super()
 		this._land = land
 		this.lights.add(new AmbientLight(0x404040))
 		const light = new DirectionalLight(0xffffff, 1)
@@ -60,10 +69,10 @@ export class Game<Tile extends TileBase = TileBase> extends MouseControl {
 	animate = () => {
 		if (!this.clock.running) return
 		const dt = this.clock.getDelta()
-		this.raiseEvents()
+		this.emit('progress', dt)
 		this.updateViews()
 		this.progress(dt)
-		for (const view of this.views.values()) view.render()
+		for (const view of this.views.keys()) view.render()
 		if (this.clock.running) requestAnimationFrame(this.animate)
 	}
 	private clock = new Clock(false)
@@ -80,7 +89,7 @@ export class Game<Tile extends TileBase = TileBase> extends MouseControl {
 	private viewPositions = new WeakMap<GameView, Vector3Like>()
 	updateViews() {
 		const movedViews: GameView[] = []
-		for (const view of this.views.values()) {
+		for (const view of this.views.keys()) {
 			const { camera } = view
 			const oldViewPosition = this.viewPositions.get(view)
 			if (!oldViewPosition || !camera.position.equals(oldViewPosition)) {
@@ -88,8 +97,7 @@ export class Game<Tile extends TileBase = TileBase> extends MouseControl {
 				movedViews.push(view)
 			}
 		}
-		if (movedViews.length)
-			this.land.updateViews(Array.from(this.views.values().map((v) => v.camera)))
+		if (movedViews.length) this.land.updateViews(Array.from(this.views.keys().map((v) => v.camera)))
 	}
 
 	// #endregion
@@ -106,15 +114,20 @@ export class Game<Tile extends TileBase = TileBase> extends MouseControl {
 
 	createView(
 		canvas?: HTMLCanvasElement,
-		{ near = 0.1, far = 1000 }: { near: number; far: number } = { near: 0.1, far: 1000 }
+		interaction: InputInteraction | null = this.mainGameInteraction,
+		{ near = 0.1, far = 1000 }: { near: number; far: number } = { near: 0.1, far: 2000 }
 	) {
 		// @ts-ignore Ignore tiles for the views
-		const view = new GameView(this, canvas, { near, far })
-		this.listenTo(view)
+		const view = new GameView(this, canvas, interaction, { near, far })
+		this.views.set(view, interaction)
+		this.scene.add(view.camera)
+		interaction?.attach(view)
 		return view
 	}
 	removeView(view: GameView) {
-		this.disengage(view)
+		this.views.get(view)?.detach(view)
+		this.views.delete(view)
+		this.scene.remove(view.camera)
 	}
 
 	// #endregion

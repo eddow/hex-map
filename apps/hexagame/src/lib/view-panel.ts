@@ -15,7 +15,7 @@ export class GameViewRenderer implements IContentRenderer {
 	}
 	init(parameters: GroupPanelPartInitParameters): void {
 		const { game } = parameters.params
-		this.gv = games[game]?.createView(this.canvas, { near: 0.1, far: 2000 })
+		this.gv = games[game]?.createView(this.canvas)
 		const { camera } = this.gv
 		camera.position.set(0, 0, 200)
 		camera.lookAt(0, 0, 0)
@@ -26,13 +26,11 @@ export class GameViewRenderer implements IContentRenderer {
 	}
 	dispose(): void {
 		this.gv?.game.removeView(this.gv)
+		this.gv?.dispose()
 	}
 
 	/*
 	focus?(): void {
-		//throw new Error('Method not implemented.');
-	}
-	dispose?(): void {
 		//throw new Error('Method not implemented.');
 	}
 	update(event: PanelUpdateEvent<Parameters>): void {

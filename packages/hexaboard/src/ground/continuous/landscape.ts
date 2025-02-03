@@ -8,7 +8,7 @@ import {
 	type RGB,
 } from 'three'
 import type { Game } from '~/game'
-import type { MouseHandle } from '~/mouse'
+import type { MouseHandle } from '~/input'
 import type { Triplet } from '~/types'
 import { assert, type Axial, type AxialCoord, Eventful, axial } from '~/utils'
 import type { RenderedEvents, TileBase } from '../land'

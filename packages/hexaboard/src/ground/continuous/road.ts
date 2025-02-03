@@ -1,4 +1,4 @@
-import { type HandledMouseEvents, MouseHandle } from '~/mouse'
+import { type HandledMouseEvents, MouseHandle } from '~/input'
 import type { Triplet } from '~/types'
 import { assert, type Axial, type AxialDirection, type AxialRef, AxialSet, axial } from '~/utils'
 import { cached } from '~/utils/decorators'

@@ -5,25 +5,31 @@ import {
 	ContinuousTextureLandscape,
 	Game,
 	HeightTerrain,
+	type HoverAction,
+	type InputActions,
+	InputInteraction,
+	type InterfaceConfigurations,
 	Land,
 	type Landscape,
 	Landscaper,
 	MouseButton,
-	type MouseButtonEvolution,
-	type MouseDragEvolution,
-	type MouseHoverEvolution,
+	MouseButtons,
 	OceanLandscape,
+	type OneButtonAction,
 	PerlinHeight,
 	Resourceful,
 	type RiverTile,
 	Rivers,
-	type RoadHandle,
+	type Scroll1DAction,
+	type Scroll2DAction,
 	TileCursor,
 	TileHandle,
-	axial,
-	costingPath,
+	handledActions,
 	icosahedron,
+	modKeyCombination,
+	pointActions,
 } from 'hexaboard'
+import { InputMode } from 'hexaboard'
 import {
 	CatmullRomCurve3,
 	Mesh,
@@ -32,13 +38,61 @@ import {
 	TubeGeometry,
 	Vector3,
 } from 'three'
-import { debugInfo, dockview, games } from './globals.svelte'
 import { roadTypes, seaLevel, terrainHeight, terrains } from './world/textures'
 
 export type GameXTile = ContentTile & RiverTile
 export type GameXLand = Land<GameXTile>
 
+interface GameXActions extends InputActions {
+	select: OneButtonAction
+	zoom: Scroll1DAction
+	pan: Scroll2DAction
+	hover: HoverAction
+}
+
+const cfg: InterfaceConfigurations<GameXActions> = {
+	select: [
+		{
+			type: 'click',
+			modifiers: modKeyCombination.none,
+			button: MouseButton.left,
+		},
+	],
+	zoom: [
+		{
+			type: 'wheelY',
+			modifiers: modKeyCombination.none,
+		},
+	],
+	pan: [
+		{
+			type: 'delta',
+			buttons: MouseButtons.left + MouseButtons.right,
+			modifiers: modKeyCombination.ctrl,
+			invertX: false,
+			invertY: false,
+		},
+	],
+	hover: [
+		{
+			type: 'hover',
+			buttons: MouseButtons.none,
+			modifiers: modKeyCombination.none,
+		},
+	],
+}
+
 export function createGame(seed: number) {
+	const mainGameInputMode = new InputMode<GameXActions>(
+		handledActions(TileHandle)({
+			select(target, event) {},
+		}),
+		pointActions({
+			zoom(target, event) {},
+		})
+	)
+
+	const gameInputInteraction = new InputInteraction<GameXActions>(mainGameInputMode, cfg)
 	const land = new Land<GameXTile>(4, 20)
 	const landscape = new ContinuousTextureLandscape<GameXTile>(
 		land.sectorRadius,
@@ -60,7 +114,7 @@ export function createGame(seed: number) {
 		new Resourceful(terrains, seed, seaLevel)
 	)
 
-	const game = new Game(land, { clampCamZ: { min: 150, max: 700 } })
+	const game = new Game(land, gameInputInteraction)
 
 	//const pawn = new Character(land.sector, 0, sphere(2, { color: 0xff0000 }))
 	//const pawn = new Character(land.sector, 0, new Object3D())
@@ -89,7 +143,7 @@ export function createGame(seed: number) {
 	}
 
 	let pathTube: Object3D | undefined
-	grid.on({
+	/*grid.on({
 		'mouse:hover'(ev: MouseHoverEvolution<RoadHandle<GameXTile>>) {
 			markPath(ev.handle.points, 2 * land.tileSize * ev.handle.roadType.road.width)
 		},
@@ -108,14 +162,14 @@ export function createGame(seed: number) {
 					axial.coord(pawn.tile),
 					...straightPath(pawn.sector, pawn.tile, cursor.tile.target, cursor.tile.hexIndex),
 				]*/
-			/* no height path (0 height diff still has horizontal mvt not counted)
+	/* no height path (0 height diff still has horizontal mvt not counted)
 				const path = costingPath(
 					cursor.tile.hexIndex,
 					(from, to) =>
 						to < sector.nbrTiles ? (sector.points[from].z - sector.points[to].z) ** 2 : Number.NaN,
 					(hexIndex) => hexIndex < sector.nbrTiles && pawn.tile === hexIndex
 				)*/
-			/*
+	/*
 				if (path && path.length > 1) {
 					const pathCurve = new CatmullRomCurve3(path.map((p) => axialV3(p)))
 					const pathGeometry = new TubeGeometry(pathCurve, path.length * 5, 2, 8, false)
@@ -126,7 +180,7 @@ export function createGame(seed: number) {
 			} catch (e) {
 				// Ignore SectorNotGeneratedError
 				if (!(e instanceof SectorNotGeneratedError)) throw e
-			}*/
+			}* /
 			//}
 			debugInfo.axial = cursor.tile?.point
 			const tile = ev.handle.tile
@@ -184,7 +238,7 @@ export function createGame(seed: number) {
 						break
 				}
 		}
-	})
+	})*/
 	game.addEntity(cursor)
 
 	return game

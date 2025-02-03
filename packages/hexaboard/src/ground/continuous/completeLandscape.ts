@@ -1,4 +1,4 @@
-import type { HandledMouseEvents } from '~/mouse'
+import type { HandledMouseEvents } from '~/input'
 import type { Triplet } from '~/types'
 import type { Axial } from '~/utils'
 import type { TileBase } from '../land'

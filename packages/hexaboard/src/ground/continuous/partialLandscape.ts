@@ -1,5 +1,5 @@
 import type { BufferGeometry, Intersection, Material, Object3D, Object3DEventMap } from 'three'
-import type { MouseHandle } from '~/mouse'
+import type { MouseHandle } from '~/input'
 import type { Triplet } from '~/types'
 import { type Axial, axial } from '~/utils'
 import type { Sector } from '../sector'

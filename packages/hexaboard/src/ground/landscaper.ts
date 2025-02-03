@@ -1,6 +1,6 @@
 import type { Face, Intersection, Object3D, Object3DEventMap } from 'three'
 import type { Game } from '~/game'
-import { MouseHandle } from '~/mouse'
+import { MouseHandle } from '~/input'
 import { Eventful } from '~/utils'
 import { type Axial, type AxialCoord, axial } from '~/utils/axial'
 import type { LandPart, RenderedEvents, TileBase, TileUpdater, WalkTimeSpecification } from './land'

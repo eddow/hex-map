@@ -80,12 +80,14 @@ export interface TwoWheelsConfiguration extends ActionConfiguration {
 
 export interface KeyPairPressConfiguration extends ActionConfiguration {
 	type: 'press2'
+	velocity: number
 	keyNeg: KeyIdentifier
 	keyPos: KeyIdentifier
 }
 
 export interface KeyQuadPressConfiguration extends ActionConfiguration {
 	type: 'press4'
+	velocity: number
 	keyXNeg: KeyIdentifier
 	keyXPos: KeyIdentifier
 	keyYNeg: KeyIdentifier

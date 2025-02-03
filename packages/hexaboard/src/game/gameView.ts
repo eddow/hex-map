@@ -1,4 +1,11 @@
-import { PerspectiveCamera, type Vector2Like, Vector3, WebGLRenderer } from 'three'
+import {
+	PerspectiveCamera,
+	type Vector2Like,
+	Vector3,
+	type Vector3Like,
+	WebGLRenderer,
+} from 'three'
+import type { InputInteraction } from '~/input/d3events'
 import type { Game } from './game'
 
 export class GameView {
@@ -7,10 +14,16 @@ export class GameView {
 	constructor(
 		public readonly game: Game,
 		canvas?: HTMLCanvasElement,
+		private readonly interaction?: InputInteraction,
 		{ near = 0.1, far = 1000 }: { near: number; far: number } = { near: 0.1, far: 1000 }
 	) {
 		this.camera = new PerspectiveCamera(75, 1, near, far)
 		this.renderer = new WebGLRenderer({ canvas, antialias: true })
+		interaction?.listenTo(this.renderer.domElement)
+	}
+	dispose() {
+		this.interaction?.unListenTo(this.renderer.domElement)
+		this.renderer.dispose()
 	}
 	get canvas() {
 		return this.renderer.domElement
@@ -63,5 +76,17 @@ export class GameView {
 		camera.position
 			.add(xv.multiplyScalar(-delta.x * displacement))
 			.add(projectedUp.multiplyScalar(delta.y * displacement))
+	}
+	zoom(
+		center: Vector3Like,
+		delta: number,
+		clampCamZ: { max: number; min: number },
+		zoomFactor = 1.2
+	) {
+		const { camera } = this
+		const dist = camera.position.clone().sub(center)
+		dist.multiplyScalar(zoomFactor ** delta)
+		camera.position.copy(center).add(dist)
+		camera.position.z = Math.max(Math.min(camera.position.z, clampCamZ.max), clampCamZ.min)
 	}
 }
