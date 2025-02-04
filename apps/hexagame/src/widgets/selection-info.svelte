@@ -10,9 +10,10 @@
 	let tile = $derived(land.tile(hKey))
 	let terrainTypeName = $derived(tile.terrain)
 	function goTo() {
-		const camera = games[gameKey].views.values().next().value?.camera
+		const camera = games[gameKey].views.keys().next().value?.camera
 		if (!camera) return
 		camera.position.copy({ ...cartesian(hKey, 20), z: camera.position.z })
+		camera.updateMatrixWorld()
 	}
 </script>
 

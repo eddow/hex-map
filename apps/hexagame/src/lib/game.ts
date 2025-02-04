@@ -29,6 +29,7 @@ import {
 	icosahedron,
 	modKeyCombination,
 	pointActions,
+	viewActions,
 } from 'hexaboard'
 import {
 	CatmullRomCurve3,
@@ -57,11 +58,31 @@ const cfg: InterfaceConfigurations<GameXActions> = {
 			modifiers: modKeyCombination.none,
 			button: MouseButton.left,
 		},
+		{
+			type: 'keydown',
+			modifiers: modKeyCombination.none,
+			key: {
+				code: 'Enter',
+			},
+		},
 	],
 	zoom: [
 		{
 			type: 'wheelY',
 			modifiers: modKeyCombination.none,
+		},
+		{
+			type: 'press2',
+			modifiers: [
+				{ on: modKeyCombination.ctrl, use: { multiplier: 1 } },
+				{ on: modKeyCombination.none, use: { multiplier: 0 } },
+			],
+			keyNeg: {
+				code: 'ArrowUp',
+			},
+			keyPos: {
+				code: 'ArrowDown',
+			},
 		},
 	],
 	pan: [
@@ -71,6 +92,25 @@ const cfg: InterfaceConfigurations<GameXActions> = {
 			modifiers: modKeyCombination.ctrl,
 			invertX: false,
 			invertY: false,
+		},
+		{
+			type: 'press4',
+			modifiers: [
+				{ on: modKeyCombination.none, use: { multiplier: 1 } },
+				{ on: modKeyCombination.shift, use: { multiplier: 2 } },
+			],
+			keyXNeg: {
+				code: 'KeyD',
+			},
+			keyXPos: {
+				code: 'KeyA',
+			},
+			keyYNeg: {
+				code: 'KeyS',
+			},
+			keyYPos: {
+				code: 'KeyW',
+			},
 		},
 	],
 	hover: [
@@ -100,11 +140,16 @@ export function createGame(seed: number) {
 			zoom(point, event) {
 				event.gameView.zoom(point, event.delta, { min: 150, max: 1000 })
 			},
+		}),
+		viewActions({
+			pan(event) {
+				event.gameView.pan(event.delta)
+			},
 		})
 	)
 
 	const gameInputInteraction = new InputInteraction<GameXActions>(mainGameInputMode, cfg)
-	const land = new Land<GameXTile>(4, 20)
+	const land = new Land<GameXTile>(2, 20)
 	const landscape = new ContinuousTextureLandscape<GameXTile>(
 		land.sectorRadius,
 		terrains,

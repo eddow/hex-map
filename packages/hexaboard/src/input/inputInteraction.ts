@@ -1,15 +1,14 @@
 import { Raycaster, Vector2, type Vector2Like, type Vector3Like } from 'three'
 import type { GameView } from '~/game'
 import { assert, debugInformation } from '~/utils'
-import {
-	type D3InputEvent,
-	type InputActions,
-	type InputState,
-	type InterfaceConfigurations,
-	type SelectiveAction,
-	configuration2event,
+import type {
+	D3InputEvent,
+	InputActions,
+	InterfaceConfigurations,
+	SelectiveAction,
 } from './actions'
 import { D2Buffer } from './d2buffer'
+import { type ActionState, type InputState, configuration2event } from './internals'
 import type { MouseHandle, MouseHandler } from './types'
 
 export interface Intersections {
@@ -46,12 +45,15 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 	// #region config+modes -> actions
 
 	private compiledCache: ModesCache<Actions> = {}
+	private actionStates: Record<string, ActionState> = {}
 	compileCache(configurations: InterfaceConfigurations<Actions>, modes: InputMode<Actions>[]) {
 		const cache = {} as ModesCache<Actions>
+		const actionStates: Record<string, ActionState> = {}
 
 		for (const mode of modes) {
 			for (const selectiveAction of mode.selectiveActions) {
 				for (const actionKey of selectiveAction.actionKeys) {
+					actionStates[actionKey] = {}
 					for (const configuration of configurations[actionKey]) {
 						cache[configuration.type] ??= {}
 						cache[configuration.type][actionKey] ??= []
@@ -61,13 +63,15 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 			}
 		}
 		this.compiledCache = cache
+		this.actionStates = actionStates
 	}
 
 	applyEvent(
 		configurationType: string,
 		intersections: Intersections | undefined,
 		state: InputState,
-		eventBase: D3InputEvent
+		eventBase: D3InputEvent,
+		dt: number
 	) {
 		const applications = this.compiledCache[configurationType]
 		if (!applications) return
@@ -79,10 +83,17 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 
 		for (const action in applications) {
 			let event: D3InputEvent | undefined
-			for (const configuration of this.configurations[action]) {
-				event = configuration2event(configuration, state, eventBase)
-				if (event) break
-			}
+			for (const configuration of this.configurations[action])
+				if (configuration.type === configurationType) {
+					event = configuration2event(
+						configuration,
+						state,
+						eventBase,
+						dt,
+						this.actionStates[action]
+					)
+					if (event) break
+				}
 			if (event)
 				applicableActions[action] = {
 					event,
@@ -148,13 +159,35 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 		if (this.views.size === 0) gameView.game.on('progress', this.dispatchEvents)
 		this.views.set(gameView.canvas, gameView)
 		this.listenTo(gameView.canvas)
-		gameView.game.on('progress', (dt) => this.dispatchEvents(dt))
 	}
 	detach(gameView: GameView) {
 		this.views.delete(gameView.canvas)
 		if (this.views.size === 0) gameView.game.off('progress', this.dispatchEvents)
 		this.unListenTo(gameView.canvas)
 	}
+
+	/*
+OneButtonConfiguration
+MouseDeltaConfiguration
+MouseHoverConfiguration
+KeyPressConfiguration
+OneWheelConfiguration
+TwoWheelsConfiguration
+KeyPairPressConfiguration
+KeyQuadPressConfiguration
+
+
+'click'
+'dblclick'
+'delta'
+'hover'
+'keydown'
+'wheelX'
+'wheelY'
+'wheels'
+'press2'
+'press4'
+*/
 
 	private readonly rayCaster = new Raycaster()
 	mouseIntersections(gameView: GameView, position: Vector2Like): Intersections {
@@ -183,8 +216,8 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 	}
 	dispatchEvents = (dt: number) => {
 		const gameView = this.activeElement && this.views.get(this.activeElement as HTMLCanvasElement)
-		if (this.size && gameView) {
-			const { modifiers, mouse, previous, deltaMouse, deltaWheel } = this.snapshot()
+		if (gameView) {
+			const { modifiers, mouse, previous, deltaMouse, deltaWheel, keysDown } = this.snapshot()
 			const intersections = mouse && this.mouseIntersections(gameView, mouse.position)
 			debugInformation.set('intersection', intersections?.point)
 			const state: InputState = {
@@ -192,53 +225,39 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 				buttons: mouse ? mouse.buttons : 0,
 				deltaMouse,
 				deltaWheel,
+				keysDown,
 			}
 			const tryEvent = (type: string, additionalState?: Partial<InputState>) =>
 				this.applyEvent(
 					type,
 					intersections,
 					additionalState ? { ...state, ...additionalState } : state,
-					{ gameView }
+					{ gameView },
+					dt
 				)
-			if (mouse) {
-				if (deltaWheel) {
-					if (!tryEvent('wheels')) {
-						if (deltaWheel.y) tryEvent('wheelY')
-						if (deltaWheel.x) tryEvent('wheelX')
+			if (this.size) {
+				if (mouse) {
+					if (deltaWheel) {
+						if (!tryEvent('wheels')) {
+							if (deltaWheel.y) tryEvent('wheelY')
+							if (deltaWheel.x) tryEvent('wheelX')
+						}
+					}
+				}
+				for (const event of this.events()) {
+					switch (event.type) {
+						case 'click':
+						case 'dblclick':
+							tryEvent(event.type, { button: (event as MouseEvent).button })
+							break
+						case 'keydown':
+							tryEvent(event.type, { keyCode: (event as KeyboardEvent).code })
+							break
 					}
 				}
 			}
-			for (const event of this.events()) {
-				switch (event.type) {
-					case 'click':
-					case 'dblclick':
-						tryEvent(event.type, { button: (event as MouseEvent).button })
-						break
-				}
-				//console.log(event.type, event)
-				/*
-OneButtonConfiguration
-MouseDeltaConfiguration
-MouseHoverConfiguration
-KeyPressConfiguration
-OneWheelConfiguration
-TwoWheelsConfiguration
-KeyPairPressConfiguration
-KeyQuadPressConfiguration
-
-
-'click'
-'dblclick'
-'delta'
-'hover'
-'press'
-'wheelX'
-'wheelY'
-'wheels'
-'press2'
-'press4'
-*/
-			}
+			tryEvent('press2')
+			tryEvent('press4')
 		}
 	}
 }

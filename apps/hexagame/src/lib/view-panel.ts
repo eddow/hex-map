@@ -19,6 +19,7 @@ export class GameViewRenderer implements IContentRenderer {
 		const { camera } = this.gv
 		camera.position.set(0, 0, 200)
 		camera.lookAt(0, 0, 0)
+		camera.updateMatrixWorld()
 		this.gv.game.running = true
 	}
 	layout?(width: number, height: number): void {

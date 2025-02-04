@@ -36,6 +36,3 @@ export const modKeyCombination = {
 	shiftCtrl: { alt: false, ctrl: true, shift: true },
 	altShiftCtrl: { alt: true, ctrl: true, shift: true },
 }
-export function sameModifiers(a: ModKeyCombination, b: ModKeyCombination): boolean {
-	return a.alt === b.alt && a.ctrl === b.ctrl && a.shift === b.shift
-}

@@ -1,21 +1,17 @@
-import { type Vector2Like, Vector3, type Vector3Like } from 'three'
+import { Vector2, type Vector2Like, Vector3, type Vector3Like } from 'three'
+import { clamp } from 'three/src/math/MathUtils'
 import type { GameView } from '~/game'
-import {
-	type ModKeyCombination,
-	type MouseButton,
-	type MouseButtons,
-	type MouseHandle,
-	sameModifiers,
-} from './types'
+import { type AnyConfiguration, type InputState, transformers } from './internals'
+import type { ModKeyCombination, MouseButton, MouseButtons, MouseHandle } from './types'
 
 // #region Generics
 export interface D3InputEvent {
 	gameView: GameView
 }
 
-export interface ActionConfiguration {
+export interface ActionConfiguration<Final extends {} = {}> {
 	type: string
-	modifiers: ModKeyCombination
+	modifiers: ModKeyCombination | { on: ModKeyCombination; use: Partial<Final> }[]
 }
 
 export interface D3InputAction<
@@ -48,55 +44,6 @@ export type InterfaceConfigurations<Actions extends InputActions = InputActions>
 }
 
 // #endregion
-// #region Transformers
-
-export interface InputState {
-	buttons: MouseButtons
-	modifiers: ModKeyCombination
-	deltaMouse?: Vector2Like
-	deltaWheel?: Vector2Like
-	button?: MouseButton
-}
-
-type AnyConfiguration =
-	| ActionConfiguration
-	| OneButtonConfiguration
-	| MouseDeltaConfiguration
-	| MouseHoverConfiguration
-	| KeyPressConfiguration
-	| OneWheelConfiguration
-	| TwoWheelsConfiguration
-	| KeyPairPressConfiguration
-	| KeyQuadPressConfiguration
-
-export const configurationTransformer: Record<
-	string,
-	(config: AnyConfiguration, state: InputState, eventBase: D3InputEvent) => D3InputEvent | undefined
-> = {}
-
-function transformers(
-	nt: Record<
-		string,
-		(
-			config: AnyConfiguration,
-			state: InputState,
-			eventBase: D3InputEvent
-		) => D3InputEvent | undefined
-	>
-) {
-	Object.assign(configurationTransformer, nt)
-}
-
-export function configuration2event(
-	config: AnyConfiguration,
-	state: InputState,
-	eventBase: D3InputEvent
-): D3InputEvent | undefined {
-	if (!sameModifiers(config.modifiers, state.modifiers)) return
-	return configurationTransformer[config.type]?.(config, state, eventBase)
-}
-
-// #endregion
 // #region Specifics
 
 export interface KeyIdentifier {
@@ -104,11 +51,54 @@ export interface KeyIdentifier {
 	code: string
 }
 
+/**
+ * Gets the velocity of the scroll
+ * @param accNeg
+ * @param accPos
+ * @param dt
+ * @param velocity
+ * @returns number
+ */
+function keyboardScroll(
+	accNeg: boolean | undefined,
+	accPos: boolean | undefined,
+	dt: number,
+	velocity: number | undefined,
+	multiplier?: number
+) {
+	accNeg ??= false
+	accPos ??= false
+	velocity ??= 0
+	if (multiplier === 0) accNeg = accPos = false
+	else velocity /= multiplier ?? 1
+	const acceleration = scrollKbd.acceleration * dt * (multiplier ?? 1)
+	if (accNeg !== accPos) velocity += accPos ? acceleration : -acceleration
+	else if (!accNeg) velocity *= (1 - scrollKbd.friction) ** dt
+	velocity = clamp(velocity, -scrollKbd.clampVelocity, scrollKbd.clampVelocity)
+	if (multiplier !== 0) velocity *= multiplier ?? 1
+	return Math.abs(velocity) < scrollKbd.min ? 0 : velocity
+}
+const scrollKbd = {
+	acceleration: 2,
+	clampVelocity: 1,
+	friction: 0.99,
+	min: 0.01,
+}
+
+interface MultipliedConfiguration {
+	multiplier?: number
+}
+
 // #region OneButton
 
 export interface OneButtonConfiguration extends ActionConfiguration {
 	type: 'click' | 'dblclick'
 	button: MouseButton
+}
+
+export interface KeyPressConfiguration extends ActionConfiguration {
+	type: 'keydown'
+	key: KeyIdentifier
 }
 
 function clickTransformer(
@@ -121,12 +111,10 @@ function clickTransformer(
 transformers({
 	click: clickTransformer,
 	dblclick: clickTransformer,
+	keydown(config, state, eventBase): D3InputEvent | undefined {
+		return 'key' in config && config.key.code === state.keyCode ? eventBase : undefined
+	},
 })
-
-export interface KeyPressConfiguration extends ActionConfiguration {
-	type: 'press'
-	key: KeyIdentifier
-}
 
 export interface OneButtonAction
 	extends D3InputAction<D3InputEvent, OneButtonConfiguration | KeyPressConfiguration> {
@@ -157,12 +145,31 @@ transformers({
 	},
 })
 
-export interface KeyPairPressConfiguration extends ActionConfiguration {
+export interface KeyPairPressConfiguration
+	extends ActionConfiguration<MultipliedConfiguration>,
+		MultipliedConfiguration {
 	type: 'press2'
-	velocity: number
 	keyNeg: KeyIdentifier
 	keyPos: KeyIdentifier
 }
+transformers({
+	press2(config, state, eventBase, dt, actionState): Scroll1DEvent | undefined {
+		if ('keyNeg' in config) {
+			actionState.keyboardVelocity = keyboardScroll(
+				state.keysDown[config.keyNeg.code],
+				state.keysDown[config.keyPos.code],
+				dt,
+				actionState.keyboardVelocity,
+				config.multiplier ?? 1
+			)
+			if (actionState.keyboardVelocity)
+				return {
+					...eventBase,
+					delta: actionState.keyboardVelocity * dt * 10,
+				}
+		}
+	},
+})
 
 export interface Scroll1DAction
 	extends D3InputAction<Scroll1DEvent, OneWheelConfiguration | KeyPairPressConfiguration> {
@@ -177,6 +184,7 @@ export const scroll1DAction: Scroll1DAction = {
 // #endregion
 // #region Scroll2D
 
+// TODO
 export interface MouseDeltaConfiguration extends ActionConfiguration {
 	type: 'delta'
 	buttons: MouseButtons
@@ -184,19 +192,61 @@ export interface MouseDeltaConfiguration extends ActionConfiguration {
 	invertY: boolean
 }
 
+// TODO
 export interface TwoWheelsConfiguration extends ActionConfiguration {
 	type: 'wheels'
 }
 
-export interface KeyQuadPressConfiguration extends ActionConfiguration {
+// TODO
+export interface KeyQuadPressConfiguration
+	extends ActionConfiguration<MultipliedConfiguration>,
+		MultipliedConfiguration {
 	type: 'press4'
-	velocity: number
 	keyXNeg: KeyIdentifier
 	keyXPos: KeyIdentifier
 	keyYNeg: KeyIdentifier
 	keyYPos: KeyIdentifier
 }
+transformers({
+	press4(config, state, eventBase, dt, actionState): Scroll2DEvent | undefined {
+		if ('keyXNeg' in config) {
+			const multiplier = config.multiplier ?? 1
+			actionState.keyboardVelocityX = keyboardScroll(
+				state.keysDown[config.keyXNeg.code],
+				state.keysDown[config.keyXPos.code],
+				dt,
+				actionState.keyboardVelocityX,
+				multiplier
+			)
+			actionState.keyboardVelocityY = keyboardScroll(
+				state.keysDown[config.keyYNeg.code],
+				state.keysDown[config.keyYPos.code],
+				dt,
+				actionState.keyboardVelocityY,
+				multiplier
+			)
+			const velocityVec = new Vector2(actionState.keyboardVelocityX, actionState.keyboardVelocityY)
+			let clamp = scrollKbd.clampVelocity
+			if (multiplier !== 0) clamp *= multiplier
+			const length = velocityVec.length()
+			if (length > clamp) {
+				const clampMultiplier = clamp / length
+				actionState.keyboardVelocityX *= clampMultiplier
+				actionState.keyboardVelocityY *= clampMultiplier
+			}
+			if (actionState.keyboardVelocityX || actionState.keyboardVelocityY)
+				return {
+					...eventBase,
+					delta: {
+						x: actionState.keyboardVelocityX * dt * 1000,
+						y: actionState.keyboardVelocityY * dt * 1000,
+					},
+				}
+		}
+	},
+})
 
+// TODO
 export interface Scroll2DEvent extends D3InputEvent {
 	delta: Vector2Like
 }
@@ -216,8 +266,8 @@ export const scroll2DAction: Scroll2DAction = {
 
 // #endregion
 // #region Hover
-
-export interface MouseHoverConfiguration extends ActionConfiguration {
+// TODO
+export interface MouseHoverConfiguration extends ActionConfiguration<MouseHoverConfiguration> {
 	type: 'hover'
 	buttons: MouseButtons
 }
@@ -285,7 +335,6 @@ class HandleSelectiveAction<
 		)
 	}
 }
-
 export function handledActions<T extends HandleType>(
 	handleType: T,
 	secondaryAccepter?: (handle: InstanceType<T>) => boolean
@@ -317,7 +366,6 @@ class PointSelectiveAction<Actions extends InputActions> extends SelectiveAction
 		)
 	}
 }
-
 export function pointActions<Actions extends InputActions>(
 	actions: Partial<InterfaceTargetedEvents<Vector3, Actions>>
 ): SelectiveAction<Actions> {
@@ -343,7 +391,6 @@ class NotSelectiveAction<Actions extends InputActions> extends SelectiveAction<A
 		this.actions[action]?.(event as ExtractActionEvent<Actions[keyof Actions]>)
 	}
 }
-
 export function viewActions<Actions extends InputActions>(
 	actions: Partial<InterfaceEvents<Actions>>
 ): SelectiveAction<Actions> {

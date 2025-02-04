@@ -32,6 +32,7 @@ export class Game<Tile extends TileBase = TileBase> extends Eventful<GameEvents>
 		private readonly mainGameInteraction: InputInteraction
 	) {
 		super()
+		this.scene.matrixWorldAutoUpdate = false
 		this._land = land
 		this.lights.add(new AmbientLight(0x404040))
 		const light = new DirectionalLight(0xffffff, 1)

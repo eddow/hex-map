@@ -32,6 +32,7 @@ export class GameView {
 		this.camera.aspect = width / height
 		this.camera.updateProjectionMatrix()
 		this.renderer.setSize(width, height)
+		this.camera.updateMatrixWorld()
 	}
 	render() {
 		// Don't rely on the `dispose` mechanism to stop rendering on a canvas when they are removed
@@ -55,6 +56,7 @@ export class GameView {
 		const frontVector = new Vector3(0, 0, 1).applyQuaternion(camera.quaternion)
 		// clamp to "nearly horizontal"
 		if (frontVector.z < 0.1) camera.rotateX(Math.asin(frontVector.z - 0.1))
+		this.camera.updateMatrixWorld()
 	}
 	pan(delta: Vector2Like) {
 		const { camera } = this
@@ -76,6 +78,7 @@ export class GameView {
 		camera.position
 			.add(xv.multiplyScalar(-delta.x * displacement))
 			.add(projectedUp.multiplyScalar(delta.y * displacement))
+		camera.updateMatrixWorld()
 	}
 	zoom(
 		center: Vector3Like,
@@ -88,5 +91,6 @@ export class GameView {
 		dist.multiplyScalar(zoomFactor ** delta)
 		camera.position.copy(center).add(dist)
 		camera.position.z = Math.max(Math.min(camera.position.z, clampCamZ.max), clampCamZ.min)
+		camera.updateMatrixWorld()
 	}
 }

@@ -12,6 +12,7 @@ export const keyboardEvents = ['keydown', 'keyup', 'keypress']
 let buttonsState: MouseButtons = MouseButtons.none
 let modifierKeys: ModKeyCombination = modKeyCombination.none
 let mousePosition: Vector2Like = { x: 0, y: 0 }
+const keysDown: Record<string, boolean> = {}
 
 export interface MouseState {
 	buttons: MouseButtons
@@ -24,6 +25,7 @@ export interface InputSnapshot {
 	modifiers: ModKeyCombination
 	deltaMouse?: Vector2Like
 	deltaWheel?: Vector2Like
+	keysDown: Record<string, boolean>
 }
 
 /**
@@ -47,6 +49,7 @@ export class D2Buffer {
 		'keydown',
 		'keyup',
 	])
+	public forwardedEvents = new Set<string>(['keydown'])
 	private canvas2substitute = new Map<HTMLElement, HTMLElement>()
 	private substitute2canvas = new Map<HTMLElement, HTMLElement>()
 	public previousButtons: MouseButtons = MouseButtons.none
@@ -108,6 +111,7 @@ export class D2Buffer {
 				modifiers: modifierKeys,
 				deltaMouse: this.deltaPosition,
 				deltaWheel: this.deltaWheel,
+				keysDown,
 			}
 		} finally {
 			this.deltaPosition = undefined
@@ -144,6 +148,8 @@ export class D2Buffer {
 		}
 	}
 	forwardEvent = (event: Event) => {
+		event.stopPropagation()
+		event.preventDefault()
 		const canvas = this.substitute2canvas.get(event.target as HTMLElement)
 		if (canvas && this.managedEvents.has(event.type)) {
 			// @ts-expect-error
@@ -154,7 +160,8 @@ export class D2Buffer {
 	private pushEvent = (rawEvent: Event) => {
 		const event = rawEvent as MouseEvent | KeyboardEvent
 		if (event instanceof MouseEvent) this.focusOnEnter(event)
-		if (preventDefaultEvents.has(event.type)) event.preventDefault()
+		/*if (preventDefaultEvents.has(event.type))*/ event.preventDefault()
+		event.stopPropagation()
 		if ('buttons' in event && event.buttons !== buttonsState) buttonsState = event.buttons
 		if ('shiftKey' in event)
 			modifierKeys = Object.fromEntries(
@@ -164,7 +171,11 @@ export class D2Buffer {
 				])
 			) as ModKeyCombination
 
-		if (!(event instanceof KeyboardEvent) || !event.repeat) this.eventsQueue.push(event)
+		if (
+			this.forwardedEvents.has(event.type) &&
+			(!(event instanceof KeyboardEvent) || !event.repeat)
+		)
+			this.eventsQueue.push(event)
 
 		if (event instanceof MouseEvent) {
 			this.mouseOut = event.type === 'mouseleave'
@@ -201,6 +212,15 @@ export class D2Buffer {
 						const { x, y } = this.deltaWheel ?? { x: 0, y: 0 }
 						this.deltaWheel = { x: event.deltaX / 96 + x, y: event.deltaY / 120 + y }
 					}
+					break
+			}
+		} else if (event instanceof KeyboardEvent) {
+			switch (event.type) {
+				case 'keydown':
+					keysDown[event.code] = true
+					break
+				case 'keyup':
+					keysDown[event.code] = false
 					break
 			}
 		}
