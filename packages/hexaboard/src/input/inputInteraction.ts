@@ -1,16 +1,16 @@
 import { Raycaster, Vector2, type Vector2Like, type Vector3Like } from 'three'
 import type { GameView } from '~/game'
-import { assert } from '~/utils'
-import type {
-	D3InputEvent,
-	InputActions,
-	InterfaceConfigurations,
-	Scroll1DEvent,
-	Scroll2DEvent,
-	SelectiveAction,
+import { assert, debugInformation } from '~/utils'
+import {
+	type D3InputEvent,
+	type InputActions,
+	type InputState,
+	type InterfaceConfigurations,
+	type SelectiveAction,
+	configuration2event,
 } from './actions'
 import { D2Buffer } from './d2buffer'
-import { type ModKeyCombination, type MouseHandle, type MouseHandler, sameModifiers } from './types'
+import type { MouseHandle, MouseHandler } from './types'
 
 export interface Intersections {
 	point?: Vector3Like
@@ -24,91 +24,109 @@ export class InputMode<Actions extends InputActions> {
 	}
 }
 
-type InterfaceEventApplication<Actions extends InputActions> = {
-	modifiers: ModKeyCombination
-	eventKey: string
-	selective: SelectiveAction<Actions>
-}
+type ModesCache<Actions extends InputActions> = Record<
+	string,
+	Record<string, SelectiveAction<Actions>[]>
+>
 
 export class InputInteraction<Actions extends InputActions = InputActions> extends D2Buffer {
 	public views = new Map<HTMLCanvasElement, GameView>()
 	constructor(
 		private readonly globalMode: InputMode<Actions>,
-		configurations: InterfaceConfigurations<Actions>
+		private configurations: InterfaceConfigurations<Actions>
 	) {
 		super()
-		this.compiledCache = this.compileCache(configurations, [this.globalMode])
+		this.compileCache(configurations, [this.globalMode])
 	}
 
 	configure(configurations: InterfaceConfigurations<Actions>) {
-		this.compiledCache = this.compileCache(configurations, [this.globalMode])
+		this.configurations = configurations
 	}
 
 	// #region config+modes -> actions
 
-	private compiledCache: Record<string, InterfaceEventApplication<Actions>[]>
+	private compiledCache: ModesCache<Actions> = {}
 	compileCache(configurations: InterfaceConfigurations<Actions>, modes: InputMode<Actions>[]) {
-		const cache = {} as Record<string, InterfaceEventApplication<Actions>[]>
+		const cache = {} as ModesCache<Actions>
 
 		for (const mode of modes) {
 			for (const selectiveAction of mode.selectiveActions) {
-				for (const eventKey of selectiveAction.eventKeys) {
-					for (const config of configurations[eventKey]) {
-						cache[config.type] ??= []
-						cache[config.type].push({
-							modifiers: config.modifiers,
-							selective: selectiveAction,
-							eventKey,
-						})
+				for (const actionKey of selectiveAction.actionKeys) {
+					for (const configuration of configurations[actionKey]) {
+						cache[configuration.type] ??= {}
+						cache[configuration.type][actionKey] ??= []
+						cache[configuration.type][actionKey].push(selectiveAction)
 					}
 				}
 			}
 		}
-		return cache
+		this.compiledCache = cache
 	}
 
 	applyEvent(
-		type: string,
-		modifiers: ModKeyCombination,
+		configurationType: string,
 		intersections: Intersections | undefined,
-		event: D3InputEvent
+		state: InputState,
+		eventBase: D3InputEvent
 	) {
-		const applications = this.compiledCache[type]
+		const applications = this.compiledCache[configurationType]
+		if (!applications) return
+		const applicableActions: Record<
+			string,
+			{ event: D3InputEvent; selectiveList: SelectiveAction<Actions>[] }
+		> = {}
+		// 1- build cache of application/events
+
+		for (const action in applications) {
+			let event: D3InputEvent | undefined
+			for (const configuration of this.configurations[action]) {
+				event = configuration2event(configuration, state, eventBase)
+				if (event) break
+			}
+			if (event)
+				applicableActions[action] = {
+					event,
+					selectiveList: applications[action],
+				}
+		}
+		// 2- apply to most demanding (handles - point - gameView)
 		if (!applications) return
 		if (intersections) {
 			// Try all handles by order they intersect
 			for (const handle of intersections.handles) {
-				for (const application of applications) {
-					if (
-						sameModifiers(application.modifiers, modifiers) &&
-						application.selective.acceptHandle(handle)
-					) {
-						application.selective.apply(application.eventKey, handle, intersections.point, event)
-						return true
+				for (const action in applicableActions) {
+					for (const selective of applicableActions[action].selectiveList) {
+						if (selective.acceptHandle(handle)) {
+							selective.apply(action, handle, intersections.point, applicableActions[action].event)
+							return true
+						}
 					}
 				}
 			}
 			// Try with a point
 			if (intersections.point) {
-				for (const application of applications) {
-					if (
-						sameModifiers(application.modifiers, modifiers) &&
-						application.selective.acceptNoHandle(false)
-					) {
-						application.selective.apply(application.eventKey, undefined, intersections.point, event)
-						return true
+				for (const action in applicableActions) {
+					for (const selective of applicableActions[action].selectiveList) {
+						if (selective.acceptNoHandle(true)) {
+							selective.apply(
+								action,
+								undefined,
+								intersections.point,
+								applicableActions[action].event
+							)
+							return true
+						}
 					}
 				}
 			}
 		}
 		// Try with nothing
-		for (const application of applications) {
-			if (
-				sameModifiers(application.modifiers, modifiers) &&
-				application.selective.acceptNoHandle(true)
-			) {
-				application.selective.apply(application.eventKey, undefined, undefined, event)
-				return true
+		for (const action in applicableActions) {
+			for (const selective of applicableActions[action].selectiveList) {
+				if (selective.acceptNoHandle(false)) {
+					selective.apply(action, undefined, undefined, applicableActions[action].event)
+					return true
+				}
 			}
 		}
 	}
@@ -168,33 +186,35 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 		if (this.size && gameView) {
 			const { modifiers, mouse, previous, deltaMouse, deltaWheel } = this.snapshot()
 			const intersections = mouse && this.mouseIntersections(gameView, mouse.position)
-			const tryEvent = <Event extends D3InputEvent>(type: string, event: Event) =>
-				this.applyEvent(type, modifiers, intersections, event)
-			const eventBase: D3InputEvent = {
-				gameView,
+			debugInformation.set('intersection', intersections?.point)
+			const state: InputState = {
+				modifiers,
+				buttons: mouse ? mouse.buttons : 0,
+				deltaMouse,
+				deltaWheel,
 			}
+			const tryEvent = (type: string, additionalState?: Partial<InputState>) =>
+				this.applyEvent(
+					type,
+					intersections,
+					additionalState ? { ...state, ...additionalState } : state,
+					{ gameView }
+				)
 			if (mouse) {
 				if (deltaWheel) {
-					if (
-						!tryEvent<Scroll2DEvent>('wheels', {
-							...eventBase,
-							delta: deltaWheel,
-						})
-					) {
-						if (deltaWheel.y)
-							tryEvent<Scroll1DEvent>('wheelY', {
-								...eventBase,
-								delta: deltaWheel.y,
-							})
-						if (deltaWheel.x)
-							tryEvent<Scroll1DEvent>('wheelX', {
-								...eventBase,
-								delta: deltaWheel.x,
-							})
+					if (!tryEvent('wheels')) {
+						if (deltaWheel.y) tryEvent('wheelY')
+						if (deltaWheel.x) tryEvent('wheelX')
 					}
 				}
 			}
 			for (const event of this.events()) {
+				switch (event.type) {
+					case 'click':
+					case 'dblclick':
+						tryEvent(event.type, { button: (event as MouseEvent).button })
+						break
+				}
 				//console.log(event.type, event)
 				/*
 OneButtonConfiguration

@@ -83,9 +83,18 @@ const cfg: InterfaceConfigurations<GameXActions> = {
 }
 
 export function createGame(seed: number) {
+	const cursor = new TileCursor(
+		icosahedron(20, {
+			color: 0xffffff,
+			wireframe: true,
+		})
+	)
+
 	const mainGameInputMode = new InputMode<GameXActions>(
 		handledActions(TileHandle)<GameXActions>({
-			select(target, event) {},
+			select(tile) {
+				cursor.tile = tile
+			},
 		}),
 		pointActions({
 			zoom(point, event) {
@@ -121,12 +130,6 @@ export function createGame(seed: number) {
 	//const pawn = new Character(land.sector, 0, sphere(2, { color: 0xff0000 }))
 	//const pawn = new Character(land.sector, 0, new Object3D())
 	//game.addEntity(pawn)
-	const cursor = new TileCursor(
-		icosahedron(20, {
-			color: 0xffffff,
-			wireframe: true,
-		})
-	)
 
 	function markPath(path?: AxialRef[] | null, radius = 2) {
 		if (pathTube) {

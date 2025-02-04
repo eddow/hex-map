@@ -1,6 +1,12 @@
 import { type Vector2Like, Vector3, type Vector3Like } from 'three'
 import type { GameView } from '~/game'
-import type { ModKeyCombination, MouseButton, MouseButtons, MouseHandle } from './types'
+import {
+	type ModKeyCombination,
+	type MouseButton,
+	type MouseButtons,
+	type MouseHandle,
+	sameModifiers,
+} from './types'
 
 // #region Generics
 export interface D3InputEvent {
@@ -42,64 +48,84 @@ export type InterfaceConfigurations<Actions extends InputActions = InputActions>
 }
 
 // #endregion
+// #region Transformers
+
+export interface InputState {
+	buttons: MouseButtons
+	modifiers: ModKeyCombination
+	deltaMouse?: Vector2Like
+	deltaWheel?: Vector2Like
+	button?: MouseButton
+}
+
+type AnyConfiguration =
+	| ActionConfiguration
+	| OneButtonConfiguration
+	| MouseDeltaConfiguration
+	| MouseHoverConfiguration
+	| KeyPressConfiguration
+	| OneWheelConfiguration
+	| TwoWheelsConfiguration
+	| KeyPairPressConfiguration
+	| KeyQuadPressConfiguration
+
+export const configurationTransformer: Record<
+	string,
+	(config: AnyConfiguration, state: InputState, eventBase: D3InputEvent) => D3InputEvent | undefined
+> = {}
+
+function transformers(
+	nt: Record<
+		string,
+		(
+			config: AnyConfiguration,
+			state: InputState,
+			eventBase: D3InputEvent
+		) => D3InputEvent | undefined
+	>
+) {
+	Object.assign(configurationTransformer, nt)
+}
+
+export function configuration2event(
+	config: AnyConfiguration,
+	state: InputState,
+	eventBase: D3InputEvent
+): D3InputEvent | undefined {
+	if (!sameModifiers(config.modifiers, state.modifiers)) return
+	return configurationTransformer[config.type]?.(config, state, eventBase)
+}
+
+// #endregion
 // #region Specifics
-
-export interface OneButtonConfiguration extends ActionConfiguration {
-	type: 'click' | 'dblclick'
-	button: MouseButton
-}
-
-export interface MouseDeltaConfiguration extends ActionConfiguration {
-	type: 'delta'
-	buttons: MouseButtons
-	invertX: boolean
-	invertY: boolean
-}
-
-export interface MouseHoverConfiguration extends ActionConfiguration {
-	type: 'hover'
-	buttons: MouseButtons
-}
 
 export interface KeyIdentifier {
 	key?: string
 	code: string
 }
 
+// #region OneButton
+
+export interface OneButtonConfiguration extends ActionConfiguration {
+	type: 'click' | 'dblclick'
+	button: MouseButton
+}
+
+function clickTransformer(
+	config: AnyConfiguration,
+	state: InputState,
+	eventBase: D3InputEvent
+): D3InputEvent | undefined {
+	return 'button' in config && state.button === config.button ? eventBase : undefined
+}
+transformers({
+	click: clickTransformer,
+	dblclick: clickTransformer,
+})
+
 export interface KeyPressConfiguration extends ActionConfiguration {
 	type: 'press'
 	key: KeyIdentifier
-}
-
-export interface OneWheelConfiguration extends ActionConfiguration {
-	type: 'wheelX' | 'wheelY'
-}
-export interface TwoWheelsConfiguration extends ActionConfiguration {
-	type: 'wheels'
-}
-
-export interface KeyPairPressConfiguration extends ActionConfiguration {
-	type: 'press2'
-	velocity: number
-	keyNeg: KeyIdentifier
-	keyPos: KeyIdentifier
-}
-
-export interface KeyQuadPressConfiguration extends ActionConfiguration {
-	type: 'press4'
-	velocity: number
-	keyXNeg: KeyIdentifier
-	keyXPos: KeyIdentifier
-	keyYNeg: KeyIdentifier
-	keyYPos: KeyIdentifier
-}
-
-export interface Scroll1DEvent extends D3InputEvent {
-	delta: number
-}
-
-export interface Scroll2DEvent extends D3InputEvent {
-	delta: Vector2Like
 }
 
 export interface OneButtonAction
@@ -112,13 +138,30 @@ export const oneButtonAction: OneButtonAction = {
 	configuration: undefined!,
 }
 
-export interface HoverAction extends D3InputAction<D3InputEvent, MouseHoverConfiguration> {
-	type: 'hover'
+// #endregion
+// #region Scroll1D
+
+export interface Scroll1DEvent extends D3InputEvent {
+	delta: number
 }
-export const hoverAction: HoverAction = {
-	type: 'hover',
-	event: undefined!,
-	configuration: undefined!,
+
+export interface OneWheelConfiguration extends ActionConfiguration {
+	type: 'wheelX' | 'wheelY'
+}
+transformers({
+	wheelX(config, state, eventBase): Scroll1DEvent | undefined {
+		return state.deltaWheel?.x ? { ...eventBase, delta: state.deltaWheel.x } : undefined
+	},
+	wheelY(config, state, eventBase): Scroll1DEvent | undefined {
+		return state.deltaWheel?.y ? { ...eventBase, delta: state.deltaWheel.y } : undefined
+	},
+})
+
+export interface KeyPairPressConfiguration extends ActionConfiguration {
+	type: 'press2'
+	velocity: number
+	keyNeg: KeyIdentifier
+	keyPos: KeyIdentifier
 }
 
 export interface Scroll1DAction
@@ -129,6 +172,33 @@ export const scroll1DAction: Scroll1DAction = {
 	type: 'scroll1',
 	event: undefined!,
 	configuration: undefined!,
+}
+
+// #endregion
+// #region Scroll2D
+
+export interface MouseDeltaConfiguration extends ActionConfiguration {
+	type: 'delta'
+	buttons: MouseButtons
+	invertX: boolean
+	invertY: boolean
+}
+
+export interface TwoWheelsConfiguration extends ActionConfiguration {
+	type: 'wheels'
+}
+
+export interface KeyQuadPressConfiguration extends ActionConfiguration {
+	type: 'press4'
+	velocity: number
+	keyXNeg: KeyIdentifier
+	keyXPos: KeyIdentifier
+	keyYNeg: KeyIdentifier
+	keyYPos: KeyIdentifier
+}
+
+export interface Scroll2DEvent extends D3InputEvent {
+	delta: Vector2Like
 }
 
 export interface Scroll2DAction
@@ -145,17 +215,36 @@ export const scroll2DAction: Scroll2DAction = {
 }
 
 // #endregion
+// #region Hover
+
+export interface MouseHoverConfiguration extends ActionConfiguration {
+	type: 'hover'
+	buttons: MouseButtons
+}
+
+export interface HoverAction extends D3InputAction<D3InputEvent, MouseHoverConfiguration> {
+	type: 'hover'
+}
+export const hoverAction: HoverAction = {
+	type: 'hover',
+	event: undefined!,
+	configuration: undefined!,
+}
+
+// #endregion
+
+// #endregion
 // #region Events lists
 
 type HandleType = new (...args: any) => MouseHandle
 
 export abstract class SelectiveAction<Actions extends InputActions> {
-	constructor(protected readonly events: Partial<Record<keyof Actions, any>>) {}
-	get eventKeys() {
-		return Object.keys(this.events)
+	constructor(protected readonly actions: Partial<Record<keyof Actions, any>>) {}
+	get actionKeys() {
+		return Object.keys(this.actions)
 	}
 	public abstract acceptHandle(handle: MouseHandle): boolean
-	public abstract acceptNoHandle(pointless: boolean): boolean
+	public abstract acceptNoHandle(hasPoint: boolean): boolean
 	public abstract apply(
 		action: keyof Actions,
 		handle: MouseHandle | undefined,
@@ -170,12 +259,12 @@ class HandleSelectiveAction<
 > extends SelectiveAction<Actions> {
 	constructor(
 		private readonly handleType: HandleType,
-		protected readonly events: Partial<InterfaceTargetedEvents<InstanceType<T>, Actions>>,
+		protected readonly actions: Partial<InterfaceTargetedEvents<InstanceType<T>, Actions>>,
 		private readonly secondaryAccepter?: (handle: InstanceType<T>) => boolean
 	) {
-		super(events)
+		super(actions)
 	}
-	public acceptNoHandle(pointless: boolean): boolean {
+	public acceptNoHandle(hasPoint: boolean): boolean {
 		return false
 	}
 	public acceptHandle(handle: InstanceType<T>): boolean {
@@ -190,7 +279,7 @@ class HandleSelectiveAction<
 		intersection: Vector3Like | undefined,
 		event: D3InputEvent
 	): void {
-		this.events[action]?.(
+		this.actions[action]?.(
 			handle as InstanceType<T>,
 			event as ExtractActionEvent<Actions[keyof Actions]>
 		)
@@ -201,17 +290,17 @@ export function handledActions<T extends HandleType>(
 	handleType: T,
 	secondaryAccepter?: (handle: InstanceType<T>) => boolean
 ): <Actions extends InputActions>(
-	events: Partial<InterfaceTargetedEvents<InstanceType<T>, Actions>>
+	actions: Partial<InterfaceTargetedEvents<InstanceType<T>, Actions>>
 ) => SelectiveAction<Actions> {
-	return (events) => new HandleSelectiveAction(handleType, events, secondaryAccepter /*, mode*/)
+	return (actions) => new HandleSelectiveAction(handleType, actions, secondaryAccepter /*, mode*/)
 }
 
 class PointSelectiveAction<Actions extends InputActions> extends SelectiveAction<Actions> {
-	constructor(protected readonly events: Partial<InterfaceTargetedEvents<Vector3, Actions>>) {
-		super(events)
+	constructor(protected readonly actions: Partial<InterfaceTargetedEvents<Vector3, Actions>>) {
+		super(actions)
 	}
-	public acceptNoHandle(pointless: boolean): boolean {
-		return !pointless
+	public acceptNoHandle(hasPoint: boolean): boolean {
+		return hasPoint
 	}
 	public acceptHandle(handle: any): boolean {
 		return false
@@ -222,7 +311,7 @@ class PointSelectiveAction<Actions extends InputActions> extends SelectiveAction
 		intersection: Vector3Like | undefined,
 		event: D3InputEvent
 	): void {
-		this.events[action]?.(
+		this.actions[action]?.(
 			new Vector3().copy(intersection!),
 			event as ExtractActionEvent<Actions[keyof Actions]>
 		)
@@ -230,17 +319,17 @@ class PointSelectiveAction<Actions extends InputActions> extends SelectiveAction
 }
 
 export function pointActions<Actions extends InputActions>(
-	events: Partial<InterfaceTargetedEvents<Vector3, Actions>>
+	actions: Partial<InterfaceTargetedEvents<Vector3, Actions>>
 ): SelectiveAction<Actions> {
-	return new PointSelectiveAction(events)
+	return new PointSelectiveAction(actions)
 }
 
 class NotSelectiveAction<Actions extends InputActions> extends SelectiveAction<Actions> {
-	constructor(protected readonly events: Partial<InterfaceEvents<Actions>>) {
-		super(events)
+	constructor(protected readonly actions: Partial<InterfaceEvents<Actions>>) {
+		super(actions)
 	}
-	public acceptNoHandle(pointless: boolean): boolean {
-		return pointless
+	public acceptNoHandle(hasPoint: boolean): boolean {
+		return !hasPoint
 	}
 	public acceptHandle(handle: any): boolean {
 		return false
@@ -251,14 +340,14 @@ class NotSelectiveAction<Actions extends InputActions> extends SelectiveAction<A
 		intersection: Vector3Like | undefined,
 		event: D3InputEvent
 	): void {
-		this.events[action]?.(event as ExtractActionEvent<Actions[keyof Actions]>)
+		this.actions[action]?.(event as ExtractActionEvent<Actions[keyof Actions]>)
 	}
 }
 
 export function viewActions<Actions extends InputActions>(
-	events: Partial<InterfaceEvents<Actions>>
+	actions: Partial<InterfaceEvents<Actions>>
 ): SelectiveAction<Actions> {
-	return new NotSelectiveAction(events)
+	return new NotSelectiveAction(actions)
 }
 
 // #endregion

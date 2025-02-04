@@ -1,4 +1,4 @@
-import { Group, type Object3D } from 'three'
+import { Group, type Object3D, type Vector3Like } from 'three'
 import type { TileHandle } from '~/ground/landscaper'
 import { GameEntity } from './game'
 
@@ -21,6 +21,20 @@ export class TileCursor extends GameEntity {
 				group.add(this.mesh)
 			}
 			group.position.copy(value.tile.position)
+		} else if (this.shown) {
+			this.shown = false
+			group.remove(this.mesh)
+		}
+	}
+	set position(value: Vector3Like | undefined) {
+		this._tile = undefined
+		const group = this.o3d as Group
+		if (value) {
+			if (!this.shown) {
+				this.shown = true
+				group.add(this.mesh)
+			}
+			group.position.copy(value)
 		} else if (this.shown) {
 			this.shown = false
 			group.remove(this.mesh)

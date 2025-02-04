@@ -35,7 +35,6 @@ export interface InputSnapshot {
 export class D2Buffer {
 	public static doubleClickTimeout = 300
 	private lastClick: number[] = []
-	private potentialClick = false
 	private eventsQueue: (MouseEvent | KeyboardEvent)[] = []
 
 	public managedEvents = new Set<string>([
@@ -171,35 +170,31 @@ export class D2Buffer {
 			this.mouseOut = event.type === 'mouseleave'
 			switch (event.type) {
 				case 'mousedown':
-					this.potentialClick = !this.potentialClick
-					this.lastButtonChange = { x: event.offsetX, y: event.offsetY }
-					break
-				case 'mouseup':
-					if (event.buttons === 0 && this.potentialClick) {
+					{
 						const now = Date.now()
-						const click = new MouseEvent(
-							now - this.lastClick[event.button] < D2Buffer.doubleClickTimeout
-								? 'dblclick'
-								: 'click',
-							event
-						)
+						const click = new MouseEvent('click', event)
 						this.lastClick[event.button] = click.type === 'dblclick' ? 0 : now
 						event.target!.dispatchEvent(click)
 						this.eventsQueue.push(click)
+						if (now - this.lastClick[event.button] < D2Buffer.doubleClickTimeout) {
+							const dblclick = new MouseEvent('dblclick', event)
+							event.target!.dispatchEvent(dblclick)
+							this.eventsQueue.push(dblclick)
+							this.lastClick[event.button] = 0
+						} else this.lastClick[event.button] = now
+						this.lastButtonChange = { x: event.offsetX, y: event.offsetY }
 					}
-					this.potentialClick = false
+					break
+				case 'mouseup':
 					this.lastButtonChange = { x: event.offsetX, y: event.offsetY }
 					break
 				case 'mousemove':
 					{
-						mousePosition = { x: event.offsetX, y: event.offsetX }
+						mousePosition = { x: event.offsetX, y: event.offsetY }
 						const { x, y } = this.deltaPosition ?? { x: 0, y: 0 }
 						this.deltaPosition = { x: event.movementX + x, y: event.movementY + y }
-						this.potentialClick = false
+						//this.potentialClick = false
 					}
-					break
-				case 'mouseleave':
-					this.potentialClick = false
 					break
 				case 'wheel':
 					{
