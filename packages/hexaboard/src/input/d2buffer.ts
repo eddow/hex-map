@@ -173,7 +173,6 @@ export class D2Buffer {
 					{
 						const now = Date.now()
 						const click = new MouseEvent('click', event)
-						this.lastClick[event.button] = click.type === 'dblclick' ? 0 : now
 						event.target!.dispatchEvent(click)
 						this.eventsQueue.push(click)
 						if (now - this.lastClick[event.button] < D2Buffer.doubleClickTimeout) {
