@@ -101,7 +101,6 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 				}
 		}
 		// 2- apply to most demanding (handles - point - gameView)
-		if (!applications) return
 		if (intersections) {
 			// Try all handles by order they intersect
 			for (const handle of intersections.handles) {
@@ -235,25 +234,31 @@ KeyQuadPressConfiguration
 					{ gameView },
 					dt
 				)
-			if (this.size) {
-				if (mouse) {
-					if (deltaWheel) {
-						if (!tryEvent('wheels')) {
-							if (deltaWheel.y) tryEvent('wheelY')
-							if (deltaWheel.x) tryEvent('wheelX')
-						}
+
+			for (const event of this.events()) {
+				switch (event.type) {
+					case 'click':
+					case 'dblclick':
+						tryEvent(event.type, { button: (event as MouseEvent).button })
+						break
+					case 'keydown':
+						tryEvent(event.type, { keyCode: (event as KeyboardEvent).code })
+						break
+					case 'mouseleave':
+						tryEvent('hover')
+						break
+				}
+			}
+			if (mouse) {
+				tryEvent('hover')
+				if (deltaWheel) {
+					if (!tryEvent('wheels')) {
+						if (deltaWheel.y) tryEvent('wheelY')
+						if (deltaWheel.x) tryEvent('wheelX')
 					}
 				}
-				for (const event of this.events()) {
-					switch (event.type) {
-						case 'click':
-						case 'dblclick':
-							tryEvent(event.type, { button: (event as MouseEvent).button })
-							break
-						case 'keydown':
-							tryEvent(event.type, { keyCode: (event as KeyboardEvent).code })
-							break
-					}
+				if (deltaMouse) {
+					tryEvent('delta')
 				}
 			}
 			tryEvent('press2')

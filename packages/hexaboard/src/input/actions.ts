@@ -1,7 +1,12 @@
 import { Vector2, type Vector2Like, Vector3, type Vector3Like } from 'three'
 import { clamp } from 'three/src/math/MathUtils'
 import type { GameView } from '~/game'
-import { type AnyConfiguration, type InputState, transformers } from './internals'
+import {
+	type AnyConfiguration,
+	type InputState,
+	switchConfiguration,
+	transformers,
+} from './internals'
 import type { ModKeyCombination, MouseButton, MouseButtons, MouseHandle } from './types'
 
 // #region Generics
@@ -9,10 +14,13 @@ export interface D3InputEvent {
 	gameView: GameView
 }
 
-export interface ActionConfiguration<Final extends {} = {}> {
+export type SwitchableConfiguration<Options, Values extends {}> =
+	| Options
+	| { on: Options; use: Values }[]
+
+export interface ActionConfiguration<Cases extends {} = {}> {
 	type: string
-	// TODO: provide a default Partial<Final>
-	modifiers: ModKeyCombination | { on: ModKeyCombination; use: Partial<Final> }[]
+	modifiers: SwitchableConfiguration<ModKeyCombination, Cases>
 }
 
 export interface D3InputAction<
@@ -59,7 +67,6 @@ export interface KeyIdentifier {
  * @param dt
  * @param velocity
  * @returns number
- * @todo Clamp on friction (if velocity *was* higher than clamp, don't re-clamp it, just let friction play  )
  */
 function keyboardScroll(
 	accNeg: boolean | undefined,
@@ -94,6 +101,11 @@ const scrollKbd = {
 
 interface MultipliedConfiguration {
 	multiplier?: number
+}
+
+interface HoverConfiguration {
+	buttonHoverType?: any
+	keyModHoverType?: any
 }
 
 // #region OneButton
@@ -191,20 +203,27 @@ export const scroll1DAction: Scroll1DAction = {
 // #endregion
 // #region Scroll2D
 
-// TODO
 export interface MouseDeltaConfiguration extends ActionConfiguration {
 	type: 'delta'
 	buttons: MouseButtons
 	invertX: boolean
 	invertY: boolean
 }
+transformers({
+	delta(config, state, eventBase, dt, actionState): Scroll2DEvent | undefined {
+		if ('invertX' in config) {
+			if (state.buttons === config.buttons)
+				return {
+					...eventBase,
+					delta: {
+						x: state.deltaMouse!.x * (config.invertX ? -1 : 1),
+						y: state.deltaMouse!.y * (config.invertY ? -1 : 1),
+					},
+				}
+		}
+	},
+})
 
-// TODO
-export interface TwoWheelsConfiguration extends ActionConfiguration {
-	type: 'wheels'
-}
-
-// TODO
 export interface KeyQuadPressConfiguration
 	extends ActionConfiguration<MultipliedConfiguration>,
 		MultipliedConfiguration {
@@ -253,16 +272,12 @@ transformers({
 	},
 })
 
-// TODO
 export interface Scroll2DEvent extends D3InputEvent {
 	delta: Vector2Like
 }
 
 export interface Scroll2DAction
-	extends D3InputAction<
-		Scroll2DEvent,
-		TwoWheelsConfiguration | KeyQuadPressConfiguration | MouseDeltaConfiguration
-	> {
+	extends D3InputAction<Scroll2DEvent, KeyQuadPressConfiguration | MouseDeltaConfiguration> {
 	type: 'scroll2'
 }
 export const scroll2DAction: Scroll2DAction = {
@@ -273,13 +288,34 @@ export const scroll2DAction: Scroll2DAction = {
 
 // #endregion
 // #region Hover
-// TODO
-export interface MouseHoverConfiguration extends ActionConfiguration<MouseHoverConfiguration> {
-	type: 'hover'
-	buttons: MouseButtons
-}
 
-export interface HoverAction extends D3InputAction<D3InputEvent, MouseHoverConfiguration> {
+export interface MouseHoverConfiguration
+	extends ActionConfiguration<HoverConfiguration>,
+		HoverConfiguration {
+	type: 'hover'
+	buttons: SwitchableConfiguration<MouseButtons, HoverConfiguration>
+}
+transformers({
+	hover(config, state, eventBase, dt, actionState): D3InputEvent | undefined {
+		if ('buttons' in config && !('invertX' in config)) {
+			const modConfig = switchConfiguration(config.buttons, state.buttons)
+			console.log(Date.now(), modConfig)
+			if (modConfig)
+				return {
+					...eventBase,
+					buttonHoverType: config.buttonHoverType,
+					keyModHoverType: config.keyModHoverType,
+					...modConfig,
+				}
+		}
+	},
+})
+
+export interface HoverEvent extends D3InputEvent {
+	buttonHoverType?: any
+	keyModHoverType?: any
+}
+export interface HoverAction extends D3InputAction<HoverEvent, MouseHoverConfiguration> {
 	type: 'hover'
 }
 export const hoverAction: HoverAction = {

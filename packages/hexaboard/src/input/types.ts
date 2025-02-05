@@ -25,14 +25,21 @@ export enum MouseButtons {
 	rd3 = 8,
 	th4 = 16,
 }
-export type ModKeyCombination = { alt: boolean; ctrl: boolean; shift: boolean }
+
+export type EventModKeyCombination = { altKey: boolean; ctrlKey: boolean; shiftKey: boolean }
+export type ModKeyCombination = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
+export function mckFrom(eMCK: EventModKeyCombination): ModKeyCombination {
+	return ((eMCK.altKey ? 1 : 0) +
+		(eMCK.ctrlKey ? 2 : 0) +
+		(eMCK.shiftKey ? 4 : 0)) as ModKeyCombination
+}
 export const modKeyCombination = {
-	none: { alt: false, ctrl: false, shift: false },
-	alt: { alt: true, ctrl: false, shift: false },
-	ctrl: { alt: false, ctrl: true, shift: false },
-	shift: { alt: false, ctrl: false, shift: true },
-	altShift: { alt: true, ctrl: false, shift: true },
-	altCtrl: { alt: true, ctrl: true, shift: false },
-	shiftCtrl: { alt: false, ctrl: true, shift: true },
-	altShiftCtrl: { alt: true, ctrl: true, shift: true },
+	none: mckFrom({ altKey: false, ctrlKey: false, shiftKey: false }),
+	alt: mckFrom({ altKey: true, ctrlKey: false, shiftKey: false }),
+	ctrl: mckFrom({ altKey: false, ctrlKey: true, shiftKey: false }),
+	shift: mckFrom({ altKey: false, ctrlKey: false, shiftKey: true }),
+	altShift: mckFrom({ altKey: true, ctrlKey: false, shiftKey: true }),
+	altCtrl: mckFrom({ altKey: true, ctrlKey: true, shiftKey: false }),
+	shiftCtrl: mckFrom({ altKey: false, ctrlKey: true, shiftKey: true }),
+	altShiftCtrl: mckFrom({ altKey: true, ctrlKey: true, shiftKey: true }),
 }

@@ -3,7 +3,7 @@ import type { Vector2Like } from 'three'
  * This is a standalone library to provide Mouse/Keyboard-Events a proper way to animated game
  */
 import { complete } from '~/utils'
-import { type ModKeyCombination, MouseButtons, modKeyCombination } from './types'
+import { type ModKeyCombination, MouseButtons, mckFrom, modKeyCombination } from './types'
 
 export const preventDefaultEvents = new Set(['contextmenu'])
 export const keyboardEvents = ['keydown', 'keyup', 'keypress']
@@ -49,7 +49,7 @@ export class D2Buffer {
 		'keydown',
 		'keyup',
 	])
-	public forwardedEvents = new Set<string>(['keydown'])
+	public forwardedEvents = new Set<string>(['keydown', 'mouseleave'])
 	private canvas2substitute = new Map<HTMLElement, HTMLElement>()
 	private substitute2canvas = new Map<HTMLElement, HTMLElement>()
 	public previousButtons: MouseButtons = MouseButtons.none
@@ -87,6 +87,12 @@ export class D2Buffer {
 		return () => this.removeListeners(element, managedEvents)
 	}
 
+	/*************  ✨ Codeium Command ⭐  *************/
+	/**
+	 * Removes the event listeners registered to the given element
+	 * @param element - the element to stop listening to
+	 */
+	/******  7a4ca02d-1c7c-458b-92f5-a30e4dfdfe25  *******/
 	public unListenTo(element: HTMLElement) {
 		this.removeListeners(element, this.managedEvents)
 	}
@@ -163,13 +169,7 @@ export class D2Buffer {
 		/*if (preventDefaultEvents.has(event.type))*/ event.preventDefault()
 		event.stopPropagation()
 		if ('buttons' in event && event.buttons !== buttonsState) buttonsState = event.buttons
-		if ('shiftKey' in event)
-			modifierKeys = Object.fromEntries(
-				['alt', 'ctrl', 'shift'].map((mod) => [
-					mod,
-					event[`${mod}Key` as 'shiftKey' | 'ctrlKey' | 'altKey'],
-				])
-			) as ModKeyCombination
+		if ('shiftKey' in event) modifierKeys = mckFrom(event)
 
 		if (
 			this.forwardedEvents.has(event.type) &&

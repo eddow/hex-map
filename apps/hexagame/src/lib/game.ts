@@ -87,7 +87,7 @@ const cfg: InterfaceConfigurations<GameXActions> = {
 		{
 			type: 'delta',
 			buttons: MouseButtons.left + MouseButtons.right,
-			modifiers: modKeyCombination.ctrl,
+			modifiers: modKeyCombination.none,
 			invertX: false,
 			invertY: false,
 		},
@@ -114,8 +114,10 @@ const cfg: InterfaceConfigurations<GameXActions> = {
 	hover: [
 		{
 			type: 'hover',
-			buttons: MouseButtons.none,
-			modifiers: modKeyCombination.none,
+			buttonHoverType: false,
+			keyModHoverType: false,
+			buttons: [{ on: MouseButtons.none, use: { buttonHoverType: 'selectable' } }],
+			modifiers: [{ on: modKeyCombination.none, use: { keyModHoverType: 'selectable' } }],
 		},
 	],
 }
@@ -130,8 +132,8 @@ export function createGame(seed: number) {
 
 	const mainGameInputMode = new InputMode<GameXActions>(
 		handledActions(TileHandle)<GameXActions>({
-			select(tile) {
-				cursor.tile = tile
+			hover(tile, event) {
+				cursor.tile = event.buttonHoverType && event.keyModHoverType ? tile : undefined
 			},
 		}),
 		pointActions({
@@ -140,6 +142,9 @@ export function createGame(seed: number) {
 			},
 		}),
 		viewActions({
+			hover() {
+				cursor.tile = undefined
+			},
 			pan(event) {
 				event.gameView.pan(event.delta)
 			},

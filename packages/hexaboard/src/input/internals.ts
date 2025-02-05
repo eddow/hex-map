@@ -9,13 +9,9 @@ import type {
 	MouseHoverConfiguration,
 	OneButtonConfiguration,
 	OneWheelConfiguration,
-	TwoWheelsConfiguration,
+	SwitchableConfiguration,
 } from './actions'
 import type { ModKeyCombination, MouseButton, MouseButtons } from './types'
-
-export function sameModifiers(a: ModKeyCombination, b: ModKeyCombination): boolean {
-	return a.alt === b.alt && a.ctrl === b.ctrl && a.shift === b.shift
-}
 
 export type AnyConfiguration =
 	| ActionConfiguration
@@ -24,7 +20,6 @@ export type AnyConfiguration =
 	| MouseHoverConfiguration
 	| KeyPressConfiguration
 	| OneWheelConfiguration
-	| TwoWheelsConfiguration
 	| KeyPairPressConfiguration
 	| KeyQuadPressConfiguration
 
@@ -68,6 +63,18 @@ export function transformers(
 	Object.assign(configurationTransformer, nt)
 }
 
+export function switchConfiguration<Options, Values extends {}>(
+	configured: SwitchableConfiguration<Options, Values>,
+	state: Options
+): Values | {} | false {
+	if (Array.isArray(configured)) {
+		const index = configured.findIndex(({ on }) => on === state)
+		if (index < 0 || index === undefined) return {}
+		return configured[index].use
+	}
+	return configured === state ? {} : false
+}
+
 export function configuration2event(
 	config: AnyConfiguration,
 	state: InputState,
@@ -75,13 +82,15 @@ export function configuration2event(
 	dt: number,
 	actionState: any
 ): D3InputEvent | undefined {
-	if (Array.isArray(config.modifiers)) {
-		const index = config.modifiers.findIndex(({ on }) => sameModifiers(on, state.modifiers))
-		if (index < 0 || index === undefined)
-			return configurationTransformer[config.type]?.(config, state, eventBase, dt, actionState)
-		config = { ...config, ...config.modifiers[index].use }
-	} else if (!sameModifiers(config.modifiers, state.modifiers)) return
-	return configurationTransformer[config.type]?.(config, state, eventBase, dt, actionState)
+	const modConfig = switchConfiguration(config.modifiers, state.modifiers)
+	if (modConfig)
+		return configurationTransformer[config.type]?.(
+			{ ...config, ...modConfig },
+			state,
+			eventBase,
+			dt,
+			actionState
+		)
 }
 
 // #endregion
