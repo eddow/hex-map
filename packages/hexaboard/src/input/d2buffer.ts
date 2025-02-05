@@ -49,11 +49,10 @@ export class D2Buffer {
 		'keydown',
 		'keyup',
 	])
-	public forwardedEvents = new Set<string>(['keydown', 'mouseleave'])
+	public forwardedEvents = new Set<string>(['keydown', 'mouseleave', 'mousedown'])
 	private canvas2substitute = new Map<HTMLElement, HTMLElement>()
 	private substitute2canvas = new Map<HTMLElement, HTMLElement>()
 	public previousButtons: MouseButtons = MouseButtons.none
-	public lastButtonChange?: Vector2Like
 	private mouseOut = true
 	get buttons() {
 		return buttonsState
@@ -67,6 +66,7 @@ export class D2Buffer {
 	public mouseState?: MouseState
 	public deltaPosition?: Vector2Like
 	public deltaWheel?: Vector2Like
+	private potentialClick = false
 
 	private removeListeners(element: HTMLElement, managedEvents: Iterable<string>) {
 		for (const event of managedEvents) element.removeEventListener(event, this.pushEvent)
@@ -181,7 +181,10 @@ export class D2Buffer {
 			this.mouseOut = event.type === 'mouseleave'
 			switch (event.type) {
 				case 'mousedown':
-					{
+					this.potentialClick = !this.potentialClick
+					break
+				case 'mouseup':
+					if (this.potentialClick && event.buttons === MouseButtons.none) {
 						const now = Date.now()
 						const click = new MouseEvent('click', event)
 						event.target!.dispatchEvent(click)
@@ -192,18 +195,15 @@ export class D2Buffer {
 							this.eventsQueue.push(dblclick)
 							this.lastClick[event.button] = 0
 						} else this.lastClick[event.button] = now
-						this.lastButtonChange = { x: event.offsetX, y: event.offsetY }
 					}
-					break
-				case 'mouseup':
-					this.lastButtonChange = { x: event.offsetX, y: event.offsetY }
+					this.potentialClick = false
 					break
 				case 'mousemove':
 					{
 						mousePosition = { x: event.offsetX, y: event.offsetY }
 						const { x, y } = this.deltaPosition ?? { x: 0, y: 0 }
 						this.deltaPosition = { x: event.movementX + x, y: event.movementY + y }
-						//this.potentialClick = false
+						this.potentialClick = false
 					}
 					break
 				case 'wheel':

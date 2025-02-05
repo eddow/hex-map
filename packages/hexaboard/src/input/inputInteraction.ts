@@ -73,16 +73,17 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 		eventBase: D3InputEvent,
 		dt: number
 	) {
+		// TODO: several actions with same configuration
 		const applications = this.compiledCache[configurationType]
 		if (!applications) return
 		const applicableActions: Record<
 			string,
-			{ event: D3InputEvent; selectiveList: SelectiveAction<Actions>[] }
+			{ event: D3InputEvent | true; selectiveList: SelectiveAction<Actions>[] }
 		> = {}
 		// 1- build cache of application/events
 
 		for (const action in applications) {
-			let event: D3InputEvent | undefined
+			let event: D3InputEvent | undefined | true
 			for (const configuration of this.configurations[action])
 				if (configuration.type === configurationType) {
 					event = configuration2event(
@@ -107,7 +108,13 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 				for (const action in applicableActions) {
 					for (const selective of applicableActions[action].selectiveList) {
 						if (selective.acceptHandle(handle)) {
-							selective.apply(action, handle, intersections.point, applicableActions[action].event)
+							if (applicableActions[action].event !== true)
+								selective.apply(
+									action,
+									handle,
+									intersections.point,
+									applicableActions[action].event
+								)
 							return true
 						}
 					}
@@ -118,12 +125,13 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 				for (const action in applicableActions) {
 					for (const selective of applicableActions[action].selectiveList) {
 						if (selective.acceptNoHandle(true)) {
-							selective.apply(
-								action,
-								undefined,
-								intersections.point,
-								applicableActions[action].event
-							)
+							if (applicableActions[action].event !== true)
+								selective.apply(
+									action,
+									undefined,
+									intersections.point,
+									applicableActions[action].event
+								)
 							return true
 						}
 					}
@@ -134,7 +142,8 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 		for (const action in applicableActions) {
 			for (const selective of applicableActions[action].selectiveList) {
 				if (selective.acceptNoHandle(false)) {
-					selective.apply(action, undefined, undefined, applicableActions[action].event)
+					if (applicableActions[action].event !== true)
+						selective.apply(action, undefined, undefined, applicableActions[action].event)
 					return true
 				}
 			}
@@ -165,29 +174,6 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 		this.unListenTo(gameView.canvas)
 	}
 
-	/*
-OneButtonConfiguration
-MouseDeltaConfiguration
-MouseHoverConfiguration
-KeyPressConfiguration
-OneWheelConfiguration
-TwoWheelsConfiguration
-KeyPairPressConfiguration
-KeyQuadPressConfiguration
-
-
-'click'
-'dblclick'
-'delta'
-'hover'
-'keydown'
-'wheelX'
-'wheelY'
-'wheels'
-'press2'
-'press4'
-*/
-
 	private readonly rayCaster = new Raycaster()
 	mouseIntersections(gameView: GameView, position: Vector2Like): Intersections {
 		const { canvas, camera } = gameView
@@ -197,7 +183,9 @@ KeyQuadPressConfiguration
 		)
 		this.rayCaster.setFromCamera(mouse, camera)
 
-		const intersections = this.rayCaster.intersectObjects(this.game.scene.children)
+		const intersections = this.rayCaster
+			.intersectObjects(this.game.scene.children)
+			.filter((intersection) => !!intersection.object?.userData?.mouseHandler)
 		if (!intersections?.length) return { handles: [] }
 		const point = intersections[0].point
 		// Filter by distance THEN by o3d.renderOrder
@@ -208,11 +196,12 @@ KeyQuadPressConfiguration
 		)
 		const handles = intersections
 			.map((intersection) =>
-				(intersection.object?.userData?.mouseHandler as MouseHandler)?.(intersection)
+				(intersection.object.userData.mouseHandler as MouseHandler)(intersection)
 			)
 			.filter(Boolean) as MouseHandle[]
 		return { point, handles }
 	}
+	public isLocking?: GameView
 	dispatchEvents = (dt: number) => {
 		const gameView = this.activeElement && this.views.get(this.activeElement as HTMLCanvasElement)
 		if (gameView) {
@@ -237,6 +226,7 @@ KeyQuadPressConfiguration
 
 			for (const event of this.events()) {
 				switch (event.type) {
+					case 'mousedown':
 					case 'click':
 					case 'dblclick':
 						tryEvent(event.type, { button: (event as MouseEvent).button })
@@ -257,8 +247,15 @@ KeyQuadPressConfiguration
 						if (deltaWheel.x) tryEvent('wheelX')
 					}
 				}
-				if (deltaMouse) {
-					tryEvent('delta')
+				const shouldLock = !!tryEvent('delta')
+				if (shouldLock === !this.isLocking) {
+					if (this.isLocking) {
+						this.isLocking = undefined
+						document.exitPointerLock()
+					} else {
+						this.isLocking = gameView
+						gameView.canvas.requestPointerLock()
+					}
 				}
 			}
 			tryEvent('press2')

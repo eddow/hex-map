@@ -45,7 +45,8 @@ const configurationTransformer: Record<
 		eventBase: D3InputEvent,
 		dt: number,
 		actionState: any
-	) => D3InputEvent | undefined
+		// `true` when no event is risen but conditions are (ex: delta-mouse when delta=0 : for locking)
+	) => D3InputEvent | undefined | true
 > = {}
 
 export function transformers(
@@ -57,7 +58,7 @@ export function transformers(
 			eventBase: D3InputEvent,
 			dt: number,
 			actionState: any
-		) => D3InputEvent | undefined
+		) => D3InputEvent | undefined | true
 	>
 ) {
 	Object.assign(configurationTransformer, nt)
@@ -81,7 +82,7 @@ export function configuration2event(
 	eventBase: D3InputEvent,
 	dt: number,
 	actionState: any
-): D3InputEvent | undefined {
+): D3InputEvent | undefined | true {
 	const modConfig = switchConfiguration(config.modifiers, state.modifiers)
 	if (modConfig)
 		return configurationTransformer[config.type]?.(

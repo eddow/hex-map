@@ -25,6 +25,7 @@ import {
 	type Scroll2DAction,
 	TileCursor,
 	TileHandle,
+	axial,
 	handledActions,
 	icosahedron,
 	modKeyCombination,
@@ -39,6 +40,7 @@ import {
 	TubeGeometry,
 	Vector3,
 } from 'three'
+import { dockview, games } from './globals.svelte'
 import { roadTypes, seaLevel, terrainHeight, terrains } from './world/textures'
 
 export type GameXTile = ContentTile & RiverTile
@@ -54,7 +56,7 @@ interface GameXActions extends InputActions {
 const cfg: InterfaceConfigurations<GameXActions> = {
 	select: [
 		{
-			type: 'click',
+			type: 'mousedown',
 			modifiers: modKeyCombination.none,
 			button: MouseButton.left,
 		},
@@ -73,13 +75,13 @@ const cfg: InterfaceConfigurations<GameXActions> = {
 		},
 		{
 			type: 'press2',
-			modifiers: [{ on: modKeyCombination.ctrl, use: { multiplier: 1 } }],
+			modifiers: [{ on: modKeyCombination.none, use: { multiplier: 1 } }],
 			multiplier: 0,
 			keyNeg: {
-				code: 'ArrowUp',
+				code: 'PageUp',
 			},
 			keyPos: {
-				code: 'ArrowDown',
+				code: 'PageDown',
 			},
 		},
 	],
@@ -111,6 +113,15 @@ const cfg: InterfaceConfigurations<GameXActions> = {
 			},
 		},
 	],
+	turn: [
+		{
+			type: 'delta',
+			buttons: MouseButtons.middle,
+			modifiers: modKeyCombination.none,
+			invertX: false,
+			invertY: false,
+		},
+	],
 	hover: [
 		{
 			type: 'hover',
@@ -132,6 +143,18 @@ export function createGame(seed: number) {
 
 	const mainGameInputMode = new InputMode<GameXActions>(
 		handledActions(TileHandle)<GameXActions>({
+			select(target, event) {
+				dockview.api.addPanel({
+					id: `selectionInfo.${crypto.randomUUID()}`,
+					component: 'selectionInfo',
+					title: axial.toString(target.point),
+					params: {
+						game: Object.entries(games).find(([k, v]) => v === game)?.[0],
+						hKey: target.point.key,
+					},
+					floating: true,
+				})
+			},
 			hover(tile, event) {
 				cursor.tile = event.buttonHoverType && event.keyModHoverType ? tile : undefined
 			},
@@ -147,6 +170,9 @@ export function createGame(seed: number) {
 			},
 			pan(event) {
 				event.gameView.pan(event.delta)
+			},
+			turn(event) {
+				event.gameView.turn(event.delta)
 			},
 		})
 	)

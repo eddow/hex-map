@@ -111,7 +111,7 @@ interface HoverConfiguration {
 // #region OneButton
 
 export interface OneButtonConfiguration extends ActionConfiguration {
-	type: 'click' | 'dblclick'
+	type: 'click' | 'dblclick' | 'mousedown'
 	button: MouseButton
 }
 
@@ -130,6 +130,7 @@ function clickTransformer(
 transformers({
 	click: clickTransformer,
 	dblclick: clickTransformer,
+	mousedown: clickTransformer,
 	keydown(config, state, eventBase): D3InputEvent | undefined {
 		return 'key' in config && config.key.code === state.keyCode ? eventBase : undefined
 	},
@@ -210,16 +211,18 @@ export interface MouseDeltaConfiguration extends ActionConfiguration {
 	invertY: boolean
 }
 transformers({
-	delta(config, state, eventBase, dt, actionState): Scroll2DEvent | undefined {
+	delta(config, state, eventBase): Scroll2DEvent | undefined | true {
 		if ('invertX' in config) {
 			if (state.buttons === config.buttons)
-				return {
-					...eventBase,
-					delta: {
-						x: state.deltaMouse!.x * (config.invertX ? -1 : 1),
-						y: state.deltaMouse!.y * (config.invertY ? -1 : 1),
-					},
-				}
+				return state.deltaMouse
+					? {
+							...eventBase,
+							delta: {
+								x: state.deltaMouse.x * (config.invertX ? -1 : 1),
+								y: state.deltaMouse.y * (config.invertY ? -1 : 1),
+							},
+						}
+					: true
 		}
 	},
 })
@@ -299,7 +302,6 @@ transformers({
 	hover(config, state, eventBase, dt, actionState): D3InputEvent | undefined {
 		if ('buttons' in config && !('invertX' in config)) {
 			const modConfig = switchConfiguration(config.buttons, state.buttons)
-			console.log(Date.now(), modConfig)
 			if (modConfig)
 				return {
 					...eventBase,
