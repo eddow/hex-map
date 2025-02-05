@@ -21,7 +21,6 @@ export interface MouseState {
 
 export interface InputSnapshot {
 	mouse?: MouseState
-	previous?: MouseState
 	modifiers: ModKeyCombination
 	deltaMouse?: Vector2Like
 	deltaWheel?: Vector2Like
@@ -35,8 +34,8 @@ export interface InputSnapshot {
  * - self-manage clicks & dbl-clicks to allow any button to be used
  */
 export class D2Buffer {
-	public static doubleClickTimeout = 300
-	private lastClick: number[] = []
+	public static doubleClickTimeout = 200
+	private lastClick: ReturnType<typeof setTimeout>[] = []
 	private eventsQueue: (MouseEvent | KeyboardEvent)[] = []
 
 	public managedEvents = new Set<string>([
@@ -108,12 +107,10 @@ export class D2Buffer {
 	}
 
 	public snapshot(): InputSnapshot {
-		const previous = this.mouseState
 		this.mouseState = this.mouseOut ? undefined : { buttons: buttonsState, position: mousePosition }
 		try {
 			return {
 				mouse: this.mouseState,
-				previous,
 				modifiers: modifierKeys,
 				deltaMouse: this.deltaPosition,
 				deltaWheel: this.deltaWheel,
@@ -185,16 +182,19 @@ export class D2Buffer {
 					break
 				case 'mouseup':
 					if (this.potentialClick && event.buttons === MouseButtons.none) {
-						const now = Date.now()
-						const click = new MouseEvent('click', event)
-						event.target!.dispatchEvent(click)
-						this.eventsQueue.push(click)
-						if (now - this.lastClick[event.button] < D2Buffer.doubleClickTimeout) {
+						if (this.lastClick[event.button]) {
+							clearTimeout(this.lastClick[event.button])
+							delete this.lastClick[event.button]
 							const dblclick = new MouseEvent('dblclick', event)
 							event.target!.dispatchEvent(dblclick)
 							this.eventsQueue.push(dblclick)
-							this.lastClick[event.button] = 0
-						} else this.lastClick[event.button] = now
+						} else
+							this.lastClick[event.button] = setTimeout(() => {
+								const click = new MouseEvent('click', event)
+								event.target!.dispatchEvent(click)
+								this.eventsQueue.push(click)
+								delete this.lastClick[event.button]
+							}, D2Buffer.doubleClickTimeout)
 					}
 					this.potentialClick = false
 					break

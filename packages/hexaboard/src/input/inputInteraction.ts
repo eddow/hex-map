@@ -201,11 +201,11 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 			.filter(Boolean) as MouseHandle[]
 		return { point, handles }
 	}
-	public isLocking?: GameView
+	public isLocking?: Intersections
 	dispatchEvents = (dt: number) => {
 		const gameView = this.activeElement && this.views.get(this.activeElement as HTMLCanvasElement)
 		if (gameView) {
-			const { modifiers, mouse, previous, deltaMouse, deltaWheel, keysDown } = this.snapshot()
+			const { modifiers, mouse, deltaMouse, deltaWheel, keysDown } = this.snapshot()
 			const intersections = mouse && this.mouseIntersections(gameView, mouse.position)
 			debugInformation.set('intersection', intersections?.point)
 			const state: InputState = {
@@ -215,10 +215,10 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 				deltaWheel,
 				keysDown,
 			}
-			const tryEvent = (type: string, additionalState?: Partial<InputState>) =>
+			const tryEvent = (type: string, additionalState?: Partial<InputState>, locking = false) =>
 				this.applyEvent(
 					type,
-					intersections,
+					this.isLocking && !locking ? undefined : (this.isLocking ?? intersections),
 					additionalState ? { ...state, ...additionalState } : state,
 					{ gameView },
 					dt
@@ -247,13 +247,13 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 						if (deltaWheel.x) tryEvent('wheelX')
 					}
 				}
-				const shouldLock = !!tryEvent('delta')
+				const shouldLock = !!tryEvent('delta', undefined, true)
 				if (shouldLock === !this.isLocking) {
 					if (this.isLocking) {
 						this.isLocking = undefined
 						document.exitPointerLock()
 					} else {
-						this.isLocking = gameView
+						this.isLocking = intersections
 						gameView.canvas.requestPointerLock()
 					}
 				}

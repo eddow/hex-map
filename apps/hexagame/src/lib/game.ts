@@ -56,7 +56,7 @@ interface GameXActions extends InputActions {
 const cfg: InterfaceConfigurations<GameXActions> = {
 	select: [
 		{
-			type: 'mousedown',
+			type: 'click',
 			modifiers: modKeyCombination.none,
 			button: MouseButton.left,
 		},
@@ -125,7 +125,7 @@ const cfg: InterfaceConfigurations<GameXActions> = {
 	hover: [
 		{
 			type: 'hover',
-			buttonHoverType: false,
+			buttonHoverType: true,
 			keyModHoverType: false,
 			buttons: [{ on: MouseButtons.none, use: { buttonHoverType: 'selectable' } }],
 			modifiers: [{ on: modKeyCombination.none, use: { keyModHoverType: 'selectable' } }],
