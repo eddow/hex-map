@@ -142,11 +142,11 @@ export class Land<Tile extends TileBase = TileBase> {
 		this.sectorTiles = hexTiles(this.sectorRadius)
 	}
 
-	sector2tile(aRef: AxialRef) {
-		return scaleAxial(axial.coord(aRef), this.sectorRadius - 1)
+	sector2tile(coord: AxialCoord) {
+		return scaleAxial(coord, this.sectorRadius - 1)
 	}
-	tile2sector(aRef: AxialRef) {
-		return axial.round(scaleAxial(axial.coord(aRef), 1 / (3 * (this.sectorRadius - 1))))
+	tile2sector(coord: AxialCoord) {
+		return axial.round(scaleAxial(coord, 1 / (3 * (this.sectorRadius - 1))))
 	}
 
 	createSectors(added: AxialSet, generationInfos: Map<LandPart<Tile>, any>) {

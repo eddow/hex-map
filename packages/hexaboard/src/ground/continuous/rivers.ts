@@ -98,8 +98,7 @@ export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousPartia
 			const path = costingPath(
 				source,
 				(from, to) => {
-					const toCoord = axial.coord(to)
-					if (axial.distance(toCoord, source) > this.maxAxialDistance) return Number.NaN
+					if (axial.distance(to, source) > this.maxAxialDistance) return Number.NaN
 					const [tFrom, tTo] = [this.land.tile(from), this.land.tile(to)]
 					// 2 facts are costly:
 					return (

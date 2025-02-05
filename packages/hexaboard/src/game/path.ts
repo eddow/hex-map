@@ -8,12 +8,11 @@ import {
 	hexSides,
 } from '~/utils'
 
-export function straightPath(fromTile: AxialRef, toTile: AxialRef) {
-	const from = axial.coord(fromTile)
-	const to = axial.coord(toTile)
+export function straightPath(from: Axial, to: Axial) {
 	const rv: AxialCoord[] = []
 	const dist = axial.distance(from, to)
-	for (let i = 0; i < dist; i++) rv.push(axial.round(axial.lerp(from, to, (i + 1) / dist)))
+	for (let i = 0; i < dist; i++)
+		rv.push(axial.coordAccess(axial.round(axial.lerp(from, to, (i + 1) / dist))))
 	return rv
 }
 

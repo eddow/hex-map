@@ -58,8 +58,10 @@ export class Landscaper<Tile extends TileBase>
 		for (const landscape of invalidated ?? this.landscapes) {
 			landscape.renderSector?.(sector)
 			const o3d = landscape.createSector3D(sector)
-			// TODO: traverse?
-			o3d.renderOrder = Landscaper.renderOrders + this.landscapes.indexOf(landscape)
+			o3d.traverse((o: Object3D) => {
+				o.renderOrder = Landscaper.renderOrders + this.landscapes.indexOf(landscape)
+			})
+
 			sector.add(landscape, o3d)
 		}
 	}

@@ -6,8 +6,6 @@ import type { Sextuplet } from '~/types'
 import type { RandGenerator } from '~/utils/numbers'
 import { assert } from './debug'
 
-// TODO: Type "all-refs" with q,r,key
-
 export type AxialKey = number
 export interface AxialCoord {
 	q: number

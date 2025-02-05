@@ -73,10 +73,8 @@ const cfg: InterfaceConfigurations<GameXActions> = {
 		},
 		{
 			type: 'press2',
-			modifiers: [
-				{ on: modKeyCombination.ctrl, use: { multiplier: 1 } },
-				{ on: modKeyCombination.none, use: { multiplier: 0 } },
-			],
+			modifiers: [{ on: modKeyCombination.ctrl, use: { multiplier: 1 } }],
+			multiplier: 0,
 			keyNeg: {
 				code: 'ArrowUp',
 			},
@@ -209,7 +207,7 @@ export function createGame(seed: number) {
 			/*try {
 				/* straight path
 				const path = [
-					axial.coord(pawn.tile),
+					axial.access(pawn.tile),
 					...straightPath(pawn.sector, pawn.tile, cursor.tile.target, cursor.tile.hexIndex),
 				]*/
 	/* no height path (0 height diff still has horizontal mvt not counted)

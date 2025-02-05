@@ -77,7 +77,8 @@ export function configuration2event(
 ): D3InputEvent | undefined {
 	if (Array.isArray(config.modifiers)) {
 		const index = config.modifiers.findIndex(({ on }) => sameModifiers(on, state.modifiers))
-		if (index < 0 || index === undefined) return
+		if (index < 0 || index === undefined)
+			return configurationTransformer[config.type]?.(config, state, eventBase, dt, actionState)
 		config = { ...config, ...config.modifiers[index].use }
 	} else if (!sameModifiers(config.modifiers, state.modifiers)) return
 	return configurationTransformer[config.type]?.(config, state, eventBase, dt, actionState)

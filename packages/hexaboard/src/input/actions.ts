@@ -11,6 +11,7 @@ export interface D3InputEvent {
 
 export interface ActionConfiguration<Final extends {} = {}> {
 	type: string
+	// TODO: provide a default Partial<Final>
 	modifiers: ModKeyCombination | { on: ModKeyCombination; use: Partial<Final> }[]
 }
 
@@ -52,12 +53,13 @@ export interface KeyIdentifier {
 }
 
 /**
- * Gets the velocity of the scroll
+ * Calculate the velocity of the scroll on keypress
  * @param accNeg
  * @param accPos
  * @param dt
  * @param velocity
  * @returns number
+ * @todo Clamp on friction (if velocity *was* higher than clamp, don't re-clamp it, just let friction play  )
  */
 function keyboardScroll(
 	accNeg: boolean | undefined,
@@ -66,16 +68,21 @@ function keyboardScroll(
 	velocity: number | undefined,
 	multiplier?: number
 ) {
+	//
 	accNeg ??= false
 	accPos ??= false
 	velocity ??= 0
-	if (multiplier === 0) accNeg = accPos = false
-	else velocity /= multiplier ?? 1
-	const acceleration = scrollKbd.acceleration * dt * (multiplier ?? 1)
+
+	if (multiplier) velocity /= multiplier ?? 0
+	const clampVelocity =
+		Math.abs(velocity) < scrollKbd.clampVelocity
+			? scrollKbd.clampVelocity
+			: Math.max(Math.abs(velocity) * (1 - scrollKbd.friction) ** dt, scrollKbd.clampVelocity)
+	const acceleration = scrollKbd.acceleration * dt * (multiplier ?? 0)
 	if (accNeg !== accPos) velocity += accPos ? acceleration : -acceleration
-	else if (!accNeg) velocity *= (1 - scrollKbd.friction) ** dt
-	velocity = clamp(velocity, -scrollKbd.clampVelocity, scrollKbd.clampVelocity)
-	if (multiplier !== 0) velocity *= multiplier ?? 1
+	if (!multiplier || (!accNeg && !accPos)) velocity *= (1 - scrollKbd.friction) ** dt
+	velocity = clamp(velocity, -clampVelocity, clampVelocity)
+	if (multiplier) velocity *= multiplier
 	return Math.abs(velocity) < scrollKbd.min ? 0 : velocity
 }
 const scrollKbd = {
@@ -160,7 +167,7 @@ transformers({
 				state.keysDown[config.keyPos.code],
 				dt,
 				actionState.keyboardVelocity,
-				config.multiplier ?? 1
+				config.multiplier ?? 0
 			)
 			if (actionState.keyboardVelocity)
 				return {
@@ -210,7 +217,7 @@ export interface KeyQuadPressConfiguration
 transformers({
 	press4(config, state, eventBase, dt, actionState): Scroll2DEvent | undefined {
 		if ('keyXNeg' in config) {
-			const multiplier = config.multiplier ?? 1
+			const multiplier = config.multiplier ?? 0
 			actionState.keyboardVelocityX = keyboardScroll(
 				state.keysDown[config.keyXNeg.code],
 				state.keysDown[config.keyXPos.code],
