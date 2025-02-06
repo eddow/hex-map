@@ -8,10 +8,12 @@ import {
 	transformers,
 } from './internals'
 import type { ModKeyCombination, MouseButton, MouseButtons, MouseHandle } from './types'
+import type { InputInteraction } from './inputInteraction'
 
 // #region Generics
 export interface D3InputEvent {
 	gameView: GameView
+	inputInteraction: InputInteraction
 }
 
 export type SwitchableConfiguration<Options, Values extends {}> =
@@ -95,7 +97,7 @@ function keyboardScroll(
 const scrollKbd = {
 	acceleration: 2,
 	clampVelocity: 1,
-	friction: 0.99,
+	friction: 0.999,
 	min: 0.01,
 }
 

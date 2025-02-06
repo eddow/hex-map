@@ -4,9 +4,9 @@
 	"license": "ISC",
 	"scripts": {
 		"dev": "concurrently \"npm:dev:dockview-svelte\" \"npm:dev:hexaboard\" \"npm:dev:hexagame\"",
-		"dev:dockview-svelte": "cd packages/dockview-svelte && npm run dev:repo",
-		"dev:hexaboard": "cd packages/hexaboard && npm run dev:repo",
-		"dev:hexagame": "cd apps/hexagame && npm run dev",
+		"dev:dockview-svelte": "npm run dev:repo --workspace=dockview-svelte",
+		"dev:hexaboard": "npm run dev:repo --workspace=hexaboard",
+		"dev:hexagame": "npm run dev --workspace=hexagame",
 		"build:all": "lerna run build --stream"
 	},
 	"repository": {

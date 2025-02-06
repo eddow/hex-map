@@ -11,4 +11,4 @@ for file in *.jpg; do convert "$file" -resize 512x512! "${file%.jpg}_512.jpg"; d
 ## Models
 
 https://free3d.com/
-
+https://gamefromscratch.com/quaternius-free-3d-assets/

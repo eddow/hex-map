@@ -9,20 +9,21 @@ import {
 	UniformsUtils,
 } from 'three'
 import type { Triplet } from '~/types'
-import { type AxialKey, AxialKeyMap, LCG, axial, numbers } from '~/utils'
+import { type Axial, type AxialKey, AxialKeyMap, LCG, axial, numbers } from '~/utils'
 import type { Sector } from '../sector'
 import type { TerrainBase, TerrainDefinition, TerrainKey, TerrainTile } from '../terrain'
 import { CompleteLandscape } from './completeLandscape'
 import type { LandscapeTriangle } from './landscape'
-import type { RoadBase, RoadKey } from './road'
 
 interface TexturePosition {
 	alpha: number
-	inTextureRadius: number
+	radius: number
 	center: { u: number; v: number }
 }
 export interface TextureTerrain extends TerrainBase {
 	texture: Texture
+}
+export interface SeamlessTextureTerrain extends TextureTerrain {
 	// Textures are images virtually of size 1x1 - this is the size of the part of the picture taken by tiles
 	inTextureRadius: number
 }
@@ -34,7 +35,7 @@ for (let i = 0; i < 6; i++) {
 
 // TODO: Now, side is 0 or 1, optimize ?
 function textureUVs(
-	{ alpha, inTextureRadius, center: { u, v } }: TexturePosition,
+	{ alpha, radius: inTextureRadius, center: { u, v } }: TexturePosition,
 	side: 0 | 1,
 	rot: 0 | 2 | 4
 ) {
@@ -62,8 +63,87 @@ function textureUVs(
 	}
 }
 
+/**
+ * Ways to mix textures between adjacent hexagons
+ * Defines a glsl function `bary2weights` who takes a "barycentric" vector and returns a vector of weights
+ * - barycentric: a point in a pain triangle A B C, can be written as `x * A + y * B + z * C` where x + y + z = 1
+ * - weights: a vector of 3 weights, summing to 1, giving which texture will be used for the computation of that fragment
+ *
+ * Note: weights are normalized to sum to 1 afterward, so `bary2weights` does not have to return a normalized vector
+ */
+export const weightMix = {
+	/**
+	 * Fade with a polynomial gradient between textures (the higher the degree, the shorter the transition)
+	 * @param degree
+	 * @returns
+	 */
+	polynomial(degree: number) {
+		return `
+float influence(float coord) {
+	return pow(coord, ${degree.toFixed(2)});
+}
+
+vec3 bary2weights(vec3 bary) {
+	return vec3(influence(bary.x), influence(bary.y), influence(bary.z));
+}
+		`
+	},
+	oneHotMax: `
+vec3 bary2weights(vec3 v) {
+    vec3 mask = step(max(v.x, max(v.y, v.z)), v);
+    return mask / dot(mask, vec3(1.0)); // Ensures only one component is 1
+}`,
+}
+
+export interface TileTextureStyle<Terrain extends TextureTerrain = TextureTerrain> {
+	/**
+	 * GLSL texture mixer for borders
+	 */
+	weightMix: string
+	/**
+	 * Choose which part of the texture is rendered around a point
+	 * @param point
+	 * @returns
+	 */
+	texturePosition(terrain: Terrain, point: Axial): TexturePosition
+}
+
+export const textureStyle = {
+	seamless(degree: number, seed: number): TileTextureStyle<SeamlessTextureTerrain> {
+		return {
+			weightMix: weightMix.polynomial(degree),
+			texturePosition(terrain, point) {
+				const gen = LCG(seed, 'seamlessTextureStyle', point.q, point.r)
+				return {
+					alpha: gen(Math.PI * 2),
+					radius: terrain.inTextureRadius,
+					center: {
+						u: gen(),
+						v: gen(),
+					},
+				}
+			},
+		}
+	},
+	// TODO: `pick in may` - give a texture with many variations in a matrix-like picture and pick one
+	unique: {
+		weightMix: weightMix.oneHotMax,
+		texturePosition() {
+			return {
+				alpha: 0,
+				radius: 1,
+				center: {
+					u: 0.5,
+					v: 0.5,
+				},
+			}
+		},
+	},
+}
+
 export class ContinuousTextureLandscape<
 	Tile extends TerrainTile = TerrainTile,
+	Terrain extends TextureTerrain = TextureTerrain,
 > extends CompleteLandscape<Tile> {
 	public readonly material: Material
 	private readonly textures: Texture[]
@@ -71,14 +151,13 @@ export class ContinuousTextureLandscape<
 	constructor(
 		sectorRadius: number,
 		private readonly terrainDefinition: TerrainDefinition<TextureTerrain>,
-		private readonly roadDefinition: Record<RoadKey, RoadBase>,
-		private readonly seed: number
+		private readonly textureStyle: TileTextureStyle<Terrain>
 	) {
 		super(sectorRadius)
 		this.textures = Array.from(
 			new Set(Object.values(terrainDefinition.types).map((t) => t.texture))
 		)
-		this.material = threeTexturedMaterial(this.textures)
+		this.material = threeTexturedMaterial(this.textures, textureStyle.weightMix)
 
 		// Index of all the textures by terrain type name
 		this.texturesIndex = Object.fromEntries(
@@ -90,22 +169,17 @@ export class ContinuousTextureLandscape<
 	}
 	createGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]): BufferGeometry {
 		// Gather the texture positions
-		const { seed, terrainDefinition } = this
+		const { textureStyle, terrainDefinition } = this
 		const textureUvCache = new AxialKeyMap(
 			(function* () {
 				for (const [i, tile] of sector.tiles) {
 					const coord = axial.keyAccess(i)
-					const gen = LCG(seed, 'terrainTextures', coord.q, coord.r)
 					yield [
 						i,
-						{
-							alpha: gen(Math.PI * 2),
-							inTextureRadius: terrainDefinition.types[tile.terrain].inTextureRadius,
-							center: {
-								u: gen(),
-								v: gen(),
-							},
-						},
+						textureStyle.texturePosition(
+							terrainDefinition.types[tile.terrain] as Terrain,
+							axial.keyAccess(i)
+						),
 					]
 				}
 			})()
@@ -195,7 +269,7 @@ export class ContinuousTextureLandscape<
 
 // TODO: `...Textures` should have to be passed as `texture1, texture2, ...`
 // TODO: Lighting - normals are calculated already, we just don't feel them
-function threeTexturedMaterial(terrainTextures: Texture[]) {
+function threeTexturedMaterial(terrainTextures: Texture[], weightMix: string) {
 	const nbrTextures = terrainTextures.length
 	const terrainTexturesCase = numbers(nbrTextures).map(
 		(n) => `if (i == ${n}) return texture2D(terrainTextures[${n}], vUv);`
@@ -266,25 +340,21 @@ varying vec3 vTextureIdx;
 //varying vec3 vViewPosition;
 varying vec3 vPosition;
 
-float influence(float coord) {
-	return coord * coord; // Quadratic function scaled to reach 1 at coord = 0.5
-}
+${weightMix}
 
 vec4 tColor(int i, vec2 vUv) {
 	${terrainTexturesCase.join('\n')}
 	return vec4(1.0, 0.0, 0.0, 1.0);
 }
 
-
 void main() {
 	vec4 color1 = tColor(int(round(vTextureIdx.x)), vUv[0]);
 	vec4 color2 = tColor(int(round(vTextureIdx.y)), vUv[1]);
 	vec4 color3 = tColor(int(round(vTextureIdx.z)), vUv[2]);
 	
+	vec3 weights = bary2weights(bary);
 	// Normalize weights to ensure they sum to 1
-	vec3 weights = vec3(influence(bary.x), influence(bary.y), influence(bary.z));
-	float sum = dot(weights, vec3(1.0)); // Sum of weights
-	weights /= sum; // Normalize weights
+	weights /= dot(weights, vec3(1.0));
 
 	// Apply the weights to the colors
 	vec4 terrainColor = vec4(color1.rgb * weights.x + color2.rgb * weights.y + color3.rgb * weights.z, 1.0);

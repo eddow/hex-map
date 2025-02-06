@@ -71,7 +71,7 @@ export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousPartia
 		{
 			riverTerrain = 'river',
 			minLength = 3,
-			minBankSlope = 4,
+			minBankSlope = 2,
 			minStreamSlope = 1,
 		}: Partial<RivesOptions> = {}
 	) {
@@ -82,7 +82,8 @@ export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousPartia
 		return []
 	}
 	refineTile(tile: Tile, coord: AxialCoord, sources: Sources): undefined {
-		if (tile.position.z < this.seaLevel) return
+		// Avoids sources being neighbors
+		if (tile.position.z < this.seaLevel || ((coord.q | coord.r) & 1) !== 0) return
 		const gen = LCG(this.seed, 'rivers', coord.q, coord.r)
 		if (
 			gen() <
@@ -117,15 +118,15 @@ export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousPartia
 			const sourceSectors = this.land.tile(source).sectors as Sector<Tile>[]
 
 			// Remove the end of river who enters too much in the sea
-			while (path && path.length > 0) {
-				const last = path[0]
+			while (path && path.length > this.options.minLength) {
+				const last = path[path.length - 1]
 				const oceanNeighbors = axial
 					.neighbors(last)
 					.reduce((nbr, tile) => nbr + (this.land.tile(tile).position.z < this.seaLevel ? 1 : 0), 0)
 				if (oceanNeighbors < 4) break
 				path.pop()
 			}
-			if (path && path.length > 4) {
+			if (path && path.length > this.options.minLength) {
 				// Last tile in the path
 				const ultimatePosition = this.land.tile(path[path.length - 1]).position
 				// Last processed tile
@@ -184,8 +185,6 @@ export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousPartia
 						.map((t) => t.riverHeight!)
 					const riverHeight = river.reduce((a, b) => a + b, 0) / river.length
 					if (!tile.riverHeight || tile.riverHeight < riverHeight) {
-						// We can have sources appearing as neighbors
-						// TODO: Is it possible to avoid sources appearing as neighbors ?
 						updateTile(sourceSectors, key, {
 							riverHeight,
 						} as Partial<Tile>)

@@ -30,23 +30,40 @@ type ModesCache<Actions extends InputActions> = Record<
 
 export class InputInteraction<Actions extends InputActions = InputActions> extends D2Buffer {
 	public views = new Map<HTMLCanvasElement, GameView>()
+
+	public temporaryMode?: InputMode<Actions>
 	constructor(
+		private configurations: InterfaceConfigurations<Actions>,
 		private readonly globalMode: InputMode<Actions>,
-		private configurations: InterfaceConfigurations<Actions>
+		public usedMode?: InputMode<Actions>
 	) {
 		super()
-		this.compileCache(configurations, [this.globalMode])
+		this.compileCache()
+	}
+
+	setMode(mode: InputMode<Actions>) {
+		this.usedMode = mode
+		if (!this.temporaryMode) this.compileCache()
 	}
 
 	configure(configurations: InterfaceConfigurations<Actions>) {
 		this.configurations = configurations
+		this.compileCache()
+	}
+
+	private tempMode(temporaryMode?: InputMode<Actions>) {
+		this.temporaryMode = temporaryMode
+		this.compileCache()
 	}
 
 	// #region config+modes -> actions
 
 	private compiledCache: ModesCache<Actions> = {}
 	private actionStates: Record<string, ActionState> = {}
-	compileCache(configurations: InterfaceConfigurations<Actions>, modes: InputMode<Actions>[]) {
+	private compileCache() {
+		const secondaryMode = this.temporaryMode ?? this.usedMode
+		const modes = secondaryMode ? [this.globalMode, secondaryMode] : [this.globalMode]
+		const configurations = this.configurations
 		const cache = {} as ModesCache<Actions>
 		const actionStates: Record<string, ActionState> = {}
 
@@ -220,7 +237,7 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 					type,
 					this.isLocking && !locking ? undefined : (this.isLocking ?? intersections),
 					additionalState ? { ...state, ...additionalState } : state,
-					{ gameView },
+					{ gameView, inputInteraction: this },
 					dt
 				)
 
@@ -263,3 +280,5 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 		}
 	}
 }
+
+//TODO: drag&drop

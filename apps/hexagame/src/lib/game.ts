@@ -23,6 +23,7 @@ import {
 	Rivers,
 	type Scroll1DAction,
 	type Scroll2DAction,
+	type SeamlessTextureTerrain,
 	TileCursor,
 	TileHandle,
 	axial,
@@ -30,6 +31,7 @@ import {
 	icosahedron,
 	modKeyCombination,
 	pointActions,
+	textureStyle,
 	viewActions,
 } from 'hexaboard'
 import {
@@ -141,7 +143,22 @@ export function createGame(seed: number) {
 		})
 	)
 
-	const mainGameInputMode = new InputMode<GameXActions>(
+	const navigationMode = new InputMode<GameXActions>(
+		pointActions({
+			zoom(point, event) {
+				event.gameView.zoom(point, event.delta, { min: 150, max: 1000 })
+			},
+		}),
+		viewActions({
+			pan(event) {
+				event.gameView.pan(event.delta)
+			},
+			turn(event) {
+				event.gameView.turn(event.delta)
+			},
+		})
+	)
+	const selectionMode = new InputMode<GameXActions>(
 		handledActions(TileHandle)<GameXActions>({
 			select(target, event) {
 				dockview.api.addPanel({
@@ -159,31 +176,23 @@ export function createGame(seed: number) {
 				cursor.tile = event.buttonHoverType && event.keyModHoverType ? tile : undefined
 			},
 		}),
-		pointActions({
-			zoom(point, event) {
-				event.gameView.zoom(point, event.delta, { min: 150, max: 1000 })
-			},
-		}),
 		viewActions({
 			hover() {
 				cursor.tile = undefined
 			},
-			pan(event) {
-				event.gameView.pan(event.delta)
-			},
-			turn(event) {
-				event.gameView.turn(event.delta)
-			},
 		})
 	)
 
-	const gameInputInteraction = new InputInteraction<GameXActions>(mainGameInputMode, cfg)
+	const gameInputInteraction = new InputInteraction<GameXActions>(
+		cfg,
+		navigationMode,
+		selectionMode
+	)
 	const land = new Land<GameXTile>(2, 20)
-	const landscape = new ContinuousTextureLandscape<GameXTile>(
+	const landscape = new ContinuousTextureLandscape<GameXTile, SeamlessTextureTerrain>(
 		land.sectorRadius,
 		terrains,
-		roadTypes,
-		seed
+		textureStyle.seamless(3, seed)
 	)
 	const grid = new ColorRoadGrid(land.sectorRadius, roadTypes)
 	land.addPart(
