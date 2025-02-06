@@ -48,7 +48,7 @@ export class D2Buffer {
 		'keydown',
 		'keyup',
 	])
-	public forwardedEvents = new Set<string>(['keydown', 'mouseleave', 'mousedown'])
+	public forwardedEvents = new Set<string>(['keydown', 'mouseleave', 'mousedown', 'mouseup'])
 	private canvas2substitute = new Map<HTMLElement, HTMLElement>()
 	private substitute2canvas = new Map<HTMLElement, HTMLElement>()
 	public previousButtons: MouseButtons = MouseButtons.none

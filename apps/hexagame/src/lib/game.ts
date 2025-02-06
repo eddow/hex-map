@@ -1,4 +1,5 @@
 import {
+	type Axial,
 	type AxialRef,
 	ColorRoadGrid,
 	type ContentTile,
@@ -21,12 +22,14 @@ import {
 	Resourceful,
 	type RiverTile,
 	Rivers,
+	type RoadKey,
 	type Scroll1DAction,
 	type Scroll2DAction,
 	type SeamlessTextureTerrain,
 	TileCursor,
 	TileHandle,
 	axial,
+	costingPath,
 	handledActions,
 	icosahedron,
 	modKeyCombination,
@@ -54,7 +57,7 @@ interface GameXActions extends InputActions {
 	pan: Scroll2DAction
 	hover: HoverAction
 }
-
+const panButtons = MouseButtons.left + MouseButtons.right
 const cfg: InterfaceConfigurations<GameXActions> = {
 	select: [
 		{
@@ -90,7 +93,7 @@ const cfg: InterfaceConfigurations<GameXActions> = {
 	pan: [
 		{
 			type: 'delta',
-			buttons: MouseButtons.left + MouseButtons.right,
+			buttons: panButtons,
 			modifiers: modKeyCombination.none,
 			invertX: false,
 			invertY: false,
@@ -131,6 +134,19 @@ const cfg: InterfaceConfigurations<GameXActions> = {
 			keyModHoverType: false,
 			buttons: [{ on: MouseButtons.none, use: { buttonHoverType: 'selectable' } }],
 			modifiers: [{ on: modKeyCombination.none, use: { keyModHoverType: 'selectable' } }],
+		},
+	],
+	roadDraw: [
+		{
+			type: 'hover',
+			buttonHoverType: 'cancel',
+			keyModHoverType: false,
+			buttons: [
+				{ on: MouseButtons.left, use: { buttonHoverType: 'drag' } },
+				{ on: MouseButtons.none, use: { buttonHoverType: 'drop' } },
+				{ on: panButtons, use: { buttonHoverType: 'over' } },
+			],
+			modifiers: modKeyCombination.none,
 		},
 	],
 }
@@ -182,11 +198,68 @@ export function createGame(seed: number) {
 			},
 		})
 	)
+	// TODO: Make a drag-drop config helper
+	function roadDrawMode(roadType: RoadKey) {
+		let drawing: Axial | undefined
+		let pathMarked: Axial | undefined
+		let path: Axial[] | null = null
+		function cancel() {
+			if (path) markPath()
+			drawing = undefined
+			pathMarked = undefined
+			path = null
+		}
+		return new InputMode<GameXActions>(
+			handledActions(TileHandle)<GameXActions>({
+				roadDraw(tile, event) {
+					if (drawing && event.buttonHoverType !== 'cancel' && pathMarked !== tile.point)
+						path = costingPath(drawing, Land.walkCost(land), (at) => at.key === tile.point.key)
+					switch (event.buttonHoverType) {
+						case 'drag':
+							if (!drawing) {
+								drawing = tile.point
+							}
+							cursor.tile = tile
+							break
+						case 'drop':
+							if (drawing) {
+								drawing = undefined
+								if (path)
+									for (let step = 1; step < path.length; step++) {
+										grid.link(land, path[step - 1], path[step], roadType)
+									}
+							}
+							cursor.tile = tile
+							break
+						case 'cancel': {
+							cancel()
+							break
+						}
+					}
+					if (!drawing && pathMarked) {
+						markPath()
+						pathMarked = undefined
+					}
+					if (drawing && pathMarked?.key !== tile.point.key) {
+						pathMarked = tile.point
+						markPath(path)
+					}
+				},
+			}),
+			viewActions({
+				roadDraw() {
+					cancel()
+					cursor.tile = undefined
+				},
+			})
+		)
+	}
 
 	const gameInputInteraction = new InputInteraction<GameXActions>(
 		cfg,
 		navigationMode,
-		selectionMode
+		roadDrawMode('hc')
+		//selectionMode
 	)
 	const land = new Land<GameXTile>(2, 20)
 	const landscape = new ContinuousTextureLandscape<GameXTile, SeamlessTextureTerrain>(

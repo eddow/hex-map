@@ -232,16 +232,17 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 				deltaWheel,
 				keysDown,
 			}
-			const tryEvent = (type: string, additionalState?: Partial<InputState>, locking = false) =>
+			const tryEvent = (type: string, additionalState?: Partial<InputState>) =>
 				this.applyEvent(
 					type,
-					this.isLocking && !locking ? undefined : (this.isLocking ?? intersections),
+					this.isLocking ?? intersections,
 					additionalState ? { ...state, ...additionalState } : state,
 					{ gameView, inputInteraction: this },
 					dt
 				)
 
 			for (const event of this.events()) {
+				console.log(event.type)
 				switch (event.type) {
 					case 'mousedown':
 					case 'click':
@@ -264,7 +265,7 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 						if (deltaWheel.x) tryEvent('wheelX')
 					}
 				}
-				const shouldLock = !!tryEvent('delta', undefined, true)
+				const shouldLock = !!tryEvent('delta')
 				if (shouldLock === !this.isLocking) {
 					if (this.isLocking) {
 						this.isLocking = undefined

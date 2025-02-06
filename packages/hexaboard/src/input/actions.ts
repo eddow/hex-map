@@ -1,6 +1,7 @@
 import { Vector2, type Vector2Like, Vector3, type Vector3Like } from 'three'
 import { clamp } from 'three/src/math/MathUtils'
 import type { GameView } from '~/game'
+import type { InputInteraction } from './inputInteraction'
 import {
 	type AnyConfiguration,
 	type InputState,
@@ -8,7 +9,6 @@ import {
 	transformers,
 } from './internals'
 import type { ModKeyCombination, MouseButton, MouseButtons, MouseHandle } from './types'
-import type { InputInteraction } from './inputInteraction'
 
 // #region Generics
 export interface D3InputEvent {
@@ -40,7 +40,7 @@ export type ExtractActionConfiguration<Action extends D3InputAction<any, any>> =
 	Action['configuration']
 
 export interface InputActions {
-	[key: string]: D3InputAction<any, any>
+	[key: PropertyKey]: D3InputAction<any, any>
 }
 
 export type InterfaceEvents<Actions extends InputActions = InputActions> = {
