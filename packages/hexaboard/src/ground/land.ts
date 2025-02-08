@@ -15,7 +15,6 @@ import {
 	fromCartesian,
 	hexTiles,
 } from '~/utils'
-import { logPerformances, resetPerformances } from '~/utils/decorators'
 import { Sector } from './sector'
 
 export interface TileBase {
@@ -129,16 +128,18 @@ export class Land<Tile extends TileBase = TileBase> {
 	private readonly parts: LandPart<Tile>[] = []
 	public readonly group = new Group()
 	private readonly sectors = new AxialKeyMap<Sector<Tile>>()
-	public readonly sectorRadius: number
 	public readonly sectorTiles: number
 
 	constructor(
-		public readonly sectorScale: number,
-		public readonly tileSize: number
+		public readonly sectorRadius: number,
+		public readonly tileSize: number,
+		/**
+		 * Radius in sectors
+		 */
+		public readonly landRadius: number = Number.POSITIVE_INFINITY
 	) {
 		// Sectors share their border, so sectors of 1 tile cannot tile a world
-		assert(sectorScale > 0, 'sectorScale must be strictly > 0')
-		this.sectorRadius = 1 << sectorScale
+		assert(sectorRadius > 2, 'sectorScale must be strictly > 0')
 		this.sectorTiles = hexTiles(this.sectorRadius)
 	}
 
@@ -149,7 +150,7 @@ export class Land<Tile extends TileBase = TileBase> {
 		return axial.round(scaleAxial(coord, 1 / (3 * (this.sectorRadius - 1))))
 	}
 
-	createSectors(added: AxialSet, generationInfos: Map<LandPart<Tile>, any>) {
+	createSectors(added: Iterable<AxialCoord>, generationInfos: Map<LandPart<Tile>, any>) {
 		const tileRefiners = this.parts.filter((part) => part.refineTile)
 		for (const toSee of added) {
 			const center = this.sector2tile(toSee)
@@ -224,10 +225,13 @@ export class Land<Tile extends TileBase = TileBase> {
 
 	sectorsToRender = new Set<Sector<Tile>>()
 	updateViews(cameras: PerspectiveCamera[]) {
+		if (Number.isFinite(this.landRadius)) {
+			if (this.sectors.size === 0) this.generateWholeLand()
+			return
+		}
 		// At first, plan to remove all sectors
 		const removed = new AxialSet(this.sectors.keys())
 		const generationInfos = new Map<LandPart<Tile>, any>()
-		resetPerformances()
 		const added = new AxialSet()
 		for (const camera of cameras)
 			for (const toSee of viewedSectors(
@@ -248,7 +252,15 @@ export class Land<Tile extends TileBase = TileBase> {
 		this.pruneSectors(removed, cameras, 1.2)
 		debugInformation.set('sectors', this.sectors.size)
 		debugInformation.set('tiles', this.tiles.size)
-		logPerformances()
+	}
+
+	generateWholeLand() {
+		if (!Number.isFinite(this.landRadius)) return
+		const generationInfos = new Map<LandPart<Tile>, any>()
+		for (const part of this.parts)
+			if (part.beginGeneration) generationInfos.set(part, part.beginGeneration())
+		this.createSectors(axial.enum(this.landRadius), generationInfos)
+		this.spreadGeneration(generationInfos)
 	}
 
 	temporaryTiles = new AxialKeyMap<Tile>()

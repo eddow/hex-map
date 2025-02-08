@@ -1,7 +1,7 @@
 import { type Group, type Object3D, Vector3 } from 'three'
 import {
+	type Axial,
 	type AxialCoord,
-	type AxialKey,
 	type AxialKeyMap,
 	type AxialRef,
 	AxialSet,
@@ -24,8 +24,8 @@ export class Sector<Tile extends TileBase> {
 	) {
 		for (const [_, tile] of this.tiles) tile.sectors.push(this)
 	}
-	cartesian(aKey: AxialKey, tiles?: Map<AxialKey, Tile>) {
-		return { ...cartesian(aKey, this.land.tileSize), z: tiles?.get(aKey)?.position?.z ?? 0 }
+	cartesian(point: Axial) {
+		return { ...cartesian(point, this.land.tileSize), z: this.tiles.get(point)?.position?.z ?? 0 }
 	}
 	add(part: LandPart<Tile>, o3d: Object3D) {
 		assert(this.group, 'Rendering should happen in an existing sector')
@@ -45,9 +45,9 @@ export class Sector<Tile extends TileBase> {
 	 * @returns
 	 */
 	inTile(aRef: AxialRef, { s, u, v }: PositionInTile) {
-		const coord = axial.coord(aRef)
-		const next1 = axial.linear(coord, hexSides[s])
-		const next2 = axial.linear(coord, hexSides[(s + 1) % 6])
+		const point = axial.access(aRef)
+		const next1 = axial.linear(point, hexSides[s])
+		const next2 = axial.linear(point, hexSides[(s + 1) % 6])
 		if (!this.tiles.has(next1) || !this.tiles.has(next2)) return null
 		const pos = new Vector3().copy(this.tiles.get(aRef)!.position)
 		const next1dir = new Vector3()

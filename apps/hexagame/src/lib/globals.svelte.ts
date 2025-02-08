@@ -1,4 +1,4 @@
-import { createGame } from '$lib/game'
+import { createGame } from '$lib/hexClash/game'
 import type { DockviewApi } from 'dockview-core'
 import { type Game, debugInformation } from 'hexaboard'
 
@@ -16,7 +16,7 @@ export const configuration = $state(
 )
 
 export const games: Record<PropertyKey, Game> = {
-	GameX: createGame(59676782),
+	GameX: createGame('GameX', 59676782),
 }
 
 export const dockview = $state({ api: {} as DockviewApi } as { api: DockviewApi })

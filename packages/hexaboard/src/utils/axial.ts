@@ -58,18 +58,7 @@ export function hexTiles(radius: number) {
 	return radius === 0 ? 0 : 3 * radius * (radius - 1) + 1
 }
 
-/**
- * Retrieve the number of hexagon tiles in an incomplete hexagonal board of size radius
- */
-export function puzzleTiles(radius: number) {
-	return 3 * radius ** 2
-}
-
-/**
- * @todo: arg -> Axial
- */
-export function cartesian(aRef: AxialRef, size = 1) {
-	const { q, r } = axial.coord(aRef)
+export function cartesian({ q, r }: AxialCoord, size = 1) {
 	const A = Math.sqrt(3) * size
 	const B = (Math.sqrt(3) / 2) * size
 	const C = (3 / 2) * size
@@ -259,6 +248,10 @@ export const axial = {
 			axial.linear(BRef, hexSides[(side + 5) % 6]),
 		]
 	},
+	/**
+	 * Enumerate all hex coordinates within a given distance
+	 * @param maxAxialDistance 0 = 1 hex, 1 = 7 hex (central + 6 surrounding), 2 = 19 hex...
+	 */
 	*enum(maxAxialDistance: number) {
 		for (let q = -maxAxialDistance; q <= maxAxialDistance; q++) {
 			for (

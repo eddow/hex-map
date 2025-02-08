@@ -45,7 +45,7 @@ import {
 	TubeGeometry,
 	Vector3,
 } from 'three'
-import { dockview, games } from './globals.svelte'
+import { dockview } from '../globals.svelte'
 import { roadTypes, seaLevel, terrainHeight, terrains } from './world/textures'
 
 export type GameXTile = ContentTile & RiverTile
@@ -56,6 +56,7 @@ interface GameXActions extends InputActions {
 	zoom: Scroll1DAction
 	pan: Scroll2DAction
 	hover: HoverAction
+	roadDraw: HoverAction
 }
 const panButtons = MouseButtons.left + MouseButtons.right
 const cfg: InterfaceConfigurations<GameXActions> = {
@@ -151,7 +152,7 @@ const cfg: InterfaceConfigurations<GameXActions> = {
 	],
 }
 
-export function createGame(seed: number) {
+export function createGame(name: string, seed: number) {
 	const cursor = new TileCursor(
 		icosahedron(20, {
 			color: 0xffffff,
@@ -182,7 +183,7 @@ export function createGame(seed: number) {
 					component: 'selectionInfo',
 					title: axial.toString(target.point),
 					params: {
-						game: Object.entries(games).find(([k, v]) => v === game)?.[0],
+						game: name,
 						hKey: target.point.key,
 					},
 					floating: true,
@@ -261,7 +262,7 @@ export function createGame(seed: number) {
 		roadDrawMode('hc')
 		//selectionMode
 	)
-	const land = new Land<GameXTile>(2, 20)
+	const land = new Land<GameXTile>(8, 20)
 	const landscape = new ContinuousTextureLandscape<GameXTile, SeamlessTextureTerrain>(
 		land.sectorRadius,
 		terrains,

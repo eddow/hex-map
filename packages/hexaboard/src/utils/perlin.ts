@@ -118,19 +118,24 @@ export class HeightMap {
 	private scale: number // Scale of the Perlin noise
 	private heightRange: [number, number] // Min and max height in meters
 
-	constructor(seed: number, scale = 1, heightRange: [number, number] = [0, 100]) {
+	constructor(
+		seed: number,
+		scale = 1,
+		heightRange: [number, number] = [0, 100],
+		private defaultOctaves = 6
+	) {
 		this.perlin = new PerlinNoise(seed)
 		this.scale = scale
 		this.heightRange = heightRange
 	}
 
-	public getHeight(x: number, y: number, octaves = 6): number {
+	public getHeight(x: number, y: number, octaves?: number): number {
 		// Scale the input coordinates
 		const nx = x / this.scale
 		const ny = y / this.scale
 
 		// Generate Perlin noise value (normalized to 0 to 1)
-		const noiseValue = (this.perlin.symphony(nx, ny) + 1) / 2
+		const noiseValue = (this.perlin.symphony(nx, ny, 0, octaves || this.defaultOctaves) + 1) / 2
 
 		// Map noise value to height range
 		const [minHeight, maxHeight] = this.heightRange

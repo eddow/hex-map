@@ -58,23 +58,23 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 
 	// #region config+modes -> actions
 
-	private compiledCache: ModesCache<Actions> = {}
-	private actionStates: Record<string, ActionState> = {}
+	private compiledCache: Partial<ModesCache<Actions>> = {}
+	private actionStates: Partial<Record<keyof Actions, ActionState>> = {}
 	private compileCache() {
 		const secondaryMode = this.temporaryMode ?? this.usedMode
 		const modes = secondaryMode ? [this.globalMode, secondaryMode] : [this.globalMode]
 		const configurations = this.configurations
-		const cache = {} as ModesCache<Actions>
-		const actionStates: Record<string, ActionState> = {}
+		const cache = {} as Partial<ModesCache<Actions>>
+		const actionStates: Partial<Record<keyof Actions, ActionState>> = {}
 
 		for (const mode of modes) {
 			for (const selectiveAction of mode.selectiveActions) {
 				for (const actionKey of selectiveAction.actionKeys) {
-					actionStates[actionKey] = {}
+					actionStates[actionKey as keyof Actions] = {}
 					for (const configuration of configurations[actionKey]) {
 						cache[configuration.type] ??= {}
-						cache[configuration.type][actionKey] ??= []
-						cache[configuration.type][actionKey].push(selectiveAction)
+						cache[configuration.type]![actionKey] ??= []
+						cache[configuration.type]![actionKey].push(selectiveAction)
 					}
 				}
 			}
@@ -242,7 +242,6 @@ export class InputInteraction<Actions extends InputActions = InputActions> exten
 				)
 
 			for (const event of this.events()) {
-				console.log(event.type)
 				switch (event.type) {
 					case 'mousedown':
 					case 'click':

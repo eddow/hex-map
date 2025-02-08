@@ -14,7 +14,7 @@ function placeInTile(i: number, gen: RandGenerator) {
 		// Center
 		return genTilePosition(gen, tp)
 	}
-	const t = gen(tp, 1 - tp)
+	const t = gen(1, tp)
 	const s = gen(t)
 	return {
 		s: i - 1,
@@ -30,7 +30,7 @@ export interface TileContent {
 
 export interface ContentTile extends TerrainTile {
 	/**
-	 * @deprecated `setTileContent` and `getTileContent` should be prefered as it is source of much errors
+	 * @deprecated `setTileContent` and `getTileContent` should be preferred as it is source of much errors
 	 */
 	content?: (TileContent | undefined)[]
 }
@@ -66,7 +66,7 @@ export class Resourceful<
 	constructor(
 		private readonly terrainDefinition: TerrainDefinition<Terrain>,
 		private readonly seed: number,
-		private readonly seaLevel: number
+		private readonly seaLevel: number = 0
 	) {
 		super()
 	}
@@ -92,7 +92,7 @@ export class Resourceful<
 					: []
 			if (tile.content.some((r) => r)) {
 				const gen = LCG(this.seed, 'placeInTile', tRef)
-				//const gen = () => 0.5	// TODO test road & resources on the same side (so that in-mem replacement = in-3d replacement)
+				//const gen = (max = 1, min = 0) => (min + max) / 2
 				for (let aRef = 0; aRef < tile.content.length; aRef++) {
 					const rsc = tile.content[aRef]
 					if (rsc instanceof Handelable) {

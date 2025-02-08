@@ -3,8 +3,7 @@ import { HeightMap } from '~/utils/perlin'
 import type { LandPart, RenderedEvents, TileBase, WalkTimeSpecification } from './land'
 
 /**
- * Really simple Perlin noise procedural
- * @todo Make a real terrain generator out of it
+ * @deprecated use PerlinTerrain
  */
 export class PerlinHeight<Tile extends TileBase = TileBase>
 	extends Eventful<RenderedEvents<Tile>>
