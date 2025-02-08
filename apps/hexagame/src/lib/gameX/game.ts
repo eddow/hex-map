@@ -152,8 +152,8 @@ export function createGame(name: string, seed: number) {
 		//selectionMode
 	)
 	//DEBUG VALUE
-	const land = new Land<GameXTile>(4, 20)
-	//	const land = new Land<GameXTile>(2, 20)
+	//const land = new Land<GameXTile>(4, 20)
+	const land = new Land<GameXTile>(0, 20)
 	const landscape = new ContinuousTextureLandscape<GameXTile, SeamlessTextureTerrain>(
 		land.sectorRadius,
 		terrainTypes,

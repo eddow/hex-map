@@ -105,7 +105,7 @@ export abstract class ContinuousLandscape<Tile extends TileBase>
 		} else {
 			this.triangles = []
 			this.geometryVertex = []
-			for (const triangle of sectorTriangles(sectorRadius - 1)) {
+			for (const triangle of sectorTriangles(sectorRadius)) {
 				this.triangles.push(triangle)
 				this.geometryVertex.push(...triangle.points)
 			}

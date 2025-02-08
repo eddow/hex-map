@@ -13,7 +13,6 @@ import {
 	cartesian,
 	debugInformation,
 	fromCartesian,
-	hexTiles,
 } from '~/utils'
 import { Sector } from './sector'
 
@@ -83,8 +82,8 @@ function distance(p1: { x: number; y: number }, p2: { x: number; y: number }): n
 
 function cameraVision(camera: PerspectiveCamera): number {
 	//DEBUG VALUE
-	return camera.far / Math.cos((camera.fov * Math.PI) / 360)
-	//return 500
+	//return camera.far / Math.cos((camera.fov * Math.PI) / 360)
+	return 500
 }
 
 function* viewedSectors(centerCoord: AxialCoord, camera: PerspectiveCamera, size: number) {
@@ -130,7 +129,6 @@ export class Land<Tile extends TileBase = TileBase> {
 	private readonly parts: LandPart<Tile>[] = []
 	public readonly group = new Group()
 	private readonly sectors = new AxialKeyMap<Sector<Tile>>()
-	public readonly sectorTiles: number
 	public readonly sectorRadius: number
 
 	constructor(
@@ -142,16 +140,15 @@ export class Land<Tile extends TileBase = TileBase> {
 		public readonly landRadius: number = Number.POSITIVE_INFINITY
 	) {
 		// Sectors share their border, so sectors of 1 tile cannot tile a world
-		assert(sectorScale > 1, 'sectorScale must be strictly > 1')
+		assert(sectorScale >= 0, 'sectorScale must be positive')
 		this.sectorRadius = 1 << sectorScale
-		this.sectorTiles = hexTiles(this.sectorRadius)
 	}
 
 	sector2tile(coord: AxialCoord) {
-		return scaleAxial(coord, this.sectorRadius - 1)
+		return scaleAxial(coord, this.sectorRadius)
 	}
 	tile2sector(coord: AxialCoord) {
-		return axial.round(scaleAxial(coord, 1 / (3 * (this.sectorRadius - 1))))
+		return axial.round(scaleAxial(coord, 1 / (3 * this.sectorRadius)))
 	}
 
 	sectorsToRender = new AxialKeyMap<ReturnType<typeof setTimeout>>()
@@ -185,7 +182,7 @@ export class Land<Tile extends TileBase = TileBase> {
 		const tileRefiners = this.parts.filter((part) => part.refineTile)
 		for (const toSee of added) {
 			const center = this.sector2tile(toSee)
-			const sectorTiles = axial.enum(this.sectorRadius - 1).map((lclCoord): [AxialKey, Tile] => {
+			const sectorTiles = axial.enum(this.sectorRadius).map((lclCoord): [AxialKey, Tile] => {
 				const point = axial.coordAccess(axial.linear(center, lclCoord))
 				let completeTile = this.tiles.get(point.key)
 				if (completeTile) return [point.key, completeTile]
@@ -238,7 +235,6 @@ export class Land<Tile extends TileBase = TileBase> {
 			const hadToRender = this.sectorsToRender.get(deletedSector.center)
 			if (hadToRender) {
 				clearTimeout(hadToRender)
-				console.log(`Sector ${deletedSector.center} render cancel`)
 				this.sectorsToRender.delete(deletedSector.center)
 			}
 		}
@@ -268,7 +264,6 @@ export class Land<Tile extends TileBase = TileBase> {
 			this.createSectors(added, generationInfos)
 			this.spreadGeneration(generationInfos)
 		}
-		// TODO!!! Memory leak: meshPaste is not always disposed
 		this.pruneSectors(removed, cameras, 1.2)
 		debugInformation.set('sectors', this.sectors.size)
 		debugInformation.set('tiles', this.tiles.size)
