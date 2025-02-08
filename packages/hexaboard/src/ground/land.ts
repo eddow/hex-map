@@ -82,7 +82,9 @@ function distance(p1: { x: number; y: number }, p2: { x: number; y: number }): n
 }
 
 function cameraVision(camera: PerspectiveCamera): number {
+	//DEBUG VALUE
 	return camera.far / Math.cos((camera.fov * Math.PI) / 360)
+	//return 500
 }
 
 function* viewedSectors(centerCoord: AxialCoord, camera: PerspectiveCamera, size: number) {
@@ -129,9 +131,10 @@ export class Land<Tile extends TileBase = TileBase> {
 	public readonly group = new Group()
 	private readonly sectors = new AxialKeyMap<Sector<Tile>>()
 	public readonly sectorTiles: number
+	public readonly sectorRadius: number
 
 	constructor(
-		public readonly sectorRadius: number,
+		public readonly sectorScale: number,
 		public readonly tileSize: number,
 		/**
 		 * Radius in sectors
@@ -139,7 +142,8 @@ export class Land<Tile extends TileBase = TileBase> {
 		public readonly landRadius: number = Number.POSITIVE_INFINITY
 	) {
 		// Sectors share their border, so sectors of 1 tile cannot tile a world
-		assert(sectorRadius > 2, 'sectorScale must be strictly > 0')
+		assert(sectorScale > 1, 'sectorScale must be strictly > 1')
+		this.sectorRadius = 1 << sectorScale
 		this.sectorTiles = hexTiles(this.sectorRadius)
 	}
 
@@ -148,6 +152,33 @@ export class Land<Tile extends TileBase = TileBase> {
 	}
 	tile2sector(coord: AxialCoord) {
 		return axial.round(scaleAxial(coord, 1 / (3 * (this.sectorRadius - 1))))
+	}
+
+	sectorsToRender = new AxialKeyMap<ReturnType<typeof setTimeout>>()
+	markToRender(sector: Sector<Tile>) {
+		if (this.sectorsToRender.has(sector.center))
+			clearTimeout(this.sectorsToRender.get(sector.center)!)
+		this.sectorsToRender.set(sector.center, this.renderSector(sector))
+	}
+
+	renderSector(sector: Sector<Tile>) {
+		const sectorRenderers = this.parts.filter((part) => part.renderSector)
+		return setTimeout(() => {
+			assert(
+				!this.sectorsToRender.has(sector.center) ||
+					this.sectors.has(this.tile2sector(sector.center)),
+				'Invalid presence'
+			)
+			if (this.sectorsToRender.delete(sector.center)) {
+				if (!sector.invalidParts) {
+					if (sector.group) this.group.remove(sector.group)
+					sector.group = new Group()
+				}
+				for (const part of sector.invalidParts ?? sectorRenderers) part.renderSector!(sector)
+				sector.invalidParts = new Set()
+				this.group.add(sector.group!)
+			}
+		}, 100)
 	}
 
 	createSectors(added: Iterable<AxialCoord>, generationInfos: Map<LandPart<Tile>, any>) {
@@ -171,7 +202,7 @@ export class Land<Tile extends TileBase = TileBase> {
 			const st = Array.from(sectorTiles)
 			const sector = new Sector(this, center, new AxialKeyMap(st))
 			this.sectors.set(toSee, sector)
-			this.sectorsToRender.add(sector)
+			this.markToRender(sector)
 		}
 	}
 
@@ -182,20 +213,6 @@ export class Land<Tile extends TileBase = TileBase> {
 					(sectors, aRef, modifications) => this.tileUpdater(sectors, aRef, modifications),
 					generationInfos.get(part)
 				)
-	}
-
-	renderSectors() {
-		const sectorRenderers = this.parts.filter((part) => part.renderSector)
-		for (const sector of this.sectorsToRender) {
-			if (!sector.invalidParts) {
-				if (sector.group) this.group.remove(sector.group)
-				sector.group = new Group()
-			}
-			for (const part of sector.invalidParts ?? sectorRenderers) part.renderSector!(sector)
-			sector.invalidParts = new Set()
-			this.group.add(sector.group!)
-		}
-		this.sectorsToRender.clear()
 	}
 
 	/**
@@ -215,15 +232,17 @@ export class Land<Tile extends TileBase = TileBase> {
 					break
 				}
 			if (seen) continue
-			assert(deletedSector.group, 'Removed group should be generated')
-			this.group.remove(deletedSector.group)
+			if (deletedSector.group) this.group.remove(deletedSector.group)
 			deletedSector.freeTiles()
 			this.sectors.delete(key)
-			this.sectorsToRender.delete(deletedSector)
+			const hadToRender = this.sectorsToRender.get(deletedSector.center)
+			if (hadToRender) {
+				clearTimeout(hadToRender)
+				console.log(`Sector ${deletedSector.center} render cancel`)
+				this.sectorsToRender.delete(deletedSector.center)
+			}
 		}
 	}
-
-	sectorsToRender = new Set<Sector<Tile>>()
 	updateViews(cameras: PerspectiveCamera[]) {
 		if (Number.isFinite(this.landRadius)) {
 			if (this.sectors.size === 0) this.generateWholeLand()
@@ -249,6 +268,7 @@ export class Land<Tile extends TileBase = TileBase> {
 			this.createSectors(added, generationInfos)
 			this.spreadGeneration(generationInfos)
 		}
+		// TODO!!! Memory leak: meshPaste is not always disposed
 		this.pruneSectors(removed, cameras, 1.2)
 		debugInformation.set('sectors', this.sectors.size)
 		debugInformation.set('tiles', this.tiles.size)
@@ -265,6 +285,7 @@ export class Land<Tile extends TileBase = TileBase> {
 
 	temporaryTiles = new AxialKeyMap<Tile>()
 	generateOneTile(aRef: AxialRef) {
+		// TODO: if (Number.isFinite(this.landRadius)) return null
 		const point = axial.access(aRef)
 		const generationInfos = new Map<LandPart<Tile>, any>()
 		for (const part of this.parts)
@@ -287,6 +308,13 @@ export class Land<Tile extends TileBase = TileBase> {
 		return completeTile
 	}
 
+	/**
+	 * Callback given to functions susceptible to update tiles - keep track of sectors who have to be re-rendered, &c
+	 * @param sectors
+	 * @param aRef
+	 * @param modifications
+	 * @returns
+	 */
 	tileUpdater(sectors: Sector<Tile>[], aRef: AxialRef, modifications?: Partial<Tile>) {
 		const tile = this.tile(aRef)
 		if (modifications) Object.assign(tile, modifications)
@@ -296,7 +324,7 @@ export class Land<Tile extends TileBase = TileBase> {
 				sector.attachedTiles.add(aRef)
 			}
 		for (const sector of tile.sectors) {
-			this.sectorsToRender.add(sector as Sector<Tile>)
+			this.markToRender(sector as Sector<Tile>)
 			sector.invalidParts = undefined
 		}
 		return tile
@@ -306,12 +334,11 @@ export class Land<Tile extends TileBase = TileBase> {
 		for (const part of parts)
 			part.on('invalidatedRender', (part: LandPart<Tile>, sector: Sector<Tile>) => {
 				sector.invalidate(part)
-				this.sectorsToRender.add(sector)
+				this.markToRender(sector)
 			})
 	}
 
 	progress(dt: number) {
-		this.renderSectors()
 		for (const [key, tile] of this.temporaryTiles) if (!tile.sectors.length) this.tiles.delete(key)
 		this.temporaryTiles.clear()
 	}

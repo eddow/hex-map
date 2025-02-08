@@ -114,9 +114,9 @@ export class PerlinNoise {
 	}
 }
 export class HeightMap {
-	private perlin: PerlinNoise
-	private scale: number // Scale of the Perlin noise
-	private heightRange: [number, number] // Min and max height in meters
+	private readonly perlin: PerlinNoise
+	private readonly scale: number // Scale of the Perlin noise
+	private readonly heightRange: [number, number] // Min and max height in meters
 
 	constructor(
 		seed: number,

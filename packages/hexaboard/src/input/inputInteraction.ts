@@ -1,4 +1,12 @@
-import { Raycaster, Vector2, type Vector2Like, type Vector3Like } from 'three'
+import {
+	type Intersection,
+	type Object3D,
+	type Object3DEventMap,
+	Raycaster,
+	Vector2,
+	type Vector2Like,
+	type Vector3Like,
+} from 'three'
 import type { GameView } from '~/game'
 import { assert, debugInformation } from '~/utils'
 import type {
@@ -9,7 +17,15 @@ import type {
 } from './actions'
 import { D2Buffer } from './d2buffer'
 import { type ActionState, type InputState, configuration2event } from './internals'
-import type { MouseHandle, MouseHandler } from './types'
+
+export type MouseHandler<Handle extends MouseHandle | undefined = MouseHandle | undefined> = (
+	intersection: Intersection<Object3D<Object3DEventMap>>
+) => Handle | undefined
+
+export abstract class MouseHandle {
+	constructor(public readonly sender: any) {}
+	abstract equals(other: MouseHandle): boolean
+}
 
 export interface Intersections {
 	point?: Vector3Like

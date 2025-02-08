@@ -1,4 +1,5 @@
-import { createGame } from '$lib/hexClash/game'
+//import { createGame } from '$lib/hexClash/game'
+import { createGame } from '$lib/gameX/game'
 import type { DockviewApi } from 'dockview-core'
 import { type Game, debugInformation } from 'hexaboard'
 

@@ -1,3 +1,3 @@
 export * from './actions'
 export * from './inputInteraction'
-export * from './types'
+export * from './d2buffer'

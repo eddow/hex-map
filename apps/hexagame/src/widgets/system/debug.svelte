@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { debugInfo } from '$lib/globals.svelte'
-	import { Table, TableBody, TableBodyCell, TableBodyRow, TableHeadCell } from 'flowbite-svelte'
+	import {
+		Button,
+		Table,
+		TableBody,
+		TableBodyCell,
+		TableBodyRow,
+		TableHeadCell
+	} from 'flowbite-svelte'
 
 	function debugged(value: any) {
 		if (typeof value === 'number') return value.toFixed(2)
@@ -11,8 +18,13 @@
 			.join(' | ')
 	}
 	let dDebugInfo = $derived(Object.entries(debugInfo).map(([k, v]) => [k, debugged(v)]))
+	function resetLayout() {
+		localStorage.removeItem('layout')
+		location.reload()
+	}
 </script>
 
+<Button class="w-full" onclick={resetLayout}>Reset layout</Button>
 <Table>
 	<TableBody title="Debug info">
 		{#each dDebugInfo as content}

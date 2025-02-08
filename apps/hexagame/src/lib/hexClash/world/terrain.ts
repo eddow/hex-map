@@ -4,7 +4,6 @@ import {
 	PerlinTerrain,
 	type ResourcefulTerrain,
 	type SeamlessTextureTerrain,
-	TerrainDefinition,
 	type TerrainKey,
 } from 'hexaboard'
 import { RepeatWrapping, TextureLoader } from 'three'
@@ -26,12 +25,11 @@ const terrainTexture = assetTexture('terrain')
 export const terrainHeight = 160
 export const seaLevel = 70
 
-const terrainTypes: Record<TerrainKey, SeamlessTextureTerrain & ResourcefulTerrain> = {
+export const terrainTypes: Record<TerrainKey, SeamlessTextureTerrain & ResourcefulTerrain> = {
 	grass: {
 		color: { r: 0.4, g: 0.8, b: 0.4 },
 		texture: terrainTexture('grass'),
 		inTextureRadius: 0.2,
-		appearHeight: Number.NEGATIVE_INFINITY,
 		//variance: 0.7,
 		resourceDistribution: [
 			[Tree, 0.1],
@@ -42,7 +40,6 @@ const terrainTypes: Record<TerrainKey, SeamlessTextureTerrain & ResourcefulTerra
 		color: { r: 0, g: 0.9, b: 0 },
 		texture: terrainTexture('forest'),
 		inTextureRadius: 0.2,
-		appearHeight: 80,
 		//variance: 2,
 		resourceDistribution: [
 			[Tree, 5],
@@ -54,14 +51,11 @@ const terrainTypes: Record<TerrainKey, SeamlessTextureTerrain & ResourcefulTerra
 		color: { r: 0.6, g: 0.4, b: 0.1 },
 		texture: terrainTexture('stone'),
 		inTextureRadius: 0.2,
-		appearHeight: 110,
 		//variance: 3,
 		resourceDistribution: [[Rock, 3]],
 		walkTimeMultiplier: 1.5,
 	},
 }
-
-export const terrains = new TerrainDefinition(terrainTypes)
 
 const mountainsFrom = 80
 

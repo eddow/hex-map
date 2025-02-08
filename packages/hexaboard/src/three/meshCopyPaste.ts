@@ -1,5 +1,5 @@
 import { InstancedMesh, type Mesh, Object3D, Quaternion, type Scene } from 'three'
-import { assert, debugInformation } from '~/utils'
+import { assert, IndexedCollection, debugInformation } from '~/utils'
 
 const generalMaxCount = 15000
 function rootObj3d(obj3d: Object3D) {
@@ -51,23 +51,24 @@ function gatherIMs(obj3d: Object3D) {
 }
 let hasCount = 0
 function recount(application: MeshCopySceneApplication) {
-	const count = application.pastes.length
+	const count = application.pastes.data.length
 	if (count > hasCount) {
 		debugInformation.set('meshCopy', `${count}/${generalMaxCount}`)
 		hasCount = count + 1
 	}
 	for (const instance of application.instances) instance.count = count
 }
-function forward(meshPaste: MeshPaste, index: number, application: MeshCopySceneApplication) {
+function forward(meshPaste: MeshPaste, application: MeshCopySceneApplication) {
 	for (const instance of application.instances) {
-		instance.setMatrixAt(index, meshPaste.matrixWorld)
+		// indexOF comes from Map -> usually O(1)
+		instance.setMatrixAt(application.pastes.indexOf(meshPaste)!, meshPaste.matrixWorld)
 		instance.instanceMatrix.needsUpdate = true
 	}
 }
 
 type MeshCopySceneApplication = {
 	object3d: Object3D
-	pastes: MeshPaste[]
+	pastes: IndexedCollection<MeshPaste>
 	instances: InstancedMesh[]
 }
 /**
@@ -95,12 +96,12 @@ export class MeshCopy {
 			this.applications.set(scene, {
 				object3d,
 				instances: gatherIMs(object3d),
-				pastes: [],
+				pastes: new IndexedCollection<MeshPaste>(),
 			})
 			scene.add(object3d)
 		}
 		const application = this.application(scene)
-		application.pastes.push(meshPaste)
+		application.pastes.add(meshPaste)
 		recount(application)
 		meshPaste.updateMatrixWorld(true)
 		//forward(meshPaste, index, application)	// No need: this is called in `updateMatrixWorld`
@@ -108,23 +109,16 @@ export class MeshCopy {
 	updated(scene: Scene, meshPaste: MeshPaste) {
 		const application = this.application(scene)
 		const pastes = application?.pastes
-		const index = pastes?.indexOf(meshPaste)
-
-		assert(index !== -1 || (!index && index !== 0), 'MeshPaste not registered')
-		forward(meshPaste, index, application)
+		forward(meshPaste, application)
 	}
 	unregister(meshPaste: MeshPaste, scene: Scene) {
 		const application = this.application(scene)
 		const pastes = application.pastes
-		const index = pastes.indexOf(meshPaste)
-		assert(index >= 0, 'MeshPaste not registered')
-		const last = pastes.pop()!
+
+		const moved = pastes.remove(meshPaste)
 		recount(application)
 		// move the last instance to fill the freed gap
-		if (index < pastes.length) {
-			pastes[index] = last
-			forward(last, index, application)
-		}
+		if (moved) forward(moved, application)
 	}
 }
 

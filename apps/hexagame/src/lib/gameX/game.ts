@@ -5,26 +5,16 @@ import {
 	type ContentTile,
 	ContinuousTextureLandscape,
 	Game,
-	HeightTerrain,
-	type HoverAction,
-	type InputActions,
 	InputInteraction,
 	InputMode,
-	type InterfaceConfigurations,
 	Land,
 	type Landscape,
 	Landscaper,
-	MouseButton,
-	MouseButtons,
 	OceanLandscape,
-	type OneButtonAction,
-	PerlinHeight,
 	Resourceful,
 	type RiverTile,
 	Rivers,
 	type RoadKey,
-	type Scroll1DAction,
-	type Scroll2DAction,
 	type SeamlessTextureTerrain,
 	TileCursor,
 	TileHandle,
@@ -32,7 +22,6 @@ import {
 	costingPath,
 	handledActions,
 	icosahedron,
-	modKeyCombination,
 	pointActions,
 	textureStyle,
 	viewActions,
@@ -46,111 +35,11 @@ import {
 	Vector3,
 } from 'three'
 import { dockview } from '../globals.svelte'
-import { roadTypes, seaLevel, terrainHeight, terrains } from './world/textures'
+import { type GameXActions, inputsConfiguration } from './inputs'
+import { roadTypes, seaLevel, terrainFactory, terrainHeight, terrainTypes } from './world/terrain'
 
 export type GameXTile = ContentTile & RiverTile
 export type GameXLand = Land<GameXTile>
-
-interface GameXActions extends InputActions {
-	select: OneButtonAction
-	zoom: Scroll1DAction
-	pan: Scroll2DAction
-	hover: HoverAction
-	roadDraw: HoverAction
-}
-const panButtons = MouseButtons.left + MouseButtons.right
-const cfg: InterfaceConfigurations<GameXActions> = {
-	select: [
-		{
-			type: 'click',
-			modifiers: modKeyCombination.none,
-			button: MouseButton.left,
-		},
-		{
-			type: 'keydown',
-			modifiers: modKeyCombination.none,
-			key: {
-				code: 'Enter',
-			},
-		},
-	],
-	zoom: [
-		{
-			type: 'wheelY',
-			modifiers: modKeyCombination.none,
-		},
-		{
-			type: 'press2',
-			modifiers: [{ on: modKeyCombination.none, use: { multiplier: 1 } }],
-			multiplier: 0,
-			keyNeg: {
-				code: 'PageUp',
-			},
-			keyPos: {
-				code: 'PageDown',
-			},
-		},
-	],
-	pan: [
-		{
-			type: 'delta',
-			buttons: panButtons,
-			modifiers: modKeyCombination.none,
-			invertX: false,
-			invertY: false,
-		},
-		{
-			type: 'press4',
-			modifiers: [
-				{ on: modKeyCombination.none, use: { multiplier: 1 } },
-				{ on: modKeyCombination.shift, use: { multiplier: 2 } },
-			],
-			keyXNeg: {
-				code: 'KeyD',
-			},
-			keyXPos: {
-				code: 'KeyA',
-			},
-			keyYNeg: {
-				code: 'KeyS',
-			},
-			keyYPos: {
-				code: 'KeyW',
-			},
-		},
-	],
-	turn: [
-		{
-			type: 'delta',
-			buttons: MouseButtons.middle,
-			modifiers: modKeyCombination.none,
-			invertX: false,
-			invertY: false,
-		},
-	],
-	hover: [
-		{
-			type: 'hover',
-			buttonHoverType: true,
-			keyModHoverType: false,
-			buttons: [{ on: MouseButtons.none, use: { buttonHoverType: 'selectable' } }],
-			modifiers: [{ on: modKeyCombination.none, use: { keyModHoverType: 'selectable' } }],
-		},
-	],
-	roadDraw: [
-		{
-			type: 'hover',
-			buttonHoverType: 'cancel',
-			keyModHoverType: false,
-			buttons: [
-				{ on: MouseButtons.left, use: { buttonHoverType: 'drag' } },
-				{ on: MouseButtons.none, use: { buttonHoverType: 'drop' } },
-				{ on: panButtons, use: { buttonHoverType: 'over' } },
-			],
-			modifiers: modKeyCombination.none,
-		},
-	],
-}
 
 export function createGame(name: string, seed: number) {
 	const cursor = new TileCursor(
@@ -257,21 +146,22 @@ export function createGame(name: string, seed: number) {
 	}
 
 	const gameInputInteraction = new InputInteraction<GameXActions>(
-		cfg,
+		inputsConfiguration,
 		navigationMode,
 		roadDrawMode('hc')
 		//selectionMode
 	)
-	const land = new Land<GameXTile>(8, 20)
+	//DEBUG VALUE
+	const land = new Land<GameXTile>(4, 20)
+	//	const land = new Land<GameXTile>(2, 20)
 	const landscape = new ContinuousTextureLandscape<GameXTile, SeamlessTextureTerrain>(
 		land.sectorRadius,
-		terrains,
+		terrainTypes,
 		textureStyle.seamless(3, seed)
 	)
 	const grid = new ColorRoadGrid(land.sectorRadius, roadTypes)
 	land.addPart(
-		new PerlinHeight<GameXTile>(terrainHeight, seed, 1000),
-		new HeightTerrain<GameXTile>(terrainHeight / 10, seed, terrains, 1000),
+		terrainFactory(seed),
 
 		new Landscaper<GameXTile>(
 			new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),
@@ -279,7 +169,7 @@ export function createGame(name: string, seed: number) {
 			grid,
 			new OceanLandscape<GameXTile>(land.sectorRadius, seaLevel)
 		),
-		new Resourceful(terrains, seed, seaLevel)
+		new Resourceful(terrainTypes, seed, seaLevel)
 	)
 
 	const game = new Game(land, gameInputInteraction)

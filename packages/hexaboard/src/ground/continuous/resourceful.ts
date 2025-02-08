@@ -2,8 +2,8 @@ import { Group, type Object3D } from 'three'
 import { Handelable, type ResourcefulTerrain } from '~/game'
 import { Eventful, LCG, type RandGenerator, genTilePosition } from '~/utils'
 import type { LandPart, RenderedEvents, WalkTimeSpecification } from '../land'
+import type { TerrainKey, TerrainTile } from '../perlinTerrain'
 import type { Sector } from '../sector'
-import type { TerrainDefinition, TerrainTile } from '../terrain'
 
 // Hardcoded to have 7 (center + 6 sides) places for stuff (resources, supplies, ...) roughly placed at the same place
 const placesInTile = 7
@@ -64,7 +64,7 @@ export class Resourceful<
 	implements LandPart<Tile>
 {
 	constructor(
-		private readonly terrainDefinition: TerrainDefinition<Terrain>,
+		private readonly terrainTypes: Record<TerrainKey, Terrain>,
 		private readonly seed: number,
 		private readonly seaLevel: number = 0
 	) {
@@ -86,7 +86,7 @@ export class Resourceful<
 					? Array.from(
 							this.generateResources(
 								LCG(this.seed, 'resourceful', tile.position.x, tile.position.y),
-								this.terrainDefinition.types[tile.terrain]
+								this.terrainTypes[tile.terrain]
 							)
 						)
 					: []

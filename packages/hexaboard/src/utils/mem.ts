@@ -282,3 +282,33 @@ export class HeapMin<Indexed, Comparable extends number | string> extends Heap<
 		return a < b
 	}
 }
+
+export class IndexedCollection<Indexed> {
+	private indexMap: Map<Indexed, number> = new Map()
+	constructor(public readonly data: Indexed[] = []) {
+		for (const [i, obj] of data.entries()) this.indexMap.set(obj, i)
+	}
+	/** Add a new object at the next available index */
+	add(obj: Indexed): number {
+		const index = this.data.length
+		this.indexMap.set(obj, this.data.length)
+		this.data.push(obj)
+		return index
+	}
+
+	/** Remove an object by index (swap with last) */
+	remove(obj: Indexed): Indexed | undefined {
+		const index = this.indexMap.get(obj)
+		if (index === undefined) return undefined
+		const moved = this.data.pop()
+		if (moved === obj) return undefined
+		this.data[index] = moved!
+		this.indexMap.set(moved!, index)
+		this.indexMap.delete(obj)
+		return moved
+	}
+
+	indexOf(obj: Indexed): number | undefined {
+		return this.indexMap.get(obj)
+	}
+}

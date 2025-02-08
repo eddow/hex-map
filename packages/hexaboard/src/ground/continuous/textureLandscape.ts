@@ -10,8 +10,8 @@ import {
 } from 'three'
 import type { Triplet } from '~/types'
 import { type Axial, type AxialKey, AxialKeyMap, LCG, axial, numbers } from '~/utils'
+import type { TerrainBase, TerrainKey, TerrainTile } from '../perlinTerrain'
 import type { Sector } from '../sector'
-import type { TerrainBase, TerrainDefinition, TerrainKey, TerrainTile } from '../terrain'
 import { CompleteLandscape } from './completeLandscape'
 import type { LandscapeTriangle } from './landscape'
 
@@ -150,36 +150,28 @@ export class ContinuousTextureLandscape<
 	private texturesIndex: Record<TerrainKey, number>
 	constructor(
 		sectorRadius: number,
-		private readonly terrainDefinition: TerrainDefinition<TextureTerrain>,
+		private readonly terrainTypes: Record<TerrainKey, TextureTerrain>,
 		private readonly textureStyle: TileTextureStyle<Terrain>
 	) {
 		super(sectorRadius)
-		this.textures = Array.from(
-			new Set(Object.values(terrainDefinition.types).map((t) => t.texture))
-		)
+		this.textures = Array.from(new Set(Object.values(terrainTypes).map((t) => t.texture)))
 		this.material = threeTexturedMaterial(this.textures, textureStyle.weightMix)
 
 		// Index of all the textures by terrain type name
 		this.texturesIndex = Object.fromEntries(
-			Object.entries(this.terrainDefinition.types).map(([k, v]) => [
-				k,
-				this.textures.indexOf(v.texture),
-			])
+			Object.entries(this.terrainTypes).map(([k, v]) => [k, this.textures.indexOf(v.texture)])
 		)
 	}
 	createGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]): BufferGeometry {
 		// Gather the texture positions
-		const { textureStyle, terrainDefinition } = this
+		const { textureStyle, terrainTypes } = this
 		const textureUvCache = new AxialKeyMap(
 			(function* () {
 				for (const [i, tile] of sector.tiles) {
 					const coord = axial.keyAccess(i)
 					yield [
 						i,
-						textureStyle.texturePosition(
-							terrainDefinition.types[tile.terrain] as Terrain,
-							axial.keyAccess(i)
-						),
+						textureStyle.texturePosition(terrainTypes[tile.terrain] as Terrain, axial.keyAccess(i)),
 					]
 				}
 			})()

@@ -1,9 +1,10 @@
+import type { HexClashTile } from '$lib/hexClash/world/terrain'
 import {
 	type ColorRoad,
+	PerlinTerrain,
 	type ResourcefulTerrain,
 	type RoadKey,
 	type SeamlessTextureTerrain,
-	TerrainDefinition,
 	type TerrainKey,
 } from 'hexaboard'
 import { RepeatWrapping, TextureLoader } from 'three'
@@ -24,7 +25,7 @@ const roadTexture = assetTexture('road')
 export const terrainHeight = 160
 export const seaLevel = 70
 
-const terrainTypes: Record<TerrainKey, SeamlessTextureTerrain & ResourcefulTerrain> = {
+export const terrainTypes: Record<TerrainKey, SeamlessTextureTerrain & ResourcefulTerrain> = {
 	sand: {
 		color: { r: 0.8, g: 0.8, b: 0 },
 		texture: terrainTexture('sand'),
@@ -87,8 +88,6 @@ const terrainTypes: Record<TerrainKey, SeamlessTextureTerrain & ResourcefulTerra
 	},
 }
 
-export const terrains = new TerrainDefinition(terrainTypes)
-
 export const roadTypes: Record<RoadKey, ColorRoad> = {
 	hc: {
 		width: 0.05,
@@ -99,4 +98,55 @@ export const roadTypes: Record<RoadKey, ColorRoad> = {
 	},
 }
 
-//export const terrains = new TerrainDefinition(terrainTypes)
+const mountainsFrom = 130
+
+export function terrainFactory(seed: number) {
+	return new PerlinTerrain<HexClashTile, 'height' | 'type' | 'rocky'>(
+		seed,
+		{
+			height: {
+				variation: [0, 160],
+				scale: 1000,
+			},
+			type: {
+				variation: [-1, 1],
+				scale: 500,
+			},
+			rocky: {
+				variation: [-1, 1],
+				scale: 100,
+			},
+		},
+		(from, generation) => {
+			const isMountain = generation.height > mountainsFrom
+			if (isMountain) {
+				return {
+					...from,
+					position: {
+						...from.position,
+						z: generation.height + generation.rocky * (generation.height - mountainsFrom),
+					},
+					terrain: generation.height > 155 ? 'snow' : 'stone',
+				}
+			}
+			const z = generation.height
+			return z > 75
+				? {
+						...from,
+						position: {
+							...from.position,
+							z,
+						},
+						terrain: generation.type > 0 ? 'forest' : 'grass',
+					}
+				: {
+						...from,
+						position: {
+							...from.position,
+							z,
+						},
+						terrain: 'sand',
+					}
+		}
+	)
+}
