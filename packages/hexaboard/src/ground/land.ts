@@ -77,8 +77,8 @@ function distance(p1: { x: number; y: number }, p2: { x: number; y: number }): n
 
 function cameraVision(camera: PerspectiveCamera): number {
 	//DEBUG VALUE
-	//return camera.far / Math.cos((camera.fov * Math.PI) / 360)
-	return 300
+	return camera.far / Math.cos((camera.fov * Math.PI) / 360)
+	//return 300
 }
 
 function* viewedSectors(centerCoord: AxialCoord, camera: PerspectiveCamera, size: number) {
