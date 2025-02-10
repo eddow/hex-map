@@ -30,8 +30,6 @@ export const terrainTypes: Record<TerrainKey, SeamlessTextureTerrain & Resourcef
 		color: { r: 0.8, g: 0.8, b: 0 },
 		texture: terrainTexture('sand'),
 		inTextureRadius: 0.2,
-		appearHeight: Number.NEGATIVE_INFINITY,
-		//variance: 0.1,
 		resourceDistribution: [[Rock, 0.1]],
 		walkTimeMultiplier: 1.1,
 	},
@@ -39,8 +37,6 @@ export const terrainTypes: Record<TerrainKey, SeamlessTextureTerrain & Resourcef
 		color: { r: 0.4, g: 0.8, b: 0.4 },
 		texture: terrainTexture('grass'),
 		inTextureRadius: 0.2,
-		appearHeight: 75,
-		//variance: 0.7,
 		resourceDistribution: [
 			[Rock, 0.2],
 			[Tree, 0.2],
@@ -50,8 +46,6 @@ export const terrainTypes: Record<TerrainKey, SeamlessTextureTerrain & Resourcef
 		color: { r: 0, g: 0.9, b: 0 },
 		texture: terrainTexture('forest'),
 		inTextureRadius: 0.2,
-		appearHeight: 100,
-		//variance: 2,
 		resourceDistribution: [
 			[Rock, 0.1],
 			[Tree, 1.5],
@@ -62,8 +56,6 @@ export const terrainTypes: Record<TerrainKey, SeamlessTextureTerrain & Resourcef
 		color: { r: 0.6, g: 0.4, b: 0.1 },
 		texture: terrainTexture('stone'),
 		inTextureRadius: 0.2,
-		appearHeight: 115,
-		//variance: 3,
 		resourceDistribution: [
 			[Rock, 1.5],
 			[Tree, 0.2],
@@ -74,8 +66,6 @@ export const terrainTypes: Record<TerrainKey, SeamlessTextureTerrain & Resourcef
 		color: { r: 0.9, g: 0.9, b: 0.9 },
 		texture: terrainTexture('snow'),
 		inTextureRadius: 0.2,
-		appearHeight: 130,
-		//variance: 1.5,
 		resourceDistribution: [[Rock, 0.2]],
 		walkTimeMultiplier: 2,
 	},
@@ -83,7 +73,6 @@ export const terrainTypes: Record<TerrainKey, SeamlessTextureTerrain & Resourcef
 		color: { r: 0.8, g: 0.8, b: 0 },
 		texture: terrainTexture('river_bed'),
 		inTextureRadius: 0.6,
-		//variance: 0.1,
 		resourceDistribution: [[Rock, 1]],
 	},
 }

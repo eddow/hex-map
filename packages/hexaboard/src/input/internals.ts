@@ -11,7 +11,7 @@ import type {
 	OneWheelConfiguration,
 	SwitchableConfiguration,
 } from './actions'
-import type { ModKeyCombination, MouseButton, MouseButtons } from './types'
+import type { MouseButtons, ModKeyCombination, MouseButton } from './d2buffer'
 
 export type AnyConfiguration =
 	| ActionConfiguration

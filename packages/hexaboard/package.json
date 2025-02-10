@@ -17,7 +17,14 @@
 	"exports": {
 		".": {
 			"types": "./dist/src/index.d.ts",
-			"import": "./dist/hexaboard.js"
+			"import": "./dist/hexaboard.js",
+			"require": "./dist/hexaboard.cjs"
+		},
+		"./vite": {
+			"types": "./dist/vite-plugin.d.ts",
+			"import": "./dist/vite-plugin.js",
+			"require": "./dist/vite-plugin.cjs"
+
 		}
 	},
 	"scripts": {

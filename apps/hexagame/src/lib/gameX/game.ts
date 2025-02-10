@@ -34,7 +34,7 @@ import {
 	TubeGeometry,
 	Vector3,
 } from 'three'
-import { dockview } from '../globals.svelte'
+import { debugInfo, dockview } from '../globals.svelte'
 import { type GameXActions, inputsConfiguration } from './inputs'
 import { roadTypes, seaLevel, terrainFactory, terrainHeight, terrainTypes } from './world/terrain'
 
@@ -80,11 +80,13 @@ export function createGame(name: string, seed: number) {
 			},
 			hover(tile, event) {
 				cursor.tile = event.buttonHoverType && event.keyModHoverType ? tile : undefined
+				debugInfo.tile = tile.point
 			},
 		}),
 		viewActions({
 			hover() {
 				cursor.tile = undefined
+				debugInfo.tile = undefined
 			},
 		})
 	)
@@ -148,8 +150,8 @@ export function createGame(name: string, seed: number) {
 	const gameInputInteraction = new InputInteraction<GameXActions>(
 		inputsConfiguration,
 		navigationMode,
-		roadDrawMode('hc')
-		//selectionMode
+		//roadDrawMode('hc')
+		selectionMode
 	)
 	//DEBUG VALUE
 	//const land = new Land<GameXTile>(4, 20)
@@ -157,7 +159,7 @@ export function createGame(name: string, seed: number) {
 	const landscape = new ContinuousTextureLandscape<GameXTile, SeamlessTextureTerrain>(
 		land.sectorRadius,
 		terrainTypes,
-		textureStyle.seamless(3, seed)
+		textureStyle.seamless(3)
 	)
 	const grid = new ColorRoadGrid(land.sectorRadius, roadTypes)
 	land.addPart(

@@ -1,6 +1,6 @@
 import { BufferGeometry, Float32BufferAttribute, ShaderMaterial } from 'three'
 import { costingPath } from '~/game'
-import { type AxialCoord, type AxialKey, LCG, axial } from '~/utils'
+import { type Axial, type AxialCoord, type AxialKey, LCG, axial } from '~/utils'
 import type { Land, TileUpdater, WalkTimeSpecification } from '../land'
 import type { TerrainKey, TerrainTile } from '../perlinTerrain'
 import type { Sector } from '../sector'
@@ -8,7 +8,6 @@ import type { LandscapeTriangle } from './landscape'
 import { ContinuousPartialLandscape } from './partialLandscape'
 
 // TODO: avoid ending in a puddle
-type Sources = AxialCoord[]
 
 export interface RiverTile extends TerrainTile {
 	riverHeight?: number
@@ -61,6 +60,7 @@ export type RivesOptions = {
 export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousPartialLandscape<Tile> {
 	options: RivesOptions
 	protected readonly material = riverMaterial
+	private sources: AxialCoord[] = []
 	constructor(
 		private readonly land: Land<Tile>,
 		private readonly seed: number,
@@ -78,10 +78,7 @@ export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousPartia
 		super(land.sectorRadius)
 		this.options = { riverTerrain, minLength, minBankSlope, minStreamSlope }
 	}
-	beginGeneration() {
-		return []
-	}
-	refineTile(tile: Tile, coord: AxialCoord, sources: Sources): undefined {
+	refineTile(tile: Tile, coord: AxialCoord): undefined {
 		// Avoids sources being neighbors
 		if (tile.position.z < this.seaLevel || ((coord.q | coord.r) & 1) !== 0) return
 		const gen = LCG(this.seed, 'rivers', coord.q, coord.r)
@@ -90,11 +87,13 @@ export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousPartia
 			(this.sourcesPerTile * (tile.position.z - this.seaLevel)) /
 				(this.terrainHeight - this.seaLevel)
 		)
-			sources.push(coord)
+			this.sources.push(coord)
 	}
 
-	spreadGeneration(updateTile: TileUpdater<Tile>, sources: Sources): void {
+	spreadGeneration(updateTile: TileUpdater<Tile>): void {
 		const Z = (tile: Tile) => tile.originalZ ?? tile.position.z
+		const { sources } = this
+		this.sources = []
 		for (const source of sources) {
 			const path = costingPath(
 				source,
@@ -131,11 +130,12 @@ export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousPartia
 				const ultimatePosition = this.land.tile(path[path.length - 1]).position
 				// Last processed tile
 				let lastTile = this.land.tile(source)
-				let lastPoint = source
-				updateTile([], source, {
-					terrain: this.options.riverTerrain,
-					riverHeight: lastTile.position.z,
-				} as Partial<Tile>)
+				let lastPoint: Axial = axial.coordAccess(source)
+				if (!lastTile.riverHeight || lastTile.riverHeight !== lastTile.position.z)
+					updateTile([], source, {
+						terrain: this.options.riverTerrain,
+						riverHeight: lastTile.position.z,
+					} as Partial<Tile>)
 				const bank = new Set<AxialKey>()
 				for (let step = 1; step < path.length; step++) {
 					const point = path[step]!
@@ -144,7 +144,7 @@ export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousPartia
 					const tileNeighbors = axial
 						.neighbors(point)
 						.map((c) => axial.coordAccess(c))
-						.filter((p) => ![path[step + 1], lastPoint].includes(p))
+						.filter((p) => ![path[step + 1]?.key, lastPoint.key].includes(p.key))
 
 					for (const neighbor of tileNeighbors) bank.add(neighbor.key)
 					const minNeighborZ = Math.min(
@@ -167,11 +167,12 @@ export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousPartia
 					)
 					if (riverHeight < minRiverHeight) minRiverHeight = riverHeight
 					if (riverHeight > maxRiverHeight) maxRiverHeight = riverHeight
-					updateTile(sourceSectors, point, {
-						terrain: this.options.riverTerrain,
-						riverHeight,
-						position: { ...tile.position, z },
-					} as Partial<Tile>)
+					if (!tile.riverHeight || tile.riverHeight !== riverHeight || tile.position.z !== z)
+						updateTile(sourceSectors, point, {
+							terrain: this.options.riverTerrain,
+							riverHeight,
+							position: { ...tile.position, z },
+						} as Partial<Tile>)
 
 					lastTile = tile
 					lastPoint = point
@@ -209,7 +210,7 @@ export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousPartia
 			//if (nbrRiverHeights < 3 && (nbrRiverHeights < 1 || nbrOcean < 1)) continue
 		}
 	}
-	createPartialGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
+	async createPartialGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
 		const positions: number[] = []
 		const opacities: number[] = []
 		const colors: number[] = []

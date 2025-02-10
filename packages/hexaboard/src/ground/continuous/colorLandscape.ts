@@ -3,7 +3,7 @@ import type { AxialCoord } from '~/utils'
 import type { TileBase } from '../land'
 import type { Sector } from '../sector'
 import { CompleteLandscape } from './completeLandscape'
-import type { LandscapeTriangle } from './landscape'
+import { centeredTriangles, type LandscapeTriangle } from './landscape'
 
 interface ColorTile extends TileBase {
 	color: RGB
@@ -20,7 +20,8 @@ export class ContinuousColorLandscape<
 			wireframe: true,
 		})
 	}
-	createGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
+	async createGeometry(sector: Sector<Tile>, genericTriangles: LandscapeTriangle<AxialCoord>[]) {
+		const triangles = centeredTriangles(genericTriangles, sector.center)
 		const positions = new Float32Array(triangles.length * 9)
 		const colors = new Float32Array(triangles.length * 9)
 		let index = 0

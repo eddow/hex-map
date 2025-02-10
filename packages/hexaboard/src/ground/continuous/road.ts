@@ -39,7 +39,7 @@ export class RoadHandle<
 	}
 	@cached()
 	get tiles() {
-		return this.points.map((p) => this.sector.tiles.get(p)) as [Tile, Tile]
+		return this.points.map((p) => this.sector.tile(p)) as [Tile, Tile]
 	}
 	@cached()
 	get directions(): [AxialDirection, AxialDirection] | null {

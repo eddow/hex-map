@@ -5,9 +5,8 @@ import type { Axial } from '~/utils/axial'
 import type { LandPart, RenderedEvents, TileBase, TileUpdater, WalkTimeSpecification } from './land'
 import type { Sector } from './sector'
 
-export interface Landscape<Tile extends TileBase, GenerationInfo = unknown>
-	extends LandPart<Tile, GenerationInfo> {
-	createSector3D(sector: Sector<Tile>): Object3D
+export interface Landscape<Tile extends TileBase> extends LandPart<Tile> {
+	createSector3D(sector: Sector<Tile>): Promise<Object3D>
 }
 
 export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
@@ -19,7 +18,7 @@ export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
 		super(sender)
 	}
 	get tile() {
-		return this.sector.tiles.get(this.point.key) as Tile
+		return this.sector.tile(this.point) as Tile
 	}
 	equals(other: MouseHandle): boolean {
 		return other instanceof TileHandle && this.point.key === other.point.key
@@ -30,7 +29,7 @@ export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
  */
 export class Landscaper<Tile extends TileBase>
 	extends Eventful<RenderedEvents<Tile>>
-	implements LandPart<Tile, unknown[]>
+	implements LandPart<Tile>
 {
 	public static renderOrders = 0
 	private readonly landscapes: Landscape<Tile>[]
@@ -52,36 +51,30 @@ export class Landscaper<Tile extends TileBase>
 			})
 		}
 	}
-	renderSector(sector: Sector<Tile>): void {
+	async renderSector(sector: Sector<Tile>) {
 		const invalidated = this.invalidated.get(sector) as Set<Landscape<Tile>>
 		if (invalidated) this.invalidated.delete(sector)
 		for (const landscape of invalidated ?? this.landscapes) {
 			landscape.renderSector?.(sector)
-			const o3d = landscape.createSector3D(sector)
+			const o3d = await landscape.createSector3D(sector)
 			o3d.traverse((o: Object3D) => {
 				o.renderOrder = Landscaper.renderOrders + this.landscapes.indexOf(landscape)
 			})
 
-			sector.add(landscape, o3d)
+			sector.setPartO3d(landscape, o3d)
 		}
 	}
-
-	beginGeneration() {
-		return this.landscapes.map((landscape) => landscape?.beginGeneration?.())
-	}
 	/**
-	 *
-	 * @param generationInfo Allows this part to spread generative modifications across multiple sectors
 	 * @param updateTile Function to call when a tile is modified
 	 */
-	spreadGeneration?(updateTile: TileUpdater<Tile>, generationInfo: unknown[]): void {
+	spreadGeneration?(updateTile: TileUpdater<Tile>): void {
 		for (let i = 0; i < this.landscapes.length; i++)
-			this.landscapes[i].spreadGeneration?.(updateTile, generationInfo[i])
+			this.landscapes[i].spreadGeneration?.(updateTile)
 	}
 
-	refineTile(tile: TileBase, coord: Axial, generationInfo: unknown[]): Tile {
+	refineTile(tile: TileBase, coord: Axial): Tile {
 		for (let i = 0; i < this.landscapes.length; i++)
-			tile = this.landscapes[i].refineTile?.(tile, coord, generationInfo[i]) ?? tile
+			tile = this.landscapes[i].refineTile?.(tile, coord) ?? tile
 		return tile as Tile
 	}
 

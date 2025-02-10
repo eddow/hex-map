@@ -16,6 +16,10 @@
 		"verbatimModuleSyntax": true,
 		"paths": {
 			"~/*": ["./src/*"]
-		}
+		},
+		"types": [
+			"three",
+			"vite/client"
+		]
 	}
 }

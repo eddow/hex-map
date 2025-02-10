@@ -58,7 +58,8 @@ export function hexTiles(radius: number) {
 	return radius === 0 ? 0 : 3 * radius * (radius - 1) + 1
 }
 
-export function cartesian({ q, r }: AxialCoord, size = 1) {
+export function cartesian(aRef: AxialRef, size = 1) {
+	const { q, r } = axial.access(aRef)
 	const A = Math.sqrt(3) * size
 	const B = (Math.sqrt(3) / 2) * size
 	const C = (3 / 2) * size

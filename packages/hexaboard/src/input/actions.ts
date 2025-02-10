@@ -1,14 +1,14 @@
 import { Vector2, type Vector2Like, Vector3, type Vector3Like } from 'three'
 import { clamp } from 'three/src/math/MathUtils'
 import type { GameView } from '~/game'
-import type { InputInteraction } from './inputInteraction'
+import type { InputInteraction, MouseHandle } from './inputInteraction'
 import {
 	type AnyConfiguration,
 	type InputState,
 	switchConfiguration,
 	transformers,
 } from './internals'
-import type { ModKeyCombination, MouseButton, MouseButtons, MouseHandle } from './types'
+import type { ModKeyCombination, MouseButton, MouseButtons } from './d2buffer'
 
 // #region Generics
 export interface D3InputEvent {

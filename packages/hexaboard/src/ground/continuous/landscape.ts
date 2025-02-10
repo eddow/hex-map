@@ -30,7 +30,9 @@ const geometryCache = new Map<
 	}
 >()
 
-function* sectorTriangles(maxAxialDistance: number): Generator<LandscapeTriangle<AxialCoord>> {
+export function* sectorTriangles(
+	maxAxialDistance: number
+): Generator<LandscapeTriangle<AxialCoord>> {
 	for (let r = -maxAxialDistance; r < maxAxialDistance; r++) {
 		const qFrom = Math.max(1 - maxAxialDistance, -r - maxAxialDistance)
 		const qTo = Math.min(maxAxialDistance, -r + maxAxialDistance)
@@ -74,7 +76,7 @@ function* sectorTriangles(maxAxialDistance: number): Generator<LandscapeTriangle
 	}
 }
 
-function centeredTriangles(
+export function centeredTriangles(
 	triangles: Iterable<LandscapeTriangle<AxialCoord>>,
 	center: AxialCoord
 ): LandscapeTriangle[] {
@@ -115,8 +117,8 @@ export abstract class ContinuousLandscape<Tile extends TileBase>
 			})
 		}
 	}
-	createSector3D(sector: Sector<Tile>): Object3D {
-		const geometry = this.createGeometry(sector, centeredTriangles(this.triangles, sector.center))
+	async createSector3D(sector: Sector<Tile>): Promise<Object3D> {
+		const geometry = await this.createGeometry(sector, this.triangles)
 		const mesh = new Mesh(geometry, this.material)
 
 		if (this.mouseHandler)
@@ -142,7 +144,7 @@ export abstract class ContinuousLandscape<Tile extends TileBase>
 	): MouseHandle | undefined
 	protected abstract createGeometry(
 		sector: Sector<Tile>,
-		triangles: LandscapeTriangle[]
-	): BufferGeometry | undefined
+		triangles: LandscapeTriangle<AxialCoord>[]
+	): Promise<BufferGeometry | undefined>
 	protected abstract material: Material
 }

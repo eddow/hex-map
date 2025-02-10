@@ -76,9 +76,9 @@ export class Resourceful<
 		for (let i = 0; i < placesInTile; i++) yield generateResource(gen, terrain)
 	}
 
-	renderSector(sector: Sector<Tile>): void {
+	async renderSector(sector: Sector<Tile>) {
+		//console.log('Rendering sector', sector.center)
 		const group = new Group()
-		sector.add(this, group)
 		for (const [tRef, tile] of sector.tiles.entries()) {
 			// Resource content is generated in the `render` phase so that the terrain is completely generated for sure
 			tile.content ??=
@@ -106,6 +106,7 @@ export class Resourceful<
 				}
 			}
 		}
+		sector.setPartO3d(this, group)
 	}
 	walkTimeMultiplier({ on, direction }: WalkTimeSpecification<Tile>): number | undefined {
 		const center = on.content?.[0]?.walkTimeMultiplier ?? 1

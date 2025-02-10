@@ -8,12 +8,14 @@ import {
 	UniformsLib,
 	UniformsUtils,
 } from 'three'
-import type { Triplet } from '~/types'
-import { type Axial, type AxialKey, AxialKeyMap, LCG, axial, numbers } from '~/utils'
+import { type Axial, type AxialCoord, type RandGenerator, numbers } from '~/utils'
+import { WorkerManager, extractFunctionParts } from '~/utils/workers'
 import type { TerrainBase, TerrainKey, TerrainTile } from '../perlinTerrain'
 import type { Sector } from '../sector'
 import { CompleteLandscape } from './completeLandscape'
 import type { LandscapeTriangle } from './landscape'
+import type { ContinuousTextureLandscapeWorker } from './textureLandscape.worker'
+import CreateGeometryWorker from './textureLandscape.worker.ts?worker&url'
 
 interface TexturePosition {
 	alpha: number
@@ -23,45 +25,11 @@ interface TexturePosition {
 export interface TextureTerrain extends TerrainBase {
 	texture: Texture
 }
-export interface SeamlessTextureTerrain extends TextureTerrain {
+export interface SeamlessTextureInfo {
 	// Textures are images virtually of size 1x1 - this is the size of the part of the picture taken by tiles
 	inTextureRadius: number
 }
-
-const scSummits: { cos: number; sin: number }[] = []
-for (let i = 0; i < 6; i++) {
-	scSummits.push({ cos: Math.cos((i * Math.PI) / 3), sin: Math.sin((i * Math.PI) / 3) })
-}
-
-// TODO: Now, side is 0 or 1, optimize ?
-function textureUVs(
-	{ alpha, radius: inTextureRadius, center: { u, v } }: TexturePosition,
-	side: 0 | 1,
-	rot: 0 | 2 | 4
-) {
-	const scAlpha = {
-		cos: inTextureRadius * Math.cos(alpha),
-		sin: inTextureRadius * Math.sin(alpha),
-	}
-	const rs = rot + side
-	const rs1 = (rs + 1) % 6
-
-	// use `cos(a+b)=cos(a)*cos(b)-sin(a)*sin(b)` & `sin(a+b)=sin(a)*cos(b)+cos(a)*sin(b)`
-	const bp1u = u + scAlpha.cos * scSummits[rs1].cos - scAlpha.sin * scSummits[rs1].sin
-	const bp1v = v + scAlpha.cos * scSummits[rs1].sin + scAlpha.sin * scSummits[rs1].cos
-	const bp2u = u + scAlpha.cos * scSummits[rs].cos - scAlpha.sin * scSummits[rs].sin
-	const bp2v = v + scAlpha.cos * scSummits[rs].sin + scAlpha.sin * scSummits[rs].cos
-	switch (rot) {
-		case 0:
-			return [u, v, bp1u, bp1v, bp2u, bp2v]
-		case 2:
-			return [bp1u, bp1v, bp2u, bp2v, u, v]
-		case 4:
-			return [bp2u, bp2v, u, v, bp1u, bp1v]
-		default:
-			throw new Error('Invalid rotation value')
-	}
-}
+export interface SeamlessTextureTerrain extends TextureTerrain, SeamlessTextureInfo {}
 
 /**
  * Ways to mix textures between adjacent hexagons
@@ -95,7 +63,7 @@ vec3 bary2weights(vec3 v) {
 }`,
 }
 
-export interface TileTextureStyle<Terrain extends TextureTerrain = TextureTerrain> {
+export interface TileTextureStyle<Terrain = unknown> {
 	/**
 	 * GLSL texture mixer for borders
 	 */
@@ -105,15 +73,15 @@ export interface TileTextureStyle<Terrain extends TextureTerrain = TextureTerrai
 	 * @param point
 	 * @returns
 	 */
-	texturePosition(terrain: Terrain, point: Axial): TexturePosition
+	texturePosition(terrain: Terrain, point: Axial, gen: RandGenerator): TexturePosition
+	extract?(terrain: Terrain): Terrain
 }
 
 export const textureStyle = {
-	seamless(degree: number, seed: number): TileTextureStyle<SeamlessTextureTerrain> {
+	seamless(degree: number): TileTextureStyle<SeamlessTextureInfo> {
 		return {
 			weightMix: weightMix.polynomial(degree),
-			texturePosition(terrain, point) {
-				const gen = LCG(seed, 'seamlessTextureStyle', point.q, point.r)
+			texturePosition(terrain, point, gen: RandGenerator) {
 				return {
 					alpha: gen(Math.PI * 2),
 					radius: terrain.inTextureRadius,
@@ -123,9 +91,14 @@ export const textureStyle = {
 					},
 				}
 			},
+			extract(terrain) {
+				return {
+					inTextureRadius: terrain.inTextureRadius,
+				}
+			},
 		}
 	},
-	// TODO: `pick in may` - give a texture with many variations in a matrix-like picture and pick one
+	// TODO: `pick in many` - give a texture with many variations in a matrix-like picture and pick one
 	unique: {
 		weightMix: weightMix.oneHotMax,
 		texturePosition() {
@@ -141,6 +114,8 @@ export const textureStyle = {
 	},
 }
 
+const workers = new WorkerManager<ContinuousTextureLandscapeWorker>(CreateGeometryWorker)
+
 export class ContinuousTextureLandscape<
 	Tile extends TerrainTile = TerrainTile,
 	Terrain extends TextureTerrain = TextureTerrain,
@@ -149,9 +124,9 @@ export class ContinuousTextureLandscape<
 	private readonly textures: Texture[]
 	private texturesIndex: Record<TerrainKey, number>
 	constructor(
-		sectorRadius: number,
-		private readonly terrainTypes: Record<TerrainKey, TextureTerrain>,
-		private readonly textureStyle: TileTextureStyle<Terrain>
+		private readonly sectorRadius: number,
+		private readonly terrainTypes: Record<TerrainKey, Terrain>,
+		private readonly textureStyle: TileTextureStyle
 	) {
 		super(sectorRadius)
 		this.textures = Array.from(new Set(Object.values(terrainTypes).map((t) => t.texture)))
@@ -162,84 +137,41 @@ export class ContinuousTextureLandscape<
 			Object.entries(this.terrainTypes).map(([k, v]) => [k, this.textures.indexOf(v.texture)])
 		)
 	}
-	createGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]): BufferGeometry {
-		// Gather the texture positions
-		const { textureStyle, terrainTypes } = this
-		const textureUvCache = new AxialKeyMap(
-			(function* () {
-				for (const [i, tile] of sector.tiles) {
-					const coord = axial.keyAccess(i)
-					yield [
-						i,
-						textureStyle.texturePosition(terrainTypes[tile.terrain] as Terrain, axial.keyAccess(i)),
-					]
-				}
-			})()
-		)
-		const neighborsMap = new Map<AxialKey, Triplet<number>[]>()
-		// Gather the neighbors in order to compute the hexagonal normal in the vertex shader
-		for (const [i, tile] of sector.tiles.entries()) {
-			neighborsMap.set(
-				i,
-				axial.neighbors(i).map((n) => {
-					const { x, y, z } = sector.land.tile(n).position
-					return [x, y, z]
-				})
-			)
-		}
+	async createGeometry(sector: Sector<Tile>, genericTriangles: LandscapeTriangle<AxialCoord>[]) {
+		const geometry = new BufferGeometry()
+		const { textureStyle, terrainTypes, texturesIndex } = this
 
-		const positions = new Float32Array(triangles.length * 3 * 3)
-		const textureIdx = new Uint8Array(triangles.length * 3 * 3)
-		const barycentric = new Float32Array(triangles.length * 3 * 3)
-		/*const n1 = new Float32Array(triangles.length * 3 * 3)
-		const n2 = new Float32Array(triangles.length * 3 * 3)
-		const n3 = new Float32Array(triangles.length * 3 * 3)
-		const n4 = new Float32Array(triangles.length * 3 * 3)
-		const n5 = new Float32Array(triangles.length * 3 * 3)
-		const n6 = new Float32Array(triangles.length * 3 * 3)*/
-
-		const uvA = new Float32Array(triangles.length * 3 * 2)
-		const uvB = new Float32Array(triangles.length * 3 * 2)
-		const uvC = new Float32Array(triangles.length * 3 * 2)
+		const barycentric = new Float32Array(genericTriangles.length * 3 * 3)
 		// Bary-centers allow the shaders to know the distance of a fragment toward a vertex
 		barycentric.set([1, 0, 0, 0, 1, 0, 0, 0, 1], 0)
 		// Exponentially copy the constant points
-		for (let multiplier = 1; multiplier < triangles.length; multiplier <<= 1)
+		for (let multiplier = 1; multiplier < genericTriangles.length; multiplier <<= 1)
 			((m) => barycentric.copyWithin(m, 0, m))(multiplier * 9)
+		//*
+		const { uvA, uvB, uvC, textureIdx, positions } = await workers.run(
+			Array.from(
+				sector.tiles.entries().map(([point, tile]) => [
+					point,
+					{
+						position: [tile.position.x, tile.position.y, tile.position.z],
+						terrain: tile.terrain,
+					},
+				])
+			),
+			this.sectorRadius,
+			sector.center,
+			{
+				weightMix: textureStyle.weightMix,
+				texturePosition: extractFunctionParts(textureStyle.texturePosition),
+			},
+			textureStyle.extract
+				? Object.fromEntries(
+						Object.entries(terrainTypes).map(([k, v]) => [k, textureStyle.extract!(v as any)])
+					)
+				: {},
+			texturesIndex
+		)
 
-		let index = 0
-		for (const triangle of triangles) {
-			// Calculate the 3 terrain textures parameters
-			const { points, side } = triangle
-			const [A, B, C] = points.map((point) => textureUvCache.get(point)!)
-			uvA.set(textureUVs(A, side, 0), index * 2)
-			uvB.set(textureUVs(B, side, 4), index * 2)
-			uvC.set(textureUVs(C, side, 2), index * 2)
-			const textureIndexes = points.map(
-				(point) => this.texturesIndex[sector.tiles.get(point.key)!.terrain]
-			)
-			for (const point of points) {
-				const tile = sector.tiles.get(point.key)!
-				const position = tile.position
-
-				// Per vertex
-				positions.set([position.x, position.y, position.z], index * 3)
-
-				/*const neighbors = neighborsMap.get(point.key)!
-				n1.set(neighbors[5], index * 3)
-				n2.set(neighbors[4], index * 3)
-				n3.set(neighbors[3], index * 3)
-				n4.set(neighbors[2], index * 3)
-				n5.set(neighbors[1], index * 3)
-				n6.set(neighbors[0], index * 3)*/
-
-				// Per triangle
-				textureIdx.set(textureIndexes, index * 3)
-
-				index++
-			}
-		}
-		const geometry = new BufferGeometry()
 		// global
 		geometry.setAttribute('barycentric', new BufferAttribute(barycentric, 3))
 		// per triangle

@@ -14,9 +14,3 @@
 <ParaglideJS {i18n}>
 	{@render children()}
 </ParaglideJS>
-
-<style>
-	:global(body) {
-		overflow: hidden;
-	}
-</style>

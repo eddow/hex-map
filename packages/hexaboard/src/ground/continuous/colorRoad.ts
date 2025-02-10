@@ -38,7 +38,7 @@ export class ColorRoadGrid<
 		super(sectorRadius, roadDefinition)
 		this.material = roadColorMaterial()
 	}
-	createPartialGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
+	async createPartialGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
 		const positions = new Float32Array(triangles.length * 3 * 3)
 		const outRoadWidths = new Float32Array(triangles.length * 3 * 3)
 		const outRoadBlends = new Float32Array(triangles.length * 3 * 3)

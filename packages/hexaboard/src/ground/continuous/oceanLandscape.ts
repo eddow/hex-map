@@ -55,7 +55,7 @@ export class OceanLandscape<
 			)
 		}
 	}
-	createPartialGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
+	async createPartialGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
 		const positions: number[] = []
 		const opacities: number[] = []
 		const indices: number[] = []

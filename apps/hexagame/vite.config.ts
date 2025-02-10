@@ -1,5 +1,6 @@
 import { paraglide } from '@inlang/paraglide-sveltekit/vite'
 import { sveltekit } from '@sveltejs/kit/vite'
+import hexaboardWorkers from 'hexaboard/vite'
 import { defineConfig } from 'vite'
 
 // Transform decorators but let the remaining untouched
@@ -11,6 +12,7 @@ export default defineConfig({
 			project: './project.inlang',
 			outdir: './src/lib/paraglide',
 		}),
+		hexaboardWorkers,
 	],
 	build: {
 		target,

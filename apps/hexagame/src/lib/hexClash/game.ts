@@ -86,7 +86,7 @@ export function createGame(name: string, seed: number) {
 	const landscape = new ContinuousTextureLandscape<HexClashTile, SeamlessTextureTerrain>(
 		land.sectorRadius,
 		terrainTypes,
-		textureStyle.seamless(2, seed)
+		textureStyle.seamless(2)
 	)
 	//const grid = new ColorRoadGrid(land.sectorRadius, roadTypes)
 	land.addPart(

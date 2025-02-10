@@ -1,16 +1,17 @@
 import type { BufferGeometry, Intersection, Material, Object3D, Object3DEventMap } from 'three'
 import type { MouseHandle } from '~/input'
 import type { Triplet } from '~/types'
-import { assert, type Axial, axial } from '~/utils'
+import { assert, type Axial, axial, type AxialCoord } from '~/utils'
 import type { Sector } from '../sector'
-import { ContinuousLandscape, type LandscapeTriangle } from './landscape'
+import { centeredTriangles, ContinuousLandscape, type LandscapeTriangle } from './landscape'
 import type { ContentTile } from './resourceful'
 
 export abstract class ContinuousPartialLandscape<
 	Tile extends ContentTile,
 > extends ContinuousLandscape<Tile> {
 	private vertexMatch = new WeakMap<Sector<Tile>, Int32Array>()
-	createGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]): BufferGeometry | undefined {
+	async createGeometry(sector: Sector<Tile>, genericTriangles: LandscapeTriangle<AxialCoord>[]) {
+		const triangles = centeredTriangles(genericTriangles, sector.center)
 		const filteredTriangles = triangles.filter(this.filterTriangles(sector))
 		if (!filteredTriangles.length) return
 		let index = 0
@@ -36,6 +37,6 @@ export abstract class ContinuousPartialLandscape<
 	abstract createPartialGeometry(
 		sector: Sector<Tile>,
 		triangles: LandscapeTriangle[]
-	): BufferGeometry
+	): Promise<BufferGeometry>
 	protected abstract material: Material
 }

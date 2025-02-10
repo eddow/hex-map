@@ -15,15 +15,17 @@ export default defineConfig({
 		target,
 		sourcemap: true,
 		lib: {
-			entry: resolve(__dirname, 'src/main.ts'),
+			entry: {
+				hexaboard: resolve(__dirname, 'src/main.ts'),
+				'vite-plugin': resolve(__dirname, 'src/vite-plugin.ts'),
+			},
 			name: 'HexaBoard',
-			fileName: 'hexaboard',
-			formats: ['es', 'umd'],
+			formats: ['es', 'cjs'],
 		},
 		rollupOptions: {
 			// make sure to externalize deps that shouldn't be bundled
 			// into your library
-			external: ['three'],
+			external: ['three', 'node:fs', 'node:path'],
 			output: {
 				globals: {
 					three: 'THREE',

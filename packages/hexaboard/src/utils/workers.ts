@@ -39,25 +39,37 @@ function freeWorkerSlot(): void {
 	}
 }
 
-export class WorkerManager<Args extends any[], Returns> {
+export class WorkerManager<Fct extends (...args: any[]) => Promise<any>> {
 	private pendingRequests: Map<
 		Worker,
-		{ resolve: (result: Returns) => void; reject: (error: any) => void }
+		{ resolve: (result: ReturnType<Fct>) => void; reject: (error: any) => void }
 	> = new Map()
-	private idleTimeouts: Map<Worker, NodeJS.Timeout> = new Map()
+	private idleTimeouts: Map<Worker, ReturnType<typeof setTimeout>> = new Map()
 
-	constructor(private workerScript: URL) {}
+	/**
+	 *
+	 * @param workerScript new URL("worker.js", import.meta.url)
+	 */
+	//constructor(private workerScript: URL) {}
+	constructor(
+		private WorkerClass:
+			| {
+					new (): Worker
+			  }
+			| URL
+			| string
+	) {}
 
 	/**
 	 * Runs a task in an available worker.
 	 */
-	async run(...data: Args): Promise<Returns> {
+	async run(...compute: Parameters<Fct>): Promise<ReturnType<Fct>> {
 		await allocateWorkerSlot()
 
-		return new Promise<Returns>((resolve, reject) => {
+		return new Promise((resolve, reject) => {
 			const worker = this.getWorker()
 			this.pendingRequests.set(worker, { resolve, reject })
-			worker.postMessage(data)
+			worker.postMessage({ compute })
 		})
 	}
 
@@ -71,7 +83,10 @@ export class WorkerManager<Args extends any[], Returns> {
 			this.idleTimeouts.delete(idling[0])
 			return idling[0]
 		}
-		const worker = new Worker(this.workerScript, { type: 'module' })
+		const worker =
+			typeof this.WorkerClass === 'function'
+				? new this.WorkerClass()
+				: new Worker(this.WorkerClass, { type: 'module' })
 		this.setupWorker(worker)
 		return worker
 	}
@@ -88,7 +103,7 @@ export class WorkerManager<Args extends any[], Returns> {
 			this.pendingRequests.delete(worker)
 			freeWorkerSlot()
 			this.recycleWorker(worker)
-			resolve(event.data)
+			resolve(event.data.result)
 		}
 
 		worker.onerror = (error) => {
@@ -131,14 +146,46 @@ export class WorkerManager<Args extends any[], Returns> {
 	}
 }
 
-export function expose<Args extends any[], Returns>(
-	fn: (data: Args) => Promise<Returns> | Returns
-) {
-	self.onmessage = async (event: MessageEvent<Args>) => {
+export function workerExpose<Fct extends (...args: any[]) => Promise<any> | any>(fn: Fct) {
+	self.onmessage = async ({ data: { compute } }: MessageEvent<{ compute: Parameters<Fct> }>) => {
 		try {
-			postMessage({ result: await fn.apply(self, event) })
+			if (compute) postMessage({ result: await fn.apply(self, compute) })
 		} catch (err: any) {
 			postMessage({ error: err.message, stack: err.stack })
 		}
 	}
+}
+
+export type FunctionParts = { args: string; body: string }
+
+export function extractFunctionParts(fn: (...args: any[]) => any) {
+	if (typeof fn !== 'function') throw new TypeError('Expected a function')
+
+	const fnStr = fn.toString().trim()
+	let args: string
+	let body: string
+
+	if (fnStr.startsWith('function')) {
+		// Regular function: "function name(arg1, arg2) { body }"
+		;[, args, body] = fnStr.match(/^function\s*\w*\s*\(([^)]*)\)\s*\{([\s\S]*)\}$/) || []
+	} else if (fnStr.startsWith('(') || fnStr.includes('=>')) {
+		// Arrow function: "(arg1, arg2) => body" or "arg => body"
+		;[, args, body] = fnStr.match(/^\(?([^)=]*)\)?\s*=>\s*\{?([\s\S]*)\}?$/) || []
+	} else {
+		// Method shorthand: "name(arg1, arg2) { body }"
+		;[, args, body] = fnStr.match(/^\s*\w+\s*\(([^)]*)\)\s*\{([\s\S]*)\}$/) || []
+	}
+
+	if (!args || !body) throw new Error('Failed to extract function parts')
+
+	return {
+		args: args.trim(),
+		body: body.trim(),
+	}
+}
+
+export function makeFunction<Fct extends (...args: any[]) => Promise<any> | any>(
+	parts: FunctionParts
+) {
+	return new Function(parts.args, parts.body) as Fct
 }

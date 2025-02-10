@@ -1,4 +1,4 @@
-import { type Group, type Object3D, Vector3 } from 'three'
+import { Group, type Object3D, Vector3 } from 'three'
 import {
 	type Axial,
 	type AxialCoord,
@@ -9,11 +9,10 @@ import {
 	cartesian,
 	hexSides,
 } from '~/utils'
-import { assert } from '~/utils/debug'
 import type { Land, LandPart, PositionInTile, TileBase } from './land'
 
 export class Sector<Tile extends TileBase> {
-	public group?: Group
+	public group = new Group()
 	private parts = new Map<LandPart<Tile>, Object3D>()
 	public invalidParts?: Set<LandPart<Tile>>
 	public readonly attachedTiles = new AxialSet()
@@ -25,18 +24,16 @@ export class Sector<Tile extends TileBase> {
 		for (const [_, tile] of this.tiles) tile.sectors.push(this)
 	}
 	cartesian(point: Axial) {
-		return { ...cartesian(point, this.land.tileSize), z: this.tiles.get(point)?.position?.z ?? 0 }
+		return { ...cartesian(point, this.land.tileSize), z: this.tile(point)?.position?.z ?? 0 }
 	}
-	add(part: LandPart<Tile>, o3d: Object3D) {
-		assert(this.group, 'Rendering should happen in an existing sector')
+	setPartO3d(part: LandPart<Tile>, o3d: Object3D) {
+		const oldO3d = this.parts.get(part)
+		if (oldO3d) this.group.remove(oldO3d)
 		this.group.add(o3d)
 		this.parts.set(part, o3d)
 	}
 	invalidate(part: LandPart<Tile>) {
-		const o3d = this.parts.get(part)
-		if (o3d) this.group?.remove(o3d)
 		this.invalidParts?.add(part)
-		this.parts.delete(part)
 	}
 	/**
 	 * Retrieves a point (xyz) inside a rendered tile
@@ -64,12 +61,21 @@ export class Sector<Tile extends TileBase> {
 		const { tiles } = this.land
 		const removeTiles = (bunch: Iterable<AxialRef>) => {
 			for (const point of bunch) {
-				const tile = tiles.get(point)!
+				const tile = tiles.get(point)
+				if (!tile) continue
 				tile.sectors = tile.sectors.filter((sector) => sector !== this)
 				if (tile.sectors.length === 0) tiles.delete(point)
 			}
 		}
 		removeTiles(this.tiles.keys())
 		removeTiles(this.attachedTiles)
+	}
+	tile(point: Axial) {
+		let rv = this.tiles.get(point)
+		if (!rv) {
+			rv = this.land.tile(point)
+			this.tiles.set(point, rv)
+		}
+		return rv
 	}
 }

@@ -7,7 +7,6 @@ export type TerrainKey = PropertyKey
 
 export interface TerrainBase {
 	color: { r: number; g: number; b: number }
-	appearHeight?: number
 	walkTimeMultiplier?: number
 }
 
