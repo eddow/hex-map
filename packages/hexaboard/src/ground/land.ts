@@ -77,17 +77,22 @@ function distance(p1: { x: number; y: number }, p2: { x: number; y: number }): n
 
 function cameraVision(camera: PerspectiveCamera): number {
 	//DEBUG VALUE
-	return camera.far / Math.cos((camera.fov * Math.PI) / 360)
-	//return 300
+	//return camera.far / Math.cos((camera.fov * Math.PI) / 360)
+	return 300
 }
 
-function* viewedSectors(centerCoord: AxialCoord, camera: PerspectiveCamera, size: number) {
+function* viewedSectors(
+	centerCoord: AxialCoord,
+	camera: PerspectiveCamera,
+	size: number,
+	dist0: number
+) {
 	const center = axial.round(centerCoord)
 	const centerCartesian = cartesian(center, size)
 	// Estimate the maximum axial distance. Since a hexagon's circumradius is sqrt(3) * side length,
 	// we use D / (sqrt(3) * size) as an upper bound for axial distance check.
-	const vision = cameraVision(camera)
-	const maxAxialDistance = Math.ceil(vision / size + 0.5)
+	const vision = cameraVision(camera) + dist0
+	const maxAxialDistance = Math.ceil(vision / size)
 	// Check all hexagons within this range
 	for (const { q, r } of axial.enum(maxAxialDistance)) {
 		const currentHex = { q: center.q + q, r: center.r + r }
@@ -125,7 +130,10 @@ export class Land<Tile extends TileBase = TileBase> {
 	public readonly group = new Group()
 	private readonly sectors = new AxialKeyMap<Sector<Tile>>()
 	public readonly sectorRadius: number
-
+	/**
+	 * Radius of a sector in "unit"
+	 */
+	public readonly sectorDist0: number
 	constructor(
 		public readonly sectorScale: number,
 		public readonly tileSize: number,
@@ -137,6 +145,7 @@ export class Land<Tile extends TileBase = TileBase> {
 		// Sectors share their border, so sectors of 1 tile cannot tile a world
 		assert(sectorScale >= 0, 'sectorScale must be positive')
 		this.sectorRadius = 1 << sectorScale
+		this.sectorDist0 = this.sectorRadius * Math.sqrt(3) * tileSize
 	}
 
 	sector2tile(coord: AxialCoord) {
@@ -173,6 +182,8 @@ export class Land<Tile extends TileBase = TileBase> {
 		if (this.sectors.has(this.tile2sector(sector.center))) this.group.add(sector.group!)
 	}
 
+	private resuscitating = 0
+	private resuscitated = 0
 	createSectors(added: Iterable<AxialCoord>) {
 		const tileRefiners = this.parts.filter((part) => part.refineTile)
 		for (const toSee of added) {
@@ -193,12 +204,17 @@ export class Land<Tile extends TileBase = TileBase> {
 					this.tiles.set(point.key, completeTile)
 					return [point.key, completeTile]
 				})
-				const st = Array.from(sectorTiles)
-				sector = new Sector(this, center, new AxialKeyMap(st))
+				sector = new Sector(this, center, new AxialKeyMap(sectorTiles))
 				this.needGenerationSpread = true
+				if (this.sectors.has(toSee)) {
+					debugger
+				}
+				this.sectors.set(toSee, sector)
 				this.markToRender(sector)
+			} else if (!this.sectors.has(toSee)) {
+				console.warn('resuscitating:', axial.coordAccess(toSee).key, ++this.resuscitating)
+				this.sectors.set(toSee, sector)
 			}
-			this.sectors.set(toSee, sector)
 		}
 	}
 
@@ -224,17 +240,22 @@ export class Land<Tile extends TileBase = TileBase> {
 			const centerCartesian = cartesian(deletedSector.center, this.tileSize)
 			let seen = false
 			for (const camera of cameras)
-				if (distance(centerCartesian, camera.position) < cameraVision(camera) * marginBufferSize) {
+				if (
+					distance(centerCartesian, camera.position) <
+					cameraVision(camera) * marginBufferSize + this.sectorDist0
+				) {
 					seen = true
 					break
 				}
 			if (seen) continue
 			this.sectors.delete(key)
 			const rendering = this.renderingSectors.get(deletedSector.center)?.rendering
-			const freeResources = () => {
-				this.group.remove(deletedSector.group)
-				deletedSector.freeTiles()
-			}
+			const freeResources = ((deletedSector: Sector<Tile>) => () => {
+				if (!this.sectors.has(key.key)) {
+					this.group.remove(deletedSector.group)
+					deletedSector.freeTiles()
+				} else console.info('resuscitated:', key.key, ++this.resuscitated)
+			})(deletedSector)
 			if (rendering) rendering.then(freeResources)
 			else freeResources()
 			/* TODO: Cancel thread/worker/task ?
@@ -258,7 +279,8 @@ export class Land<Tile extends TileBase = TileBase> {
 			for (const toSee of viewedSectors(
 				this.tile2sector(fromCartesian(camera.position, this.tileSize)),
 				camera,
-				this.tileSize * this.sectorRadius
+				this.tileSize * this.sectorRadius,
+				this.sectorDist0
 			)) {
 				removed.delete(toSee)
 				if (!this.sectors.has(toSee)) added.add(toSee)

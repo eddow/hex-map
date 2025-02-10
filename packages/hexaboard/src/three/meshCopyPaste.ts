@@ -1,5 +1,5 @@
 import { InstancedMesh, type Mesh, Object3D, Quaternion, type Scene } from 'three'
-import { assert, IndexedCollection, debugInformation } from '~/utils'
+import { IndexedCollection, debugInformation } from '~/utils'
 
 const generalMaxCount = 15000
 function rootObj3d(obj3d: Object3D) {
@@ -86,10 +86,6 @@ export class MeshCopy {
 			this.object3d.updateMatrixWorld(true)
 		})
 	}
-	application(scene: Scene) {
-		assert(this.applications.has(scene), 'Scene not registered')
-		return this.applications.get(scene)!
-	}
 	register(meshPaste: MeshPaste, scene: Scene) {
 		if (!this.applications.has(scene)) {
 			const object3d = this.object3d.clone()
@@ -100,19 +96,19 @@ export class MeshCopy {
 			})
 			scene.add(object3d)
 		}
-		const application = this.application(scene)
+		const application = this.applications.get(scene)!
 		application.pastes.add(meshPaste)
 		recount(application)
 		meshPaste.updateMatrixWorld(true)
 		//forward(meshPaste, index, application)	// No need: this is called in `updateMatrixWorld`
 	}
 	updated(scene: Scene, meshPaste: MeshPaste) {
-		const application = this.application(scene)
+		const application = this.applications.get(scene)!
 		const pastes = application?.pastes
 		forward(meshPaste, application)
 	}
 	unregister(meshPaste: MeshPaste, scene: Scene) {
-		const application = this.application(scene)
+		const application = this.applications.get(scene)!
 		const pastes = application.pastes
 
 		const moved = pastes.remove(meshPaste)

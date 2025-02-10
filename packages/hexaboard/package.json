@@ -2,7 +2,6 @@
 	"name": "hexaboard",
 	"version": "1.0.0",
 	"description": "A minimal 3D hexagonal game board using Three.js",
-	"main": "dist/index.mjs",
 	"files": [
 		"dist",
 		"!dist/**/*.test.*",
@@ -13,6 +12,7 @@
 	],
 	"type": "module",
 	"types": "dist/src/index.d.ts",
+	"main": "dist/hexaboard.js",
 	"module": "dist/hexaboard.js",
 	"exports": {
 		".": {
