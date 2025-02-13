@@ -1,7 +1,7 @@
 import { InstancedMesh, type Mesh, Object3D, Quaternion, type Scene } from 'three'
 import { IndexedCollection, debugInformation } from '~/utils'
 
-const generalMaxCount = 15000
+const generalMaxCount = 30000
 function rootObj3d(obj3d: Object3D) {
 	while (obj3d.parent) obj3d = obj3d.parent
 	return obj3d
