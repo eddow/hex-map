@@ -11,6 +11,7 @@ export default {
 				const hexaboardPath = dirname(
 					new URL(await import.meta.resolve('hexaboard'), import.meta.url).pathname
 				)
+				console.log(await import.meta.resolve('hexaboard'), import.meta.url)
 				const filePath = resolve(
 					hexaboardPath,
 					req.url.startsWith('/') ? req.url.slice(1) : req.url
@@ -24,6 +25,9 @@ export default {
 					fs.createReadStream(filePath).pipe(res)
 					return
 				}
+				res.writeHead(404)
+				res.write(`Not found: ${filePath}`)
+				return
 			}
 			next()
 		})
