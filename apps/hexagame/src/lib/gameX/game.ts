@@ -166,8 +166,8 @@ export function createGame(name: string, seed: number) {
 		terrainFactory(seed),
 
 		new Landscaper<GameXTile>(
-			new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),
 			landscape as Landscape<GameXTile>,
+			new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),
 			grid,
 			new OceanLandscape<GameXTile>(land.sectorRadius, seaLevel)
 		),

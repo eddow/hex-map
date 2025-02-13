@@ -171,36 +171,36 @@ export class Land<Tile extends TileBase = TileBase> {
 		SDU?.log(sector, { type: 'markToRender' }) // SectorInvariant: 1->g
 		// TODO: Might have problem when rendering a part and need to render whole or vice&versa
 		// NOTE: occurs for example when "resourcefulTerrain" changes (road/tree/...)
-		//setTimeout(() => {
-		if (
-			!this.renderingSectors.has(sector.point) &&
-			!this.markedForDeletion.has(sector.point) &&
-			this.sectors.get(sector.point) === sector
-		) {
-			SDU?.assertInvariant(
-				'1',
-				sector.point,
-				this.sectors,
-				this.renderingSectors,
-				this.markedForDeletion
-			)
-			SDU?.log(sector, { type: 'begin render' })
-			this.renderingSectors.set(sector.point, {
-				sector,
-				rendering: this.renderSector(sector).then(() => {
-					this.renderingSectors.delete(sector.point) // g->1
-					SDU?.log(sector, { type: 'done render' })
-				}),
-			})
-			SDU?.assertInvariant(
-				'g',
-				sector.point,
-				this.sectors,
-				this.renderingSectors,
-				this.markedForDeletion
-			)
-		}
-		//})
+		setTimeout(() => {
+			if (
+				!this.renderingSectors.has(sector.point) &&
+				!this.markedForDeletion.has(sector.point) &&
+				this.sectors.get(sector.point) === sector
+			) {
+				SDU?.assertInvariant(
+					'1',
+					sector.point,
+					this.sectors,
+					this.renderingSectors,
+					this.markedForDeletion
+				)
+				SDU?.log(sector, { type: 'begin render' })
+				this.renderingSectors.set(sector.point, {
+					sector,
+					rendering: this.renderSector(sector).then(() => {
+						this.renderingSectors.delete(sector.point) // g->1
+						SDU?.log(sector, { type: 'done render' })
+					}),
+				})
+				SDU?.assertInvariant(
+					'g',
+					sector.point,
+					this.sectors,
+					this.renderingSectors,
+					this.markedForDeletion
+				)
+			}
+		})
 	}
 
 	async renderSector(sector: Sector<Tile>) {
