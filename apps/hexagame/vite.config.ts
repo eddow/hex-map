@@ -50,6 +50,11 @@ export default defineConfig({
 			},
 		},
 	],
+	server: {
+		fs: {
+			allow: ['../../hexaboard/dist', '../../dockview-svelte/dist'],
+		},
+	},
 	build: {
 		target,
 	},

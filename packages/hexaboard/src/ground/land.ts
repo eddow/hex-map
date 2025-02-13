@@ -14,7 +14,7 @@ import {
 	debugInformation,
 	fromCartesian,
 } from '~/utils'
-import { Sector } from './sector'
+import { SDU, Sector } from './sector'
 
 export interface TileBase {
 	position: Vector3Like
@@ -128,6 +128,7 @@ export class Land<Tile extends TileBase = TileBase> {
 	public readonly tiles = new AxialKeyMap<Tile>()
 	private readonly parts: LandPart<Tile>[] = []
 	public readonly group = new Group()
+	private readonly markedForDeletion = new AxialSet()
 	private readonly sectors = new AxialKeyMap<Sector<Tile>>()
 	public readonly sectorRadius: number
 	/**
@@ -155,19 +156,51 @@ export class Land<Tile extends TileBase = TileBase> {
 		return axial.round(scaleAxial(coord, 1 / (3 * this.sectorRadius)))
 	}
 
+	private needGenerationSpread = false
+	spreadGeneration() {
+		if (this.needGenerationSpread)
+			for (const part of this.parts)
+				if (part.spreadGeneration)
+					part.spreadGeneration((sectors, aRef, modifications) =>
+						this.tileUpdater(sectors, aRef, modifications)
+					)
+	}
+
 	renderingSectors = new AxialKeyMap<{ sector: Sector<Tile>; rendering: Promise<void> }>()
 	markToRender(sector: Sector<Tile>) {
+		SDU?.log(sector, { type: 'markToRender' }) // SectorInvariant: 1->g
 		// TODO: Might have problem when rendering a part and need to render whole or vice&versa
-		if (!this.renderingSectors.has(sector.center)) {
-			setTimeout(() => {
-				this.renderingSectors.set(sector.center, {
-					sector,
-					rendering: this.renderSector(sector).then(() => {
-						this.renderingSectors.delete(sector.center)
-					}),
-				})
+		// NOTE: occurs for example when "resourcefulTerrain" changes (road/tree/...)
+		//setTimeout(() => {
+		if (
+			!this.renderingSectors.has(sector.point) &&
+			!this.markedForDeletion.has(sector.point) &&
+			this.sectors.get(sector.point) === sector
+		) {
+			SDU?.assertInvariant(
+				'1',
+				sector.point,
+				this.sectors,
+				this.renderingSectors,
+				this.markedForDeletion
+			)
+			SDU?.log(sector, { type: 'begin render' })
+			this.renderingSectors.set(sector.point, {
+				sector,
+				rendering: this.renderSector(sector).then(() => {
+					this.renderingSectors.delete(sector.point) // g->1
+					SDU?.log(sector, { type: 'done render' })
+				}),
 			})
+			SDU?.assertInvariant(
+				'g',
+				sector.point,
+				this.sectors,
+				this.renderingSectors,
+				this.markedForDeletion
+			)
 		}
+		//})
 	}
 
 	async renderSector(sector: Sector<Tile>) {
@@ -179,53 +212,35 @@ export class Land<Tile extends TileBase = TileBase> {
 		// Must be sequential as there is inter-dependency (cf. terrainHeight)
 		// TODO: Landscaper must be concurrently
 		for (const part of invalidParts ?? sectorRenderers) await part.renderSector!(sector)
-		if (this.sectors.has(this.tile2sector(sector.center))) this.group.add(sector.group!)
 	}
 
-	private resuscitating = 0
-	private resuscitated = 0
 	createSectors(added: Iterable<AxialCoord>) {
 		const tileRefiners = this.parts.filter((part) => part.refineTile)
 		for (const toSee of added) {
 			const center = this.sector2tile(toSee)
-			let sector = this.renderingSectors.get(center)?.sector
-			// else it's resuscitating & -> problems
-			if (!sector) {
-				const sectorTiles = axial.enum(this.sectorRadius).map((lclCoord): [AxialKey, Tile] => {
-					const point = axial.coordAccess(axial.linear(center, lclCoord))
-					let completeTile = this.tiles.get(point.key)
-					if (completeTile) return [point.key, completeTile]
-					let tile: TileBase = {
-						position: { ...cartesian(point, this.tileSize), z: 0 },
-						sectors: [],
-					}
-					for (const part of tileRefiners) tile = part.refineTile!(tile, point) ?? tile
-					completeTile = tile as Tile
-					this.tiles.set(point.key, completeTile)
-					return [point.key, completeTile]
-				})
-				sector = new Sector(this, center, new AxialKeyMap(sectorTiles))
-				this.needGenerationSpread = true
-				if (this.sectors.has(toSee)) {
-					debugger
+			const sectorTiles = axial.enum(this.sectorRadius).map((lclCoord): [AxialKey, Tile] => {
+				const point = axial.coordAccess(axial.linear(center, lclCoord))
+				let completeTile = this.tiles.get(point.key)
+				if (completeTile) return [point.key, completeTile]
+				let tile: TileBase = {
+					position: { ...cartesian(point, this.tileSize), z: 0 },
+					sectors: [],
 				}
-				this.sectors.set(toSee, sector)
-				this.markToRender(sector)
-			} else if (!this.sectors.has(toSee)) {
-				console.warn('resuscitating:', axial.coordAccess(toSee).key, ++this.resuscitating)
-				this.sectors.set(toSee, sector)
-			}
+				for (const part of tileRefiners) tile = part.refineTile!(tile, point) ?? tile
+				completeTile = tile as Tile
+				this.tiles.set(point.key, completeTile)
+				return [point.key, completeTile]
+			})
+			const sector = new Sector(this, center, new AxialKeyMap(sectorTiles))
+			this.needGenerationSpread = true
+			SDU?.log(sector, { type: 'add-new' })
+			SDU?.addIn(this.group, sector)
+			SDU?.assertInvariant('0', toSee, this.sectors, this.renderingSectors, this.markedForDeletion)
+			this.sectors.set(toSee, sector) // SectorInvariant: 0->1
+			this.group.add(sector.group!)
+			SDU?.assertInvariant('1', toSee, this.sectors, this.renderingSectors, this.markedForDeletion)
+			this.markToRender(sector)
 		}
-	}
-
-	private needGenerationSpread = false
-	spreadGeneration() {
-		if (this.needGenerationSpread)
-			for (const part of this.parts)
-				if (part.spreadGeneration)
-					part.spreadGeneration((sectors, aRef, modifications) =>
-						this.tileUpdater(sectors, aRef, modifications)
-					)
 	}
 
 	/**
@@ -235,37 +250,73 @@ export class Land<Tile extends TileBase = TileBase> {
 	 * @param marginBufferSize Distance of removal ration (2 = let the sectors twice the visible distance existing)
 	 */
 	pruneSectors(removed: AxialSet, cameras: PerspectiveCamera[], marginBufferSize: number) {
-		for (const key of removed) {
-			const deletedSector = this.sectors.get(key)!
-			const centerCartesian = cartesian(deletedSector.center, this.tileSize)
-			let seen = false
-			for (const camera of cameras)
-				if (
-					distance(centerCartesian, camera.position) <
-					cameraVision(camera) * marginBufferSize + this.sectorDist0
-				) {
-					seen = true
-					break
-				}
-			if (seen) continue
-			this.sectors.delete(key)
-			const rendering = this.renderingSectors.get(deletedSector.center)?.rendering
-			const freeResources = ((deletedSector: Sector<Tile>) => () => {
-				if (!this.sectors.has(key.key)) {
+		for (const key of removed)
+			if (!this.markedForDeletion.has(key)) {
+				const deletedSector = this.sectors.get(key)!
+				const centerCartesian = cartesian(deletedSector.center, this.tileSize)
+				let seen = false
+				for (const camera of cameras)
+					if (
+						distance(centerCartesian, camera.position) <
+						cameraVision(camera) * marginBufferSize + this.sectorDist0
+					) {
+						seen = true
+						break
+					}
+				if (seen) continue
+				SDU?.log(deletedSector, { type: 'remove' })
+				const rendering = this.renderingSectors.get(key)?.rendering
+				const freeResources = ((deletedSector: Sector<Tile>) => () => {
+					// SectorInvariant: x->0
+					if (!this.markedForDeletion.delete(key)) return
+					this.sectors.delete(key)
+					SDU?.log(deletedSector, { type: 'group-remove' })
+					assert(
+						this.group.children.includes(deletedSector.group),
+						'Deleted sector group not found'
+					)
 					this.group.remove(deletedSector.group)
 					deletedSector.freeTiles()
-				} else console.info('resuscitated:', key.key, ++this.resuscitated)
-			})(deletedSector)
-			if (rendering) rendering.then(freeResources)
-			else freeResources()
-			/* TODO: Cancel thread/worker/task ?
-			const hadToRender = this.renderingSectors.get(deletedSector.center)
-			if (hadToRender) {
-				const x = 0
-				//this.renderingSectors.delete(deletedSector.center)
+					SDU?.assertInvariant(
+						'0',
+						key,
+						this.sectors,
+						this.renderingSectors,
+						this.markedForDeletion
+					)
+				})(deletedSector)
+				if (rendering) {
+					// SectorInvariant: g->x
+					SDU?.log(deletedSector, { type: 'cancel render' })
+					//this.renderingSectors.delete(key)
+					rendering.then(freeResources)
+					this.markedForDeletion.add(key)
+					SDU?.assertInvariant(
+						'x',
+						key,
+						this.sectors,
+						this.renderingSectors,
+						this.markedForDeletion
+					)
+				} else {
+					SDU?.assertInvariant(
+						'1',
+						key,
+						this.sectors,
+						this.renderingSectors,
+						this.markedForDeletion
+					)
+					this.markedForDeletion.add(key)
+					freeResources() // SectorInvariant: 1->0
+					SDU?.assertInvariant(
+						'0',
+						key,
+						this.sectors,
+						this.renderingSectors,
+						this.markedForDeletion
+					)
+				}
 			}
-			//*/
-		}
 	}
 	updateViews(cameras: PerspectiveCamera[]) {
 		if (Number.isFinite(this.landRadius)) {
@@ -284,10 +335,12 @@ export class Land<Tile extends TileBase = TileBase> {
 			)) {
 				removed.delete(toSee)
 				if (!this.sectors.has(toSee)) added.add(toSee)
+				else this.markedForDeletion.delete(toSee) // x -> g
 			}
 		if (added.size > 0) this.createSectors(added)
 		this.pruneSectors(removed, cameras, 1.2)
 		debugInformation.set('sectors', this.sectors.size)
+		debugInformation.set('landGroup', this.group.children.length)
 		debugInformation.set('tiles', this.tiles.size)
 	}
 

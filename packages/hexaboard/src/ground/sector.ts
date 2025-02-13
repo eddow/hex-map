@@ -1,17 +1,97 @@
 import { Group, type Object3D, Vector3 } from 'three'
 import {
+	assert,
 	type Axial,
 	type AxialCoord,
-	type AxialKeyMap,
+	AxialKeyMap,
 	type AxialRef,
 	AxialSet,
 	axial,
 	cartesian,
 	hexSides,
 } from '~/utils'
+import { cached } from '~/utils/decorators'
 import type { Land, LandPart, PositionInTile, TileBase } from './land'
 
-export class Sector<Tile extends TileBase> {
+export interface SectorDebugUtils {
+	create(sector: Sector): void
+	log(point: Sector, event: LogEvent): void
+	addIn(group: Group, sector: Sector): void
+	assertInvariant(
+		invariant: string,
+		key: AxialRef,
+		sectors: AxialKeyMap<any>,
+		renderingSectors: AxialKeyMap<any>,
+		markedForDeletion: AxialSet
+	): void
+}
+
+/*
+0- inexistent: land.sectors[key] -> undefined
+g - generating: land.generating[key] -> defined
+x- cancelled: land.markedForDeletion[key]-> defined
+1- generated
+*/
+const sectors = new WeakMap<Object3D, Sector>()
+const uuids = new WeakMap<Sector, string>()
+type LogEvent = Record<string, any>
+const logs = new AxialKeyMap<LogEvent[]>()
+
+const debugSectorLeak: true | undefined = true
+export const SDU: SectorDebugUtils | undefined = debugSectorLeak && {
+	create(sector: Sector<TileBase>) {
+		sectors.set(sector.group, sector)
+		uuids.set(sector, crypto.randomUUID())
+		SDU?.log(sector, { type: 'create' })
+	},
+	log(sector: Sector, event: LogEvent) {
+		event = { sector: uuids.get(sector), ...event }
+		const point = sector.point
+		let log = logs.get(point)
+		if (!log) {
+			log = []
+			logs.set(point, log)
+		}
+		log.push({ ...event, stack: new Error().stack })
+	},
+	addIn(group: Group, sector: Sector<TileBase>) {
+		for (const o3d of group.children) {
+			if (sectors.get(o3d)?.center === sector.center) {
+				const log = logs.get(sector.point)
+				console.dir(log)
+				throw new Error("Sector's position already added")
+			}
+		}
+	},
+	assertInvariant(
+		invariant: string,
+		key: AxialRef,
+		sectors: AxialKeyMap<any>,
+		renderingSectors: AxialKeyMap<any>,
+		markedForDeletion: AxialSet
+	): void {
+		type InvariantCheck = 'A' | 'B' | 'C'
+		const actualState = {
+			A: sectors.has(key),
+			B: renderingSectors.has(key),
+			C: markedForDeletion.has(key),
+		}
+		const expectedState = {
+			0: { A: false, B: false, C: false },
+			g: { A: true, B: true, C: false },
+			x: { A: true, B: true, C: true },
+			1: { A: true, B: false, C: false },
+		}[`${invariant}`]
+		assert(expectedState, `Invariant ${invariant} not defined`)
+		for (const [key, value] of Object.entries(actualState))
+			if (value !== expectedState[key as InvariantCheck])
+				throw new Error(
+					`Invariant ${invariant} violated: ${key} ${value} !== ${expectedState[key as InvariantCheck]}`
+				)
+	},
+}
+
+export class Sector<Tile extends TileBase = TileBase> {
 	public group = new Group()
 	private parts = new Map<LandPart<Tile>, Object3D>()
 	public invalidParts?: Set<LandPart<Tile>>
@@ -22,6 +102,12 @@ export class Sector<Tile extends TileBase> {
 		public readonly tiles: AxialKeyMap<Tile>
 	) {
 		for (const [_, tile] of this.tiles) tile.sectors.push(this)
+		SDU?.create(this)
+	}
+
+	@cached()
+	get point() {
+		return axial.coordAccess(this.land.tile2sector(this.center)).key
 	}
 	cartesian(point: Axial) {
 		return { ...cartesian(point, this.land.tileSize), z: this.tile(point)?.position?.z ?? 0 }
@@ -33,6 +119,7 @@ export class Sector<Tile extends TileBase> {
 		this.parts.set(part, o3d)
 	}
 	invalidate(part: LandPart<Tile>) {
+		SDU?.log(this, { type: 'invalidate', part: part.constructor.name })
 		this.invalidParts?.add(part)
 	}
 	/**
@@ -58,6 +145,7 @@ export class Sector<Tile extends TileBase> {
 		return pos.add(next1dir).add(next2dir)
 	}
 	freeTiles() {
+		SDU?.log(this, { type: 'freeTiles' })
 		const { tiles } = this.land
 		const removeTiles = (bunch: Iterable<AxialRef>) => {
 			for (const point of bunch) {
@@ -77,5 +165,9 @@ export class Sector<Tile extends TileBase> {
 			this.tiles.set(point, rv)
 		}
 		return rv
+	}
+
+	get logs() {
+		return logs.get(this.point)
 	}
 }
