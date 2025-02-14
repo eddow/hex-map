@@ -6,6 +6,7 @@ import {
 	InputMode,
 	Land,
 	Landscaper,
+	OceanLandscape,
 	Resourceful,
 	type SeamlessTextureTerrain,
 	TileCursor,
@@ -27,7 +28,7 @@ import {
 } from 'three'
 import { dockview } from '../globals.svelte'
 import { type HexClashActions, inputsConfiguration } from './inputs'
-import { type HexClashTile, terrainFactory, terrainTypes } from './world/terrain'
+import { type HexClashTile, seaLevel, terrainFactory, terrainTypes } from './world/terrain'
 
 export function createGame(name: string, seed: number) {
 	const cursor = new TileCursor(
@@ -82,7 +83,7 @@ export function createGame(name: string, seed: number) {
 		navigationMode,
 		selectionMode
 	)
-	const land = new Land<HexClashTile>(4, 20, 0)
+	const land = new Land<HexClashTile>(5, 20, 0)
 	const landscape = new ContinuousTextureLandscape<HexClashTile, SeamlessTextureTerrain>(
 		land.sectorRadius,
 		terrainTypes,
@@ -91,7 +92,10 @@ export function createGame(name: string, seed: number) {
 	//const grid = new ColorRoadGrid(land.sectorRadius, roadTypes)
 	land.addPart(
 		terrainFactory(seed),
-		new Landscaper<HexClashTile>(landscape /*, grid*/),
+		new Landscaper<HexClashTile>(
+			landscape /*, grid*/,
+			new OceanLandscape<HexClashTile>(land.sectorRadius, seaLevel)
+		),
 		new Resourceful(terrainTypes, seed)
 	)
 

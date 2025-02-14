@@ -22,6 +22,6 @@ export const formations: Sextuplet<AxialDirection[]> = [
 	[0, 3],
 	[0, 2, 4],
 	[0, 1, 3, 5],
-	[null, 0, 1, 3, 5],
+	[null, 1, 2, 4, 5],
 	[0, 1, 2, 3, 4, 5],
 ]

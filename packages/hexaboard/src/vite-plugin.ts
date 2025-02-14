@@ -6,7 +6,6 @@ import type { ViteDevServer } from 'vite'
 export default {
 	name: 'serve-hexaboard-workers',
 	configureServer: (server: ViteDevServer): void => {
-		console.log('hexboard workers plugin loaded')
 		server.middlewares.use(async (req, res, next) => {
 			if (req.url?.startsWith('/assets/')) {
 				const hexaboardPath = dirname(
