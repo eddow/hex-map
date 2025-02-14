@@ -14,22 +14,12 @@ import { cached } from '~/utils/decorators'
 import type { Land, LandPart, PositionInTile, TileBase } from './land'
 
 export type SectorStatus = 'creating' | 'rendering' | 'existing'
-export interface AsyncSector<Tile extends TileBase> extends Sector<Tile> {
-	status: SectorStatus
-	promise?: Promise<void>
-}
 
 export interface SectorDebugUtils {
 	create(sector: Sector): void
 	log(point: Sector, event: LogEvent): void
 	addIn(group: Group, sector: Sector): void
-	assertInvariant(
-		invariant: string,
-		key: AxialRef,
-		sectors: AxialKeyMap<any>,
-		renderingSectors: AxialKeyMap<any>,
-		markedForDeletion: AxialSet
-	): void
+	assertInvariant(invariant: string, key: AxialRef, sectors: AxialKeyMap<any>): void
 	assertStatus(key: AxialRef, status: SectorStatus, land: Land<any>): void
 }
 
@@ -70,18 +60,13 @@ export const SDU: SectorDebugUtils | undefined = debugSectorLeak && {
 			}
 		}
 	},
-	assertInvariant(
-		invariant: string,
-		key: AxialRef,
-		sectors: AxialKeyMap<any>,
-		renderingSectors: AxialKeyMap<any>,
-		markedForDeletion: AxialSet
-	): void {
+	assertInvariant(invariant: string, key: AxialRef, sectors: AxialKeyMap<Sector>): void {
 		type InvariantCheck = 'A' | 'B' | 'C'
+		const sector = sectors.get(key)
 		const actualState = {
-			A: sectors.has(key),
-			B: renderingSectors.has(key),
-			C: markedForDeletion.has(key),
+			A: !!sector,
+			B: !!sector?.promise,
+			C: !!sector?.markedForDeletion,
 		}
 		const expectedState = {
 			0: { A: false, B: false, C: false },
@@ -104,6 +89,9 @@ export const SDU: SectorDebugUtils | undefined = debugSectorLeak && {
 }
 
 export class Sector<Tile extends TileBase = TileBase> {
+	status: SectorStatus
+	markedForDeletion?: true
+	promise?: Promise<void>
 	public readonly group = new Group()
 	private parts = new Map<LandPart<Tile>, Object3D>()
 	public invalidParts?: Set<LandPart<Tile>>
@@ -113,6 +101,7 @@ export class Sector<Tile extends TileBase = TileBase> {
 		public readonly land: Land<Tile>,
 		public readonly center: AxialCoord
 	) {
+		this.status = 'creating'
 		SDU?.create(this)
 	}
 
@@ -176,7 +165,8 @@ export class Sector<Tile extends TileBase = TileBase> {
 				if (tile.sectors.length === 0) tiles.delete(point)
 			}
 		}
-		removeTiles(this.tiles.keys())
+		// If not yet allocated (deleted before creation)
+		if (this.allocatedTiles) removeTiles(this.allocatedTiles.keys())
 		removeTiles(this.attachedTiles)
 	}
 	tile(point: Axial) {

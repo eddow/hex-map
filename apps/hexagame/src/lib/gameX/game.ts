@@ -20,6 +20,7 @@ import {
 	TileHandle,
 	axial,
 	costingPath,
+	debugHole,
 	handledActions,
 	icosahedron,
 	pointActions,
@@ -154,8 +155,7 @@ export function createGame(name: string, seed: number) {
 		selectionMode
 	)
 	//DEBUG VALUE
-	const land = new Land<GameXTile>(5, 20)
-	//const land = new Land<GameXTile>(0, 20)
+	const land = new Land<GameXTile>(debugHole ? 0 : 5, 20)
 	const landscape = new ContinuousTextureLandscape<GameXTile, SeamlessTextureTerrain>(
 		land.sectorRadius,
 		terrainTypes,
