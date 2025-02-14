@@ -9,7 +9,7 @@ import {
 	UniformsUtils,
 } from 'three'
 import { type Axial, type AxialCoord, type RandGenerator, numbers } from '~/utils'
-import { WorkerManager, extractFunctionParts } from '~/utils/workers'
+import { ThreadTask, extractFunctionParts } from '~/utils/workers/usage'
 import type { TerrainBase, TerrainKey, TerrainTile } from '../perlinTerrain'
 import type { Sector } from '../sector'
 import { CompleteLandscape } from './completeLandscape'
@@ -57,8 +57,8 @@ vec3 bary2weights(vec3 bary) {
 		`
 	},
 	oneHotMax: `
-vec3 bary2weights(vec3 v) {
-    vec3 mask = step(max(v.x, max(v.y, v.z)), v);
+vec3 bary2weights(vec3 bary) {
+    vec3 mask = step(max(bary.x, max(bary.y, bary.z)), bary);
     return mask / dot(mask, vec3(1.0)); // Ensures only one component is 1
 }`,
 }
@@ -114,7 +114,7 @@ export const textureStyle = {
 	},
 }
 
-const workers = new WorkerManager<ContinuousTextureLandscapeWorker>(CreateGeometryWorker)
+const workers = new ThreadTask<ContinuousTextureLandscapeWorker>(CreateGeometryWorker)
 
 export class ContinuousTextureLandscape<
 	Tile extends TerrainTile = TerrainTile,

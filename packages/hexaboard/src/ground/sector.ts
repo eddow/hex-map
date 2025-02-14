@@ -13,6 +13,12 @@ import {
 import { cached } from '~/utils/decorators'
 import type { Land, LandPart, PositionInTile, TileBase } from './land'
 
+export type SectorStatus = 'creating' | 'rendering' | 'existing'
+export interface AsyncSector<Tile extends TileBase> extends Sector<Tile> {
+	status: SectorStatus
+	promise?: Promise<void>
+}
+
 export interface SectorDebugUtils {
 	create(sector: Sector): void
 	log(point: Sector, event: LogEvent): void
@@ -24,6 +30,7 @@ export interface SectorDebugUtils {
 		renderingSectors: AxialKeyMap<any>,
 		markedForDeletion: AxialSet
 	): void
+	assertStatus(key: AxialRef, status: SectorStatus, land: Land<any>): void
 }
 
 /*
@@ -89,20 +96,34 @@ export const SDU: SectorDebugUtils | undefined = debugSectorLeak && {
 					`Invariant ${invariant} violated: ${key} ${value} !== ${expectedState[key as InvariantCheck]}`
 				)
 	},
+	assertStatus(key: AxialRef, status: SectorStatus, land: Land<any>) {
+		const sector = land.sectors.get(key)
+		if (!sector) throw new Error('Sector not found')
+		if (sector.status !== status) throw new Error(`Sector status ${sector.status} !== ${status}`)
+	},
 }
 
 export class Sector<Tile extends TileBase = TileBase> {
-	public group = new Group()
+	public readonly group = new Group()
 	private parts = new Map<LandPart<Tile>, Object3D>()
 	public invalidParts?: Set<LandPart<Tile>>
 	public readonly attachedTiles = new AxialSet()
+	private allocatedTiles?: AxialKeyMap<Tile>
 	constructor(
 		public readonly land: Land<Tile>,
-		public readonly center: AxialCoord,
-		public readonly tiles: AxialKeyMap<Tile>
+		public readonly center: AxialCoord
 	) {
-		for (const [_, tile] of this.tiles) tile.sectors.push(this)
 		SDU?.create(this)
+	}
+
+	get tiles() {
+		if (!this.allocatedTiles) throw new Error('Sector tiles not allocated')
+		return this.allocatedTiles
+	}
+	set tiles(value: AxialKeyMap<Tile>) {
+		if (this.allocatedTiles) throw new Error('Sector tiles already allocated')
+		this.allocatedTiles = value
+		for (const [_, tile] of this.tiles) tile.sectors.push(this)
 	}
 
 	@cached()

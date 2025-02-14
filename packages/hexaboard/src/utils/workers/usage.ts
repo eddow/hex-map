@@ -1,3 +1,5 @@
+import { assert } from '../debug'
+
 const coreCount = navigator.hardwareConcurrency || 4
 const isMobile = /Mobi|Android/i.test(navigator.userAgent)
 
@@ -39,26 +41,23 @@ function freeWorkerSlot(): void {
 	}
 }
 
-export class WorkerManager<Fct extends (...args: any[]) => Promise<any>> {
+type WorkerDefinition = { new (): Worker } | URL | string
+function loadWorker(worker: WorkerDefinition) {
+	if (typeof worker === 'function') return new worker()
+	return new Worker(worker, { type: 'module' })
+}
+
+/**
+ * Manages a pool of workers to run tasks concurrently. Each run allocates (perhaps instantiates) a worker, and runs a task once
+ */
+export class ThreadTask<Fct extends (...args: any[]) => Promise<any>> {
 	private pendingRequests: Map<
 		Worker,
 		{ resolve: (result: ReturnType<Fct>) => void; reject: (error: any) => void }
 	> = new Map()
 	private idleTimeouts: Map<Worker, ReturnType<typeof setTimeout>> = new Map()
 
-	/**
-	 *
-	 * @param workerScript new URL("worker.js", import.meta.url)
-	 */
-	//constructor(private workerScript: URL) {}
-	constructor(
-		private WorkerClass:
-			| {
-					new (): Worker
-			  }
-			| URL
-			| string
-	) {}
+	constructor(private definition: WorkerDefinition) {}
 
 	/**
 	 * Runs a task in an available worker.
@@ -83,10 +82,7 @@ export class WorkerManager<Fct extends (...args: any[]) => Promise<any>> {
 			this.idleTimeouts.delete(idling[0])
 			return idling[0]
 		}
-		const worker =
-			typeof this.WorkerClass === 'function'
-				? new this.WorkerClass()
-				: new Worker(this.WorkerClass, { type: 'module' })
+		const worker = loadWorker(this.definition)
 		this.setupWorker(worker)
 		return worker
 	}
@@ -146,13 +142,90 @@ export class WorkerManager<Fct extends (...args: any[]) => Promise<any>> {
 	}
 }
 
-export function workerExpose<Fct extends (...args: any[]) => Promise<any> | any>(fn: Fct) {
-	self.onmessage = async ({ data: { compute } }: MessageEvent<{ compute: Parameters<Fct> }>) => {
-		try {
-			if (compute) postMessage({ result: await fn.apply(self, compute) })
-		} catch (err: any) {
-			postMessage({ error: err.message, stack: err.stack })
+export type WorkerExposition = Record<PropertyKey, (...args: any[]) => Promise<any>>
+export type FunctionCall<Exposition extends WorkerExposition> = {
+	fn: keyof Exposition
+	args: Parameters<Exposition[keyof Exposition]>
+	resolve?: (result: ReturnType<Exposition[keyof Exposition]>) => void
+	reject?: (error: any) => void
+}
+
+/**
+ * Allocates a worker AND a slot for the duration of several calls
+ * Each task call will be sequential
+ */
+export class AllocatedWorker<Exposition extends WorkerExposition> {
+	private disposed = false
+	private slot?: Promise<void>
+	private slotAllocations = 0
+	private worker: Worker
+	private runningTasks?: FunctionCall<Exposition>
+	private queue: FunctionCall<Exposition>[] = []
+	constructor(definition: WorkerDefinition) {
+		this.worker = loadWorker(definition)
+		this.slot = allocateWorkerSlot()
+		this.worker.onmessage = ({ data }) => {
+			if (data.error) this.runningTasks!.reject!(new Error(data.error))
+			else this.runningTasks!.resolve!(data.result)
+			this.runningTasks = undefined
+			this.runQueue()
 		}
+		this.worker.onerror = (err) => {
+			this.runningTasks!.reject!(err)
+			this.runningTasks = undefined
+			this.runQueue()
+		}
+	}
+	get slotAllocated() {
+		return !!this.slot
+	}
+	set slotAllocated(value: boolean) {
+		if (value) this.slotAllocations++
+		else this.slotAllocations--
+		if (this.slotAllocations && !this.slot) this.slot = allocateWorkerSlot()
+		else if (!this.slotAllocations && this.slot) {
+			freeWorkerSlot()
+			this.slot = undefined
+		}
+	}
+	dispose() {
+		assert(this.runningTasks, 'Worker disposed while tasks are running')
+		if (this.disposed) return
+		this.worker.terminate()
+		this.slotAllocated = false
+		this.disposed = true
+	}
+	addTask(call: FunctionCall<Exposition>) {
+		this.queue.push(call)
+		this.runQueue()
+	}
+	private async runQueue() {
+		if (!this.runningTasks && this.queue.length > 0) {
+			this.runningTasks = this.queue.shift()!
+			await this.slot
+			this.worker.postMessage(this.runningTasks)
+		}
+	}
+	async run<Fct extends keyof Exposition>(fn: Fct, ...args: Parameters<Exposition[Fct]>) {
+		if (!this.slot) throw new Error('No slot allocated')
+		const functionCall = { fn, args } as FunctionCall<Exposition>
+		const task = new Promise<ReturnType<Exposition[Fct]>>((resolve, reject) => {
+			functionCall.resolve = resolve
+			functionCall.reject = reject
+		})
+		this.addTask(functionCall)
+		return task
+	}
+	get exposed() {
+		return new Proxy(
+			{},
+			{
+				get:
+					(_, fn: keyof Exposition) =>
+					(...args: Parameters<Exposition[typeof fn]>) =>
+						this.run(fn, ...args),
+			}
+		)
 	}
 }
 
@@ -182,10 +255,4 @@ export function extractFunctionParts(fn: (...args: any[]) => any) {
 		args: args.trim(),
 		body: body.trim(),
 	}
-}
-
-export function makeFunction<Fct extends (...args: any[]) => Promise<any> | any>(
-	parts: FunctionParts
-) {
-	return new Function(parts.args, parts.body) as Fct
 }

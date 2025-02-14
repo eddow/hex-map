@@ -14,7 +14,7 @@ import {
 	debugInformation,
 	fromCartesian,
 } from '~/utils'
-import { SDU, Sector } from './sector'
+import { type AsyncSector, SDU, Sector } from './sector'
 
 export interface TileBase {
 	position: Vector3Like
@@ -129,7 +129,7 @@ export class Land<Tile extends TileBase = TileBase> {
 	private readonly parts: LandPart<Tile>[] = []
 	public readonly group = new Group()
 	private readonly markedForDeletion = new AxialSet()
-	private readonly sectors = new AxialKeyMap<Sector<Tile>>()
+	public readonly sectors = new AxialKeyMap<AsyncSector<Tile>>()
 	public readonly sectorRadius: number
 	/**
 	 * Radius of a sector in "unit"
@@ -214,32 +214,58 @@ export class Land<Tile extends TileBase = TileBase> {
 		for (const part of invalidParts ?? sectorRenderers) await part.renderSector!(sector)
 	}
 
-	createSectors(added: Iterable<AxialCoord>) {
+	asyncCreateSector(key: AxialCoord) {
+		const center = this.sector2tile(key)
+		const sector = new Sector(this, center) as AsyncSector<Tile>
+		sector.status = 'creating'
 		const tileRefiners = this.parts.filter((part) => part.refineTile)
-		for (const toSee of added) {
-			const center = this.sector2tile(toSee)
-			const sectorTiles = axial.enum(this.sectorRadius).map((lclCoord): [AxialKey, Tile] => {
-				const point = axial.coordAccess(axial.linear(center, lclCoord))
-				let completeTile = this.tiles.get(point.key)
-				if (completeTile) return [point.key, completeTile]
-				let tile: TileBase = {
-					position: { ...cartesian(point, this.tileSize), z: 0 },
-					sectors: [],
-				}
-				for (const part of tileRefiners) tile = part.refineTile!(tile, point) ?? tile
-				completeTile = tile as Tile
-				this.tiles.set(point.key, completeTile)
-				return [point.key, completeTile]
+		sector.promise = new Promise((resolve) => {
+			setTimeout(() => {
+				const sectorTiles = axial.enum(this.sectorRadius).map((lclCoord): [AxialKey, Tile] => {
+					const point = axial.coordAccess(axial.linear(center, lclCoord))
+					let completeTile = this.tiles.get(point.key)
+					if (completeTile) return [point.key, completeTile]
+					let tile: TileBase = {
+						position: { ...cartesian(point, this.tileSize), z: 0 },
+						sectors: [],
+					}
+					for (const part of tileRefiners) tile = part.refineTile!(tile, point) ?? tile
+					completeTile = tile as Tile
+					this.tiles.set(point.key, completeTile)
+					return [point.key, completeTile]
+				})
+
+				sector.tiles = new AxialKeyMap(sectorTiles)
+				sector.promise = undefined
+				sector.status = 'existing'
+				resolve()
 			})
-			const sector = new Sector(this, center, new AxialKeyMap(sectorTiles))
+		})
+		this.needGenerationSpread = true
+		SDU?.log(sector, { type: 'create' })
+		SDU?.assertInvariant('0', key, this.sectors, this.renderingSectors, this.markedForDeletion)
+		this.sectors.set(key, sector) // SectorInvariant: 0->1
+		SDU?.addIn(this.group, sector)
+		this.group.add(sector.group!)
+		return sector
+	}
+
+	createSectors(added: Iterable<AxialCoord>) {
+		for (const toSee of added) {
 			this.needGenerationSpread = true
-			SDU?.log(sector, { type: 'add-new' })
-			SDU?.addIn(this.group, sector)
-			SDU?.assertInvariant('0', toSee, this.sectors, this.renderingSectors, this.markedForDeletion)
-			this.sectors.set(toSee, sector) // SectorInvariant: 0->1
-			this.group.add(sector.group!)
-			SDU?.assertInvariant('1', toSee, this.sectors, this.renderingSectors, this.markedForDeletion)
-			this.markToRender(sector)
+			const sector = this.asyncCreateSector(toSee)
+			SDU?.assertStatus(toSee, 'creating', this)
+			sector.promise?.then(() => {
+				SDU?.log(sector, { type: 'add-new' })
+				SDU?.assertInvariant(
+					'1',
+					toSee,
+					this.sectors,
+					this.renderingSectors,
+					this.markedForDeletion
+				)
+				this.markToRender(sector)
+			})
 		}
 	}
 
