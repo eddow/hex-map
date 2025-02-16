@@ -1,4 +1,3 @@
-import type { HexClashTile } from '$lib/hexClash/world/terrain'
 import {
 	type ColorRoad,
 	PerlinTerrain,
@@ -9,6 +8,7 @@ import {
 } from 'hexaboard'
 import { RepeatWrapping, TextureLoader } from 'three'
 import { Rock, Tree } from './handelable'
+import type { HexClashTile } from '$lib/hexClash/world/terrain'
 
 const textureLoader = new TextureLoader()
 function assetTexture(asset: string) {

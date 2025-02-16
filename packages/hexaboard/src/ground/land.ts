@@ -16,6 +16,12 @@ import {
 } from '~/utils'
 import { SDU, Sector } from './sector'
 
+export class SectorNotGeneratedError extends Error {
+	constructor(public readonly key: AxialKey) {
+		super(`Tile ${key} has not been generated`)
+	}
+}
+
 export const debugHole = true
 
 export interface TileBase {
@@ -175,7 +181,6 @@ export class Land<Tile extends TileBase = TileBase> {
 		SDU?.log(sector, { type: 'markToRender' }) // SectorInvariant: 1->g
 		// TODO: Might have problem when rendering a part and need to render whole or vice&versa
 		// NOTE: occurs for example when "resourcefulTerrain" changes (road/tree/...)
-		// TODO: remove setTimeOut when no more `this.renderingSectors`
 		//setTimeout(() => {
 		if (
 			sector.status !== 'rendering' &&
@@ -186,7 +191,7 @@ export class Land<Tile extends TileBase = TileBase> {
 			SDU?.log(sector, { type: 'begin render' })
 			sector.status = 'rendering'
 			sector.promise = this.renderSector(sector).then(() => {
-				sector.status = 'existing' // g->1
+				sector.status = 'rendered' // g->1
 				sector.promise = undefined
 				SDU?.log(sector, { type: 'done render' })
 				this.propagateDebugInformation()
@@ -283,6 +288,7 @@ export class Land<Tile extends TileBase = TileBase> {
 				const freeResources = ((deletedSector: Sector<Tile>) => (direct: boolean) => {
 					// SectorInvariant: x->0
 					if ((!deletedSector.markedForDeletion && !direct) || !this.sectors.delete(key)) return
+					deletedSector.status = 'deleted'
 					SDU?.log(deletedSector, { type: `freeResources[${direct ? 'direct' : 'delayed'}]` })
 					SDU?.log(deletedSector, { type: 'group-remove' })
 					assert(
@@ -342,6 +348,50 @@ export class Land<Tile extends TileBase = TileBase> {
 		this.createSectors(axial.enum(this.landRadius))
 	}
 
+	// Mark to render, but with a `setTimeout`
+	willMarkToRender(sector: Sector<Tile>) {
+		sector.invalidParts = undefined
+		if (sector.status === 'rendered') {
+			sector.status = 'existing'
+			setTimeout(() => {
+				this.markToRender(sector)
+			})
+		}
+	}
+
+	/**
+	 * Callback given to functions susceptible to update tiles - keep track of sectors who have to be re-rendered, &c
+	 * @param sectors
+	 * @param aRef
+	 * @param modifications
+	 * @returns
+	 */
+	tileUpdater(sectors: Sector<Tile>[], aRef: AxialRef, modifications?: Partial<Tile>) {
+		const tile = this.tile(aRef)
+		if (modifications) Object.assign(tile, modifications)
+		for (const sector of sectors)
+			if (!tile.sectors.includes(sector)) {
+				tile.sectors.push(sector)
+				sector.attachedTiles.add(aRef)
+			}
+		for (const sector of tile.sectors) this.willMarkToRender(sector)
+		return tile
+	}
+	addPart(...parts: LandPart<Tile>[]) {
+		this.parts.push(...parts)
+		for (const part of parts)
+			part.on('invalidatedRender', (part: LandPart<Tile>, sector: Sector<Tile>) => {
+				sector.invalidate(part)
+				this.markToRender(sector)
+			})
+	}
+
+	progress(dt: number) {
+		for (const [key, tile] of this.temporaryTiles) if (!tile.sectors.length) this.tiles.delete(key)
+		this.temporaryTiles.clear()
+	}
+	// #region Tile access
+
 	temporaryTiles = new AxialKeyMap<Tile>()
 	generateOneTile(aRef: AxialRef) {
 		// TODO: if (Number.isFinite(this.landRadius)) return null
@@ -362,47 +412,11 @@ export class Land<Tile extends TileBase = TileBase> {
 			})
 		return completeTile
 	}
-
-	/**
-	 * Callback given to functions susceptible to update tiles - keep track of sectors who have to be re-rendered, &c
-	 * @param sectors
-	 * @param aRef
-	 * @param modifications
-	 * @returns
-	 */
-	tileUpdater(sectors: Sector<Tile>[], aRef: AxialRef, modifications?: Partial<Tile>) {
-		const tile = this.tile(aRef)
-		if (modifications) Object.assign(tile, modifications)
-		for (const sector of sectors)
-			if (!tile.sectors.includes(sector)) {
-				tile.sectors.push(sector)
-				sector.attachedTiles.add(aRef)
-			}
-		for (const sector of tile.sectors) {
-			sector.invalidParts = undefined
-			this.markToRender(sector as Sector<Tile>)
-		}
-		return tile
-	}
-	addPart(...parts: LandPart<Tile>[]) {
-		this.parts.push(...parts)
-		for (const part of parts)
-			part.on('invalidatedRender', (part: LandPart<Tile>, sector: Sector<Tile>) => {
-				sector.invalidate(part)
-				this.markToRender(sector)
-			})
-	}
-
-	progress(dt: number) {
-		for (const [key, tile] of this.temporaryTiles) if (!tile.sectors.length) this.tiles.delete(key)
-		this.temporaryTiles.clear()
-	}
-	// #region Tile access
-
 	tile(aRef: AxialRef): Tile {
 		const renderedTile = this.tiles.get(aRef)
 		if (renderedTile) return renderedTile
-		return this.generateOneTile(aRef)
+		throw new SectorNotGeneratedError(axial.access(aRef).key)
+		//return this.generateOneTile(aRef)
 	}
 
 	tileAt(vec2: Vector2Like) {

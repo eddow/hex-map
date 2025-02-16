@@ -13,7 +13,7 @@ import {
 import { cached } from '~/utils/decorators'
 import type { Land, LandPart, PositionInTile, TileBase } from './land'
 
-export type SectorStatus = 'creating' | 'rendering' | 'existing'
+export type SectorStatus = 'creating' | 'rendering' | 'existing' | 'rendered' | 'deleted'
 
 export interface SectorDebugUtils {
 	create(sector: Sector): void

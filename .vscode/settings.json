@@ -5,6 +5,7 @@
 		"Catmull",
 		"coef",
 		"dockview",
+		"fract",
 		"glsl",
 		"GLTF",
 		"Handelable",
@@ -12,6 +13,7 @@
 		"hexaboard",
 		"hexagame",
 		"inlang",
+		"ivec",
 		"lacunarity",
 		"Mobi",
 		"onready",
@@ -19,7 +21,9 @@
 		"poppanator",
 		"Raycaster",
 		"replit",
-		"unlisten"
+		"smoothstep",
+		"unlisten",
+		"voronoi"
 	],
 	
 	"recommendations": [
