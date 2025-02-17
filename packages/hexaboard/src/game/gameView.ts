@@ -1,96 +1,143 @@
 import {
-	PerspectiveCamera,
-	type Vector2Like,
+	type AbstractEngine,
+	Color3,
+	Color4,
+	DirectionalLight,
+	Engine,
+	type EngineOptions,
+	FreeCamera,
+	HemisphericLight,
+	type IVector2Like,
+	Scene,
+	type SceneOptions,
 	Vector3,
-	type Vector3Like,
-	WebGLRenderer,
-} from 'three'
-import type { InputInteraction } from '~/input/inputInteraction'
+} from '@babylonjs/core'
+import { clamp } from '~/utils'
 import type { Game } from './game'
 
 export class GameView {
-	public readonly camera
-	private readonly renderer
+	public readonly camera: FreeCamera
+	public readonly scene: Scene
+	public readonly engine: AbstractEngine
+	public game: Game = null!
 	constructor(
-		public readonly game: Game,
-		canvas?: HTMLCanvasElement,
-		private readonly interaction?: InputInteraction,
-		{ near = 0.1, far = 1000 }: { near: number; far: number } = { near: 0.1, far: 1000 }
+		public readonly canvas: HTMLCanvasElement,
+		engineOptions?: EngineOptions,
+		sceneOptions?: SceneOptions
 	) {
-		this.camera = new PerspectiveCamera(75, 1, near, far)
-		this.renderer = new WebGLRenderer({ canvas, antialias: true })
-		interaction?.listenTo(this.renderer.domElement)
+		this.engine = new Engine(canvas, true, engineOptions)
+		const scene = new Scene(this.engine, sceneOptions)
+		scene.clearColor = new Color4(0, 0, 0, 1)
+
+		this.setLights()
+		const camera = new FreeCamera('camera', new Vector3(300, 300, 300), scene)
+		camera.detachControl()
+		scene.detachControl()
+		camera.setTarget(new Vector3(0, 0, 0))
+		camera.minZ = 0.1
+		camera.maxZ = 2000
+
+		this.scene = scene
+		this.camera = camera
+		document.addEventListener('visibilitychange', this.visibilityChange)
+		this.intersectionObserver = new IntersectionObserver(
+			([entry]) => {
+				this.isCanvasVisible = entry.isIntersecting
+				this.updateRenderLoop()
+			},
+			{ threshold: 0.01 }
+		)
+		this.visibilityChange()
+	}
+	setLights() {
+		const { scene } = this
+		const ambient = new HemisphericLight('ambient', new Vector3(0, 1, 0), scene)
+		ambient.intensity = 0.5
+		ambient.diffuse = new Color3(1, 1, 1)
+		const directional = new DirectionalLight('light', new Vector3(0, -1, 0), scene)
+		directional.position.set(0, 300, 0)
 	}
 	dispose() {
-		this.interaction?.unListenTo(this.renderer.domElement)
-		this.renderer.dispose()
+		this.engine.dispose()
+		this.scene.dispose()
+		document.removeEventListener('visibilitychange', this.visibilityChange)
+		this.intersectionObserver.disconnect()
 	}
-	get canvas() {
-		return this.renderer.domElement
+	visibilityChange = () => {
+		this.isPageVisible = !document.hidden
+		this.updateRenderLoop()
+	}
+	private readonly intersectionObserver: IntersectionObserver
+	isCanvasVisible = true
+	isPageVisible = true
+	isLoopActive = false
+	updateRenderLoop() {
+		const shouldRunRenderLoop = this.isCanvasVisible && this.isPageVisible
+		if (shouldRunRenderLoop !== this.isLoopActive) {
+			this.isLoopActive = shouldRunRenderLoop
+			if (this.isLoopActive) this.engine.runRenderLoop(() => this.scene.render())
+			else this.engine.stopRenderLoop()
+		}
 	}
 	resize(width: number, height: number) {
-		this.camera.aspect = width / height
-		this.camera.updateProjectionMatrix()
-		this.renderer.setSize(width, height)
-		this.camera.updateMatrixWorld()
+		this.engine.resize()
 	}
-	render() {
-		// Don't rely on the `dispose` mechanism to stop rendering on a canvas when they are removed
-		const canvas = this.renderer.domElement
-		if (!document.body.contains(canvas) || canvas.offsetWidth === 0 || canvas.offsetHeight === 0)
-			return
-		const style = window.getComputedStyle(canvas)
-		if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return
-		this.renderer.render(this.game.scene, this.camera)
-	}
-	turn(delta: Vector2Like) {
+
+	private get cameraRightVector() {
 		const { camera } = this
-		// Rotate camera
-		// x: movement rotates the camera around the word's Z axis
-		camera.rotateOnWorldAxis(new Vector3(0, 0, -1), delta.x * 0.01)
-		// y: camera tilts between horizontal (plan: z=0) and vertical (look along Z axis) positions
-		camera.rotateX(-delta.y * 0.01) // Apply tilt rotation
-		// clamp down/horizon
-		const upVector = new Vector3(0, 1, 0).applyQuaternion(camera.quaternion)
-		if (upVector.z < 0) camera.rotateX(-Math.asin(upVector.z))
-		const frontVector = new Vector3(0, 0, 1).applyQuaternion(camera.quaternion)
-		// clamp to "nearly horizontal"
-		if (frontVector.z < 0.1) camera.rotateX(Math.asin(frontVector.z - 0.1))
-		this.camera.updateMatrixWorld()
+		// Extract the right vector (X-axis) from the camera's world matrix
+		const matrix = camera.getWorldMatrix()
+		const right = new Vector3(matrix.m[0], matrix.m[1], matrix.m[2])
+		return right.normalize()
 	}
-	pan(delta: Vector2Like) {
+	turn(delta: IVector2Like) {
 		const { camera } = this
-		const displacement = camera.position.z / 1000
-		const xv = new Vector3(1, 0, 0)
-		xv.applyQuaternion(camera.quaternion)
-		const upVector = new Vector3(0, 1, 0)
-		const worldUpVector = upVector.applyQuaternion(camera.quaternion)
+		// 🟢 1️⃣ Horizontal Rotation (Yaw)
+		camera.rotation.y += delta.x * 0.01
+		// 🟡 2️⃣ Vertical Rotation (Pitch)
+		camera.rotation.x += delta.y * 0.01
+		// 🟢 3️⃣ Clamp Vertical Tilt
+		const maxTilt = Math.PI / 2 - 0.1 // Slightly less than 90° to prevent flipping
+		camera.rotation.x = clamp(camera.rotation.x, 0, maxTilt)
+	}
 
-		const projectedUp = new Vector3(worldUpVector.x, worldUpVector.y, 0)
+	pan(delta: IVector2Like) {
+		// TODO add inertia or easing w/ mouse
+		const { camera } = this
+		const displacement = camera.position.y / 1000
 
-		// Step 3: Normalize the vector
-		projectedUp.normalize()
-
-		// Step 4: Scale it to match the original magnitude
+		// 1️⃣ Get Right Vector (X-axis)
+		const xv = Vector3.TransformNormal(new Vector3(1, 0, 0), camera.getWorldMatrix())
+		// 2️⃣ Get Forward Vector (Z-axis projected from world up)
+		const worldUpVector = Vector3.TransformNormal(new Vector3(0, 1, 0), camera.getWorldMatrix())
+		// 3️⃣ Project Up Vector onto X-Z Plane
+		const projectedUp = new Vector3(worldUpVector.x, 0, worldUpVector.z).normalize()
+		// 4️⃣ Scale Projected Vector by Original Magnitude
 		const originalMagnitude = worldUpVector.length()
-		projectedUp.multiplyScalar(originalMagnitude)
-		// Pan camera
-		camera.position
-			.add(xv.multiplyScalar(-delta.x * displacement))
-			.add(projectedUp.multiplyScalar(delta.y * displacement))
-		camera.updateMatrixWorld()
+		projectedUp.scaleInPlace(originalMagnitude)
+		// 5️⃣ Pan Camera on X-Z Plane
+		camera.position.addInPlace(xv.scale(-delta.x * displacement)) // Horizontal (X-axis)
+		camera.position.addInPlace(projectedUp.scale(delta.y * displacement)) // Vertical (Z-axis)
 	}
-	zoom(
-		center: Vector3Like,
-		delta: number,
-		clampCamZ: { max: number; min: number },
-		zoomFactor = 1.2
-	) {
+
+	zoom(center: Vector3, delta: number, clampCamZ: { max: number; min: number }, zoomFactor = 1.2) {
 		const { camera } = this
-		const dist = camera.position.clone().sub(center)
-		dist.multiplyScalar(zoomFactor ** delta)
-		camera.position.copy(center).add(dist)
-		camera.position.z = Math.max(Math.min(camera.position.z, clampCamZ.max), clampCamZ.min)
-		camera.updateMatrixWorld()
+		// 1️⃣ Distance from center
+		const dist = camera.position.clone().subtract(center)
+		// 2️⃣ Apply zoom factor
+		dist.scaleInPlace(zoomFactor ** delta)
+		// 3️⃣ Move camera
+		camera.position.copyFrom(center).addInPlace(dist)
+		// 4️⃣ Clamp Z-axis
+		camera.position.z = clamp(camera.position.z, clampCamZ.min, clampCamZ.max)
+	}
+
+	private oldPosition = new Vector3()
+	public get updated() {
+		if (!this.oldPosition.equals(this.camera.position)) {
+			this.oldPosition.copyFrom(this.camera.position)
+			return true
+		}
+		return false
 	}
 }

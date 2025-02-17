@@ -1,4 +1,4 @@
-import { Group, type Object3D, Vector3 } from 'three'
+import { type Node, TransformNode } from '@babylonjs/core'
 import {
 	assert,
 	type Axial,
@@ -9,8 +9,8 @@ import {
 	axial,
 	cartesian,
 	hexSides,
+	vector3from,
 } from '~/utils'
-import { cached } from '~/utils/decorators'
 import type { Land, LandPart, PositionInTile, TileBase } from './land'
 
 export type SectorStatus = 'creating' | 'rendering' | 'existing' | 'rendered' | 'deleted'
@@ -18,7 +18,7 @@ export type SectorStatus = 'creating' | 'rendering' | 'existing' | 'rendered' | 
 export interface SectorDebugUtils {
 	create(sector: Sector): void
 	log(point: Sector, event: LogEvent): void
-	addIn(group: Group, sector: Sector): void
+	addIn(node: TransformNode, sector: Sector): void
 	assertInvariant(invariant: string, key: AxialRef, sectors: AxialKeyMap<any>): void
 	assertStatus(key: AxialRef, status: SectorStatus, land: Land<any>): void
 }
@@ -29,7 +29,7 @@ g - generating: land.generating[key] -> defined
 x- cancelled: land.markedForDeletion[key]-> defined
 1- generated
 */
-const sectors = new WeakMap<Object3D, Sector>()
+const sectors = new WeakMap<Node, Sector>()
 const uuids = new WeakMap<Sector, string>()
 type LogEvent = Record<string, any>
 const logs = new AxialKeyMap<LogEvent[]>()
@@ -37,7 +37,7 @@ const logs = new AxialKeyMap<LogEvent[]>()
 const debugSectorLeak: true | undefined = true
 export const SDU: SectorDebugUtils | undefined = debugSectorLeak && {
 	create(sector: Sector<TileBase>) {
-		sectors.set(sector.group, sector)
+		sectors.set(sector.node, sector)
 		uuids.set(sector, crypto.randomUUID())
 		SDU?.log(sector, { type: 'create' })
 	},
@@ -51,9 +51,9 @@ export const SDU: SectorDebugUtils | undefined = debugSectorLeak && {
 		}
 		log.push({ ...event, stack: new Error().stack })
 	},
-	addIn(group: Group, sector: Sector<TileBase>) {
-		for (const o3d of group.children) {
-			if (sectors.get(o3d)?.center === sector.center) {
+	addIn(land: TransformNode, sector: Sector<TileBase>) {
+		for (const node of land.getChildren()) {
+			if (sectors.get(node)?.center === sector.center) {
 				const log = logs.get(sector.point)
 				console.dir(log)
 				throw new Error("Sector's position already added")
@@ -92,15 +92,17 @@ export class Sector<Tile extends TileBase = TileBase> {
 	status: SectorStatus
 	markedForDeletion?: true
 	promise?: Promise<void>
-	public readonly group = new Group()
-	private parts = new Map<LandPart<Tile>, Object3D>()
+	public readonly node: TransformNode
+	private parts = new Map<LandPart<Tile>, TransformNode>()
 	public invalidParts?: Set<LandPart<Tile>>
 	public readonly attachedTiles = new AxialSet()
 	private allocatedTiles?: AxialKeyMap<Tile>
 	constructor(
+		public readonly point: Axial,
 		public readonly land: Land<Tile>,
 		public readonly center: AxialCoord
 	) {
+		this.node = new TransformNode(`Sector #${point.key}`, land.gameView.scene, true)
 		this.status = 'creating'
 		SDU?.create(this)
 	}
@@ -115,18 +117,17 @@ export class Sector<Tile extends TileBase = TileBase> {
 		for (const [_, tile] of this.tiles) tile.sectors.push(this)
 	}
 
-	@cached()
-	get point() {
-		return axial.coordAccess(this.land.tile2sector(this.center)).key
-	}
 	cartesian(point: Axial) {
-		return { ...cartesian(point, this.land.tileSize), z: this.tile(point)?.position?.z ?? 0 }
+		return { ...cartesian(point, this.land.tileSize), y: this.tile(point)?.position?.y ?? 0 }
 	}
-	setPartO3d(part: LandPart<Tile>, o3d: Object3D) {
-		const oldO3d = this.parts.get(part)
-		if (oldO3d) this.group.remove(oldO3d)
-		this.group.add(o3d)
-		this.parts.set(part, o3d)
+	setPartNode(part: LandPart<Tile>, node: TransformNode) {
+		const oldNode = this.parts.get(part)
+		if (oldNode) {
+			this.node.removeChild(oldNode)
+			oldNode.dispose()
+		}
+		this.node.addChild(node)
+		this.parts.set(part, node)
 	}
 	invalidate(part: LandPart<Tile>) {
 		SDU?.log(this, { type: 'invalidate', part: part.constructor.name })
@@ -143,16 +144,17 @@ export class Sector<Tile extends TileBase = TileBase> {
 		const next1 = axial.linear(point, hexSides[s])
 		const next2 = axial.linear(point, hexSides[(s + 1) % 6])
 		if (!this.tiles.has(next1) || !this.tiles.has(next2)) return null
-		const pos = new Vector3().copy(this.tiles.get(aRef)!.position)
-		const next1dir = new Vector3()
-			.copy(this.tiles.get(next1)!.position)
-			.sub(pos)
-			.multiplyScalar(u / 2)
-		const next2dir = new Vector3()
-			.copy(this.tiles.get(next2)!.position)
-			.sub(pos)
-			.multiplyScalar(v / 2)
-		return pos.add(next1dir).add(next2dir)
+		const pos = this.position(aRef)
+
+		const next1dir = this.position(next1)
+			.subtract(pos)
+			.scale(u / 2)
+
+		const next2dir = this.position(next2)
+			.subtract(pos)
+			.scale(v / 2)
+
+		return pos.addInPlace(next1dir).addInPlace(next2dir)
 	}
 	freeTiles() {
 		SDU?.log(this, { type: 'freeTiles' })
@@ -176,6 +178,15 @@ export class Sector<Tile extends TileBase = TileBase> {
 			this.tiles.set(point, rv)
 		}
 		return rv
+	}
+
+	global(point: AxialRef) {
+		return axial.coordAccess(axial.linear(this.center, axial.access(point)))
+	}
+
+	position(aRef: AxialRef) {
+		const tile = this.tile(axial.access(aRef))
+		return vector3from(tile.position)
 	}
 
 	get logs() {

@@ -1,51 +1,63 @@
-import { BufferAttribute, BufferGeometry, type Material, MeshBasicMaterial, type RGB } from 'three'
+import { Color3, type Material, StandardMaterial, VertexData } from '@babylonjs/core'
+import type { Game } from '~/game'
 import type { AxialCoord } from '~/utils'
 import type { TileBase } from '../land'
 import type { Sector } from '../sector'
 import { CompleteLandscape } from './completeLandscape'
-import { centeredTriangles, type LandscapeTriangle } from './landscape'
+import { type LandscapeTriangle, centeredTiles } from './landscape'
 
-interface ColorTile extends TileBase {
-	color: RGB
+export interface ColorTile extends TileBase {
+	color: Color3
 }
 
 export class ContinuousColorLandscape<
 	Tile extends ColorTile = ColorTile,
 > extends CompleteLandscape<Tile> {
 	protected readonly material: Material
-	constructor(sectorRadius: number) {
-		super(sectorRadius)
-		this.material = new MeshBasicMaterial({
-			vertexColors: true,
-			wireframe: true,
-		})
+	constructor(game: Game) {
+		super(game)
+		const material = new StandardMaterial('vertexColorMaterial', game.gameView.scene)
+		material.wireframe = true
+		material.disableLighting = true
+		material.emissiveColor = new Color3(1, 1, 1)
+		this.material = material
 	}
-	async createGeometry(sector: Sector<Tile>, genericTriangles: LandscapeTriangle<AxialCoord>[]) {
-		const triangles = centeredTriangles(genericTriangles, sector.center)
-		const positions = new Float32Array(triangles.length * 9)
-		const colors = new Float32Array(triangles.length * 9)
-		let index = 0
-		for (const triangle of triangles) {
-			for (const coord of triangle.points) {
-				const tile = sector.tiles.get(coord)!
-				const position = tile.position
-				const color = tile.color
-				positions.set([position.x, position.y, position.z], index * 3)
-				colors.set([color.r, color.g, color.b], index * 3)
-				index++
-			}
+	async createVertexData(
+		sector: Sector<Tile>,
+		triangles: LandscapeTriangle<number>[],
+		vertex: AxialCoord[]
+	): Promise<VertexData> {
+		const vertexData = new VertexData()
+		const tiles = centeredTiles(vertex, sector)
+		/*vertexData.positions = tiles.flatMap(({ tile: { position } }) => [
+			position.x,
+			position.y,
+			position.z,
+		])
+		vertexData.colors = tiles.flatMap(({ tile: { color } }) => [
+			color.r ?? 0,
+			color.g ?? 0,
+			color.b ?? 0,
+			1,
+		])
+		vertexData.indices = triangles.flatMap(({ points }) => points)*/
+		vertexData.positions = []
+		vertexData.colors = []
+		vertexData.indices = []
+		const indices = triangles.flatMap(({ points }) => points)
+		for (const index of indices) {
+			const { tile, point } = tiles[index]
+			vertexData.positions.push(tile.position.x, tile.position.y, tile.position.z)
+			vertexData.colors.push(tile.color.r ?? 0, tile.color.g ?? 0, tile.color.b ?? 0, 1)
+			vertexData.indices.push(vertexData.indices.length)
 		}
-		const geometry = new BufferGeometry()
-		geometry.setAttribute('position', new BufferAttribute(positions, 3))
-		geometry.setAttribute('color', new BufferAttribute(colors, 3))
-		return geometry
+		return vertexData
 	}
 	refineTile(tile: TileBase, coord: AxialCoord): Tile {
-		const h01 = Math.min(1, Math.max(0, tile.position.z / 150))
+		const h01 = Math.min(1, Math.max(0, tile.position.y / 150))
 		return {
 			...tile,
 			color: {
-				r: 0,
 				g: h01,
 				b: 1 - h01,
 			},

@@ -107,7 +107,7 @@ export class Resourceful<
 				}
 			}
 		}
-		sector.setPartO3d(this, group)
+		sector.setPartNode(this, group)
 	}
 	walkTimeMultiplier({ on, direction }: WalkTimeSpecification<Tile>): number | undefined {
 		const center = on.content?.[0]?.walkTimeMultiplier ?? 1

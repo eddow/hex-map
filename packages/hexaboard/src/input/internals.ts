@@ -1,4 +1,4 @@
-import type { Vector2Like } from 'three'
+import type { IVector2Like } from '@babylonjs/core'
 import type {
 	ActionConfiguration,
 	D3InputEvent,
@@ -11,7 +11,7 @@ import type {
 	OneWheelConfiguration,
 	SwitchableConfiguration,
 } from './actions'
-import type { MouseButtons, ModKeyCombination, MouseButton } from './d2buffer'
+import type { ModKeyCombination, MouseButton, MouseButtons } from './d2buffer'
 
 export type AnyConfiguration =
 	| ActionConfiguration
@@ -26,8 +26,8 @@ export type AnyConfiguration =
 export interface InputState {
 	buttons: MouseButtons
 	modifiers: ModKeyCombination
-	deltaMouse?: Vector2Like
-	deltaWheel?: Vector2Like
+	deltaMouse?: IVector2Like
+	deltaWheel?: IVector2Like
 	button?: MouseButton
 	keyCode?: string
 	keysDown: Record<string, boolean>

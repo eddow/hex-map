@@ -84,7 +84,7 @@ export function terrainFactory(seed: number) {
 					...from,
 					position: {
 						...from.position,
-						z: generation.height + generation.rocky * (generation.height - mountainsFrom) * 2,
+						y: generation.height + generation.rocky * (generation.height - mountainsFrom) * 2,
 					},
 					terrain: 'stone',
 				}
@@ -94,7 +94,7 @@ export function terrainFactory(seed: number) {
 					...from,
 					position: {
 						...from.position,
-						z: generation.height,
+						y: generation.height,
 					},
 					terrain: 'river',
 				}
@@ -103,7 +103,7 @@ export function terrainFactory(seed: number) {
 				...from,
 				position: {
 					...from.position,
-					z: generation.height,
+					y: generation.height,
 				},
 				terrain: generation.type > 0 ? 'forest' : 'grass',
 			}

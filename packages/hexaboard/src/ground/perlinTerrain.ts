@@ -38,6 +38,7 @@ export class PerlinTerrain<Tile extends TileBase, Keys extends PropertyKey>
 	implements LandPart<Tile>
 {
 	private generators: Record<Keys, HeightMap>
+
 	constructor(
 		seed: number,
 		configurations: Record<Keys, PerlinConfiguration>,
@@ -65,7 +66,7 @@ export class PerlinTerrain<Tile extends TileBase, Keys extends PropertyKey>
 			Object.defineProperty(subGen, key, {
 				// Calculate perlin only when needed + cache
 				get() {
-					const rv = generators[key as Keys].getHeight(tile.position.x, tile.position.y)
+					const rv = generators[key as Keys].getHeight(tile.position.x, tile.position.z)
 					Object.defineProperty(subGen, key, { value: rv })
 					return rv
 				},

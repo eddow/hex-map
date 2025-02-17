@@ -1,7 +1,7 @@
-import type { Vector2Like } from 'three'
 /**
  * This is a standalone library to provide Mouse/Keyboard-Events a proper way to animated game
  */
+import type { IVector2Like } from '@babylonjs/core'
 import { complete } from '~/utils'
 
 export enum MouseButton {
@@ -44,19 +44,19 @@ export const keyboardEvents = ['keydown', 'keyup', 'keypress']
 // One mouse for the computer, these ought to be global
 let buttonsState: MouseButtons = MouseButtons.none
 let modifierKeys: ModKeyCombination = modKeyCombination.none
-let mousePosition: Vector2Like = { x: 0, y: 0 }
+let mousePosition: IVector2Like = { x: 0, y: 0 }
 const keysDown: Record<string, boolean> = {}
 
 export interface MouseState {
 	buttons: MouseButtons
-	position: Vector2Like
+	position: IVector2Like
 }
 
 export interface InputSnapshot {
 	mouse?: MouseState
 	modifiers: ModKeyCombination
-	deltaMouse?: Vector2Like
-	deltaWheel?: Vector2Like
+	deltaMouse?: IVector2Like
+	deltaWheel?: IVector2Like
 	keysDown: Record<string, boolean>
 }
 
@@ -96,8 +96,8 @@ export class D2Buffer {
 		return mousePosition
 	}
 	public mouseState?: MouseState
-	public deltaPosition?: Vector2Like
-	public deltaWheel?: Vector2Like
+	public deltaPosition?: IVector2Like
+	public deltaWheel?: IVector2Like
 	private potentialClick = false
 
 	private removeListeners(element: HTMLElement, managedEvents: Iterable<string>) {

@@ -1,7 +1,7 @@
+import type { IVector3Like } from '@babylonjs/core'
 /**
  * @link https://www.redblobgames.com/grids/hexagons/
  */
-import type { Vector2Like } from 'three'
 import type { Sextuplet } from '~/types'
 import type { RandGenerator } from '~/utils/numbers'
 import { assert } from './debug'
@@ -58,21 +58,21 @@ export function hexTiles(radius: number) {
 	return radius === 0 ? 0 : 3 * radius * (radius - 1) + 1
 }
 
-export function cartesian(aRef: AxialRef, size = 1) {
+export function cartesian(aRef: AxialRef, size = 1): IVector3Like {
 	const { q, r } = axial.access(aRef)
 	const A = Math.sqrt(3) * size
 	const B = (Math.sqrt(3) / 2) * size
 	const C = (3 / 2) * size
 
-	return { x: A * q + B * r, y: C * r }
+	return { x: A * q + B * r, y: 0, z: C * r }
 }
 
-export function fromCartesian({ x, y }: Vector2Like, size: number) {
+export function fromCartesian({ x, z }: IVector3Like, size: number) {
 	const A = Math.sqrt(3) * size
 	const B = (Math.sqrt(3) / 2) * size
 	const C = (3 / 2) * size
 
-	const r = y / C
+	const r = z / C
 	const q = (x - B * r) / A
 	return { q, r }
 }

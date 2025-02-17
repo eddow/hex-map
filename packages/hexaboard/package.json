@@ -24,7 +24,6 @@
 			"types": "./dist/vite-plugin.d.ts",
 			"import": "./dist/vite-plugin.js",
 			"require": "./dist/vite-plugin.cjs"
-
 		}
 	},
 	"scripts": {
@@ -46,6 +45,7 @@
 	"author": "fmdm",
 	"license": "ISC",
 	"dependencies": {
-		"@babel/preset-typescript": "^7.26.0"
+		"@babel/preset-typescript": "^7.26.0",
+		"@babylonjs/core": "^7.49.0"
 	}
 }

@@ -1,6 +1,7 @@
-import { Vector2, type Vector2Like, Vector3, type Vector3Like } from 'three'
-import { clamp } from 'three/src/math/MathUtils'
+import { type IVector2Like, type IVector3Like, Vector2, type Vector3 } from '@babylonjs/core'
 import type { GameView } from '~/game'
+import { clamp, vector3from } from '~/utils'
+import type { ModKeyCombination, MouseButton, MouseButtons } from './d2buffer'
 import type { InputInteraction, MouseHandle } from './inputInteraction'
 import {
 	type AnyConfiguration,
@@ -8,7 +9,6 @@ import {
 	switchConfiguration,
 	transformers,
 } from './internals'
-import type { ModKeyCombination, MouseButton, MouseButtons } from './d2buffer'
 
 // #region Generics
 export interface D3InputEvent {
@@ -278,7 +278,7 @@ transformers({
 })
 
 export interface Scroll2DEvent extends D3InputEvent {
-	delta: Vector2Like
+	delta: IVector2Like
 }
 
 export interface Scroll2DAction
@@ -345,7 +345,7 @@ export abstract class SelectiveAction<Actions extends InputActions> {
 	public abstract apply(
 		action: keyof Actions,
 		handle: MouseHandle | undefined,
-		intersection: Vector3Like | undefined,
+		intersection: IVector3Like | undefined,
 		event: D3InputEvent
 	): void
 }
@@ -373,7 +373,7 @@ class HandleSelectiveAction<
 	public apply(
 		action: keyof Actions,
 		handle: MouseHandle | undefined,
-		intersection: Vector3Like | undefined,
+		intersection: IVector3Like | undefined,
 		event: D3InputEvent
 	): void {
 		this.actions[action]?.(
@@ -404,11 +404,11 @@ class PointSelectiveAction<Actions extends InputActions> extends SelectiveAction
 	public apply(
 		action: keyof Actions,
 		handle: MouseHandle | undefined,
-		intersection: Vector3Like | undefined,
+		intersection: IVector3Like | undefined,
 		event: D3InputEvent
 	): void {
 		this.actions[action]?.(
-			new Vector3().copy(intersection!),
+			vector3from(intersection!),
 			event as ExtractActionEvent<Actions[keyof Actions]>
 		)
 	}
@@ -432,7 +432,7 @@ class NotSelectiveAction<Actions extends InputActions> extends SelectiveAction<A
 	public apply(
 		action: keyof Actions,
 		handle: MouseHandle | undefined,
-		intersection: Vector3Like | undefined,
+		intersection: IVector3Like | undefined,
 		event: D3InputEvent
 	): void {
 		this.actions[action]?.(event as ExtractActionEvent<Actions[keyof Actions]>)

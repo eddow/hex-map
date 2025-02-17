@@ -1,4 +1,5 @@
-import { Group, type PerspectiveCamera, type Vector2Like, type Vector3Like } from 'three'
+import { type IVector3Like, type TargetCamera, TransformNode } from '@babylonjs/core'
+import type { GameView } from '~/game'
 import {
 	assert,
 	type Axial,
@@ -13,6 +14,7 @@ import {
 	cartesian,
 	debugInformation,
 	fromCartesian,
+	vector3from,
 } from '~/utils'
 import { SDU, Sector } from './sector'
 
@@ -25,7 +27,7 @@ export class SectorNotGeneratedError extends Error {
 export const debugHole = true
 
 export interface TileBase {
-	position: Vector3Like
+	position: IVector3Like
 	// Number of sectors it has been generated in (find an alternative solution, many "1" to store)
 	sectors: Sector<any>[]
 }
@@ -79,17 +81,17 @@ export interface LandPart<Tile extends TileBase> extends Eventful<RenderedEvents
 	walkTimeMultiplier?(movement: WalkTimeSpecification<Tile>): number | undefined
 }
 
-function distance(p1: { x: number; y: number }, p2: { x: number; y: number }): number {
-	return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2)
+function distance(p1: IVector3Like, p2: IVector3Like): number {
+	return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + (p1.z - p2.z) ** 2)
 }
 
-function cameraVision(camera: PerspectiveCamera): number {
-	return debugHole ? 300 : camera.far / Math.cos((camera.fov * Math.PI) / 360)
+function cameraVision(camera: TargetCamera): number {
+	return debugHole ? 300 : camera.maxZ / Math.cos((camera.fov * Math.PI) / 360)
 }
 
 function* viewedSectors(
 	centerCoord: AxialCoord,
-	camera: PerspectiveCamera,
+	camera: TargetCamera,
 	size: number,
 	dist0: number
 ) {
@@ -133,7 +135,7 @@ function scaleAxial({ q, r }: AxialCoord, scale: number) {
 export class Land<Tile extends TileBase = TileBase> {
 	public readonly tiles = new AxialKeyMap<Tile>()
 	private readonly parts: LandPart<Tile>[] = []
-	public readonly group = new Group()
+	public readonly node: TransformNode
 	public readonly sectors = new AxialKeyMap<Sector<Tile>>()
 	public readonly sectorRadius: number
 	/**
@@ -141,6 +143,7 @@ export class Land<Tile extends TileBase = TileBase> {
 	 */
 	public readonly sectorDist0: number
 	constructor(
+		public readonly gameView: GameView,
 		public readonly sectorScale: number,
 		public readonly tileSize: number,
 		/**
@@ -148,6 +151,7 @@ export class Land<Tile extends TileBase = TileBase> {
 		 */
 		public readonly landRadius: number = Number.POSITIVE_INFINITY
 	) {
+		this.node = new TransformNode('Land', gameView.scene, true)
 		// Sectors share their border, so sectors of 1 tile cannot tile a world
 		assert(sectorScale >= 0, 'sectorScale must be positive')
 		this.sectorRadius = 1 << sectorScale
@@ -172,7 +176,7 @@ export class Land<Tile extends TileBase = TileBase> {
 	}
 
 	propagateDebugInformation() {
-		debugInformation.set('landGroup', this.group.children.length)
+		debugInformation.set('landGroup', this.node.getChildren().length)
 		debugInformation.set('tiles', this.tiles.size)
 		debugInformation.set('sectors', this.sectors.size)
 	}
@@ -212,9 +216,9 @@ export class Land<Tile extends TileBase = TileBase> {
 		for (const part of invalidParts ?? sectorRenderers) await part.renderSector!(sector)
 	}
 
-	asyncCreateSector(key: AxialCoord) {
-		const center = this.sector2tile(key)
-		const sector = new Sector(this, center) as Sector<Tile>
+	asyncCreateSector(point: Axial) {
+		const center = this.sector2tile(point)
+		const sector = new Sector(point, this, center) as Sector<Tile>
 		const tileRefiners = this.parts.filter((part) => part.refineTile)
 		// TODO: creation -> worker (+ perlin)
 		sector.promise = new Promise((resolve) => {
@@ -224,7 +228,7 @@ export class Land<Tile extends TileBase = TileBase> {
 					let completeTile = this.tiles.get(point.key)
 					if (completeTile) return [point.key, completeTile]
 					let tile: TileBase = {
-						position: { ...cartesian(point, this.tileSize), z: 0 },
+						position: cartesian(point, this.tileSize),
 						sectors: [],
 					}
 					for (const part of tileRefiners) tile = part.refineTile!(tile, point) ?? tile
@@ -246,11 +250,11 @@ export class Land<Tile extends TileBase = TileBase> {
 	createSectors(added: Iterable<AxialCoord>) {
 		for (const toSee of added) {
 			this.needGenerationSpread = true
-			const sector = this.asyncCreateSector(toSee)
+			const sector = this.asyncCreateSector(axial.coordAccess(toSee))
 			SDU?.assertInvariant('0', toSee, this.sectors)
 			this.sectors.set(toSee, sector) // SectorInvariant: 0->1
-			SDU?.addIn(this.group, sector)
-			this.group.add(sector.group!)
+			SDU?.addIn(this.node, sector)
+			this.node.addChild(sector.node!)
 			SDU?.assertStatus(toSee, 'creating', this)
 			sector.promise?.then(() => {
 				SDU?.log(sector, { type: 'created' })
@@ -269,20 +273,19 @@ export class Land<Tile extends TileBase = TileBase> {
 	 * @param cameras Cameras to check distance with
 	 * @param marginBufferSize Distance of removal ration (2 = let the sectors twice the visible distance existing)
 	 */
-	pruneSectors(removed: AxialSet, cameras: PerspectiveCamera[], marginBufferSize: number) {
+	pruneSectors(removed: AxialSet, camera: TargetCamera, marginBufferSize: number) {
 		for (const key of removed) {
 			const deletedSector = this.sectors.get(key)
 			if (deletedSector && !deletedSector.markedForDeletion) {
 				const centerCartesian = cartesian(deletedSector.center, this.tileSize)
 				let seen = false
-				for (const camera of cameras)
-					if (
-						distance(centerCartesian, camera.position) <
-						cameraVision(camera) * marginBufferSize + this.sectorDist0
-					) {
-						seen = true
-						break
-					}
+				if (
+					distance(centerCartesian, camera.position) <
+					cameraVision(camera) * marginBufferSize + this.sectorDist0
+				) {
+					seen = true
+					break
+				}
 				if (seen) continue
 				SDU?.log(deletedSector, { type: 'remove' })
 				const freeResources = ((deletedSector: Sector<Tile>) => (direct: boolean) => {
@@ -291,11 +294,13 @@ export class Land<Tile extends TileBase = TileBase> {
 					deletedSector.status = 'deleted'
 					SDU?.log(deletedSector, { type: `freeResources[${direct ? 'direct' : 'delayed'}]` })
 					SDU?.log(deletedSector, { type: 'group-remove' })
+
 					assert(
-						this.group.children.includes(deletedSector.group),
+						this.node.getChildren((node) => node === deletedSector.node).length === 1,
 						'Deleted sector group not found'
 					)
-					this.group.remove(deletedSector.group)
+					this.node.removeChild(deletedSector.node!)
+					deletedSector.node!.dispose()
 					deletedSector.freeTiles()
 					SDU?.assertInvariant('0', key, this.sectors)
 					this.propagateDebugInformation()
@@ -315,7 +320,8 @@ export class Land<Tile extends TileBase = TileBase> {
 			}
 		}
 	}
-	updateViews(cameras: PerspectiveCamera[]) {
+	updateView() {
+		const { camera } = this.gameView
 		if (Number.isFinite(this.landRadius)) {
 			if (this.sectors.size === 0) this.generateWholeLand()
 			return
@@ -323,23 +329,22 @@ export class Land<Tile extends TileBase = TileBase> {
 		// At first, plan to remove all sectors - remove the ones seen afterward
 		const removed = new AxialSet(this.sectors.keys())
 		const added = new AxialSet()
-		for (const camera of cameras)
-			for (const toSee of viewedSectors(
-				this.tile2sector(fromCartesian(camera.position, this.tileSize)),
-				camera,
-				this.tileSize * this.sectorRadius,
-				this.sectorDist0
-			)) {
-				removed.delete(toSee)
-				const sector = this.sectors.get(toSee)
-				if (!sector) added.add(toSee)
-				else if (sector.markedForDeletion) {
-					SDU?.log(sector, { type: 'resuscitate' })
-					sector.markedForDeletion = undefined // x -> g
-				}
+		for (const toSee of viewedSectors(
+			this.tile2sector(fromCartesian(camera.position, this.tileSize)),
+			camera,
+			this.tileSize * this.sectorRadius,
+			this.sectorDist0
+		)) {
+			removed.delete(toSee)
+			const sector = this.sectors.get(toSee)
+			if (!sector) added.add(toSee)
+			else if (sector.markedForDeletion) {
+				SDU?.log(sector, { type: 'resuscitate' })
+				sector.markedForDeletion = undefined // x -> g
 			}
+		}
 		if (added.size > 0) this.createSectors(added)
-		this.pruneSectors(removed, cameras, 1.2)
+		this.pruneSectors(removed, camera, 1.2)
 		this.propagateDebugInformation()
 	}
 
@@ -397,7 +402,7 @@ export class Land<Tile extends TileBase = TileBase> {
 		// TODO: if (Number.isFinite(this.landRadius)) return null
 		const point = axial.access(aRef)
 		let tile: TileBase = {
-			position: { ...cartesian(point, this.tileSize), z: 0 },
+			position: cartesian(point, this.tileSize),
 			sectors: [],
 		}
 		this.needGenerationSpread = true
@@ -413,14 +418,20 @@ export class Land<Tile extends TileBase = TileBase> {
 		return completeTile
 	}
 	tile(aRef: AxialRef): Tile {
-		const renderedTile = this.tiles.get(aRef)
-		if (renderedTile) return renderedTile
+		const tile = this.tiles.get(aRef)
+		if (tile) return tile
 		throw new SectorNotGeneratedError(axial.access(aRef).key)
 		//return this.generateOneTile(aRef)
 	}
 
-	tileAt(vec2: Vector2Like) {
-		return fromCartesian(vec2, this.tileSize)
+	position(aRef: AxialRef) {
+		const tile = this.tile(aRef)
+		if (tile) return vector3from(tile.position)
+		throw new SectorNotGeneratedError(axial.access(aRef).key)
+	}
+
+	tileAt(vec: IVector3Like) {
+		return fromCartesian(vec, this.tileSize)
 	}
 
 	// #endregion

@@ -1,19 +1,17 @@
 <script lang="ts">
-	import type { GameXLand } from '$lib/game.ts'
-	import { games } from '$lib/globals.svelte'
+	import { game } from '$lib/globals.svelte'
 	import { Button } from 'flowbite-svelte'
 	import { EyeOutline } from 'flowbite-svelte-icons'
-	import { cartesian, type AxialKey } from 'hexaboard'
+	import { cartesian, vector3from, type AxialKey } from 'hexaboard'
 
-	let { game: gameKey, hKey }: { game: string; hKey: AxialKey } = $props()
-	let land = $derived(games[gameKey].land) as GameXLand
+	let { hKey }: { game: string; hKey: AxialKey } = $props()
+	let land = $derived(game!.land)
 	let tile = $derived(land.tile(hKey))
 	let terrainTypeName = $derived(tile.terrain)
 	function goTo() {
-		const camera = games[gameKey].views.keys().next().value?.camera
+		const camera = game!.gameView.camera
 		if (!camera) return
-		camera.position.copy({ ...cartesian(hKey, 20), z: camera.position.z })
-		camera.updateMatrixWorld()
+		camera.position = vector3from({ ...cartesian(hKey, 20), y: camera.position.y })
 	}
 </script>
 

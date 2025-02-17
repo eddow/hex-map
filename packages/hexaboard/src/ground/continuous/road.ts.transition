@@ -6,7 +6,12 @@ import type { Land } from '../land'
 import type { Sector } from '../sector'
 import type { LandscapeTriangle } from './landscape'
 import { ContinuousPartialLandscape } from './partialLandscape'
-import { type ContentTile, type TileContent, getTileContent, setTileContent } from './resourceful'
+import {
+	type ContentTile,
+	type TileContent,
+	getTileContent,
+	setTileContent,
+} from './resourceful'
 
 export type RoadKey = PropertyKey
 

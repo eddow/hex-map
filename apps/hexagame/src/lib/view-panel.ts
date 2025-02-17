@@ -1,33 +1,29 @@
-import { games } from '$lib/globals.svelte'
+import { loadGame } from '$lib/globals.svelte'
 import type { GroupPanelPartInitParameters, IContentRenderer } from 'dockview-core'
-import type { GameView } from 'hexaboard'
+import { type Game, GameView } from 'hexaboard'
 
 export class GameViewRenderer implements IContentRenderer {
-	private gv?: GameView
+	private gameView: GameView
 	private canvas: HTMLCanvasElement
+	private game?: Game
 	constructor(public readonly id: string) {
 		this.canvas = document.createElement('canvas')
 		this.canvas.style.width = '100%'
 		this.canvas.style.height = '100%'
+		this.gameView = new GameView(this.canvas)
 	}
 	get element(): HTMLElement {
 		return this.canvas
 	}
 	init(parameters: GroupPanelPartInitParameters): void {
 		const { game } = parameters.params
-		this.gv = games[game]?.createView(this.canvas)
-		const { camera } = this.gv
-		camera.position.set(0, 0, 200)
-		camera.lookAt(0, 0, 0)
-		camera.updateMatrixWorld()
-		this.gv.game.running = true
+		this.game = loadGame(game, this.gameView, 592338)
 	}
 	layout?(width: number, height: number): void {
-		this.gv?.resize(width, height)
+		this.gameView.resize(width, height)
 	}
 	dispose(): void {
-		this.gv?.game.removeView(this.gv)
-		this.gv?.dispose()
+		this.game?.dispose()
 	}
 
 	/*

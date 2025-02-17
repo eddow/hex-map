@@ -1,4 +1,4 @@
-import type { Object3D } from 'three'
+import { AbstractMesh, type TransformNode } from '@babylonjs/core'
 import { MouseHandle } from '~/input'
 import { Eventful } from '~/utils'
 import type { Axial } from '~/utils/axial'
@@ -6,7 +6,7 @@ import type { LandPart, RenderedEvents, TileBase, TileUpdater, WalkTimeSpecifica
 import type { Sector } from './sector'
 
 export interface Landscape<Tile extends TileBase> extends LandPart<Tile> {
-	createSector3D(sector: Sector<Tile>): Promise<Object3D>
+	createSector3D(sector: Sector<Tile>): Promise<TransformNode>
 }
 
 export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
@@ -19,6 +19,9 @@ export class TileHandle<Tile extends TileBase = TileBase> extends MouseHandle {
 	}
 	get tile() {
 		return this.sector.tile(this.point) as Tile
+	}
+	get position() {
+		return this.sector.position(this.point)
 	}
 	equals(other: MouseHandle): boolean {
 		return other instanceof TileHandle && this.point.key === other.point.key
@@ -56,12 +59,12 @@ export class Landscaper<Tile extends TileBase>
 		if (invalidated) this.invalidated.delete(sector)
 		for (const landscape of invalidated ?? this.landscapes) {
 			landscape.renderSector?.(sector)
-			const o3d = await landscape.createSector3D(sector)
-			o3d.traverse((o: Object3D) => {
-				o.renderOrder = Landscaper.renderOrders + this.landscapes.indexOf(landscape)
-			})
+			const node = await landscape.createSector3D(sector)
+			for (const n of node.getDescendants(false))
+				if (n instanceof AbstractMesh)
+					n.renderingGroupId = Landscaper.renderOrders + this.landscapes.indexOf(landscape)
 
-			sector.setPartO3d(landscape, o3d)
+			sector.setPartNode(landscape, node)
 		}
 	}
 	/**

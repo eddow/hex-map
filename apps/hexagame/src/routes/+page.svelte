@@ -12,7 +12,7 @@
 	import { onMount } from 'svelte'
 	import createGameViewRenderer from '$lib/view-panel'
 	import * as widgets from '$widgets'
-	import { games } from '$lib/globals.svelte'
+	import { game } from '$lib/globals.svelte'
 
 	$effect(() => {
 		const disposable = api.onDidLayoutChange(() => {
@@ -20,9 +20,7 @@
 			localStorage.setItem('layout', JSON.stringify(layout))
 		})
 		return () => {
-			for (const game of Object.values(games)) {
-				game.running = false
-			}
+			game!.dispose()
 			disposable.dispose()
 		}
 	})

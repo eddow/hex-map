@@ -1,4 +1,4 @@
-import { type Object3D, Vector3, type Vector3Like } from 'three'
+import { type TransformNode, Vector3 } from '@babylonjs/core'
 import { Land, type TileBase } from '~/ground'
 import { type Axial, type AxialDirection, type AxialRef, axial } from '~/utils/axial'
 import { assert } from '~/utils/debug'
@@ -70,13 +70,13 @@ export class Walk3 extends CharacterAction {
 	constructor(
 		character: Character,
 		duration: number,
-		public readonly end: Vector3Like
+		public readonly end: Vector3
 	) {
 		super(character, duration)
-		this.start = character.o3d.position
+		this.start = character.node.position
 	}
 	set progression(alpha: number) {
-		this.character.o3d.position.lerpVectors(this.start, this.end, alpha)
+		this.character.node.position = Vector3.Lerp(this.start, this.end, alpha)
 	}
 }
 
@@ -117,7 +117,7 @@ export async function goTo(this: Character, destination: AxialRef) {
 				//TODO: calculate half-way actions
 			}
 
-			for (const point of path) await this.act(new Walk3(this, 1, this.land.tile(point).position))
+			for (const point of path) await this.act(new Walk3(this, 1, this.land.position(point)))
 		} catch (e) {
 			if (e instanceof BrokenPath) continue
 			throw e
@@ -139,25 +139,22 @@ export class Character<Tile extends TileBase = TileBase> extends GameEntity {
 	public direction?: AxialDirection
 	constructor(
 		public readonly land: Land<Tile>,
-		o3d: Object3D,
+		node: TransformNode,
 		point?: Axial
 	) {
-		super(o3d)
+		super(node)
 		if (point !== undefined) {
-			const tile = land.tile(point)
 			this.point = point
-			o3d.position.copy(tile.position)
+			this.node.position = land.position(point)
 			this.direction = null
 		} else {
-			this.point = axial.coordAccess(land.tileAt(o3d.position))
-			this.direction = new Vector3().copy(land.tile(this.point).position).equals(o3d.position)
-				? null
-				: undefined
+			this.point = axial.coordAccess(land.tileAt(node.position))
+			this.direction = node.position.equals(land.position(this.point)) ? null : undefined
 		}
 	}
 
 	get position() {
-		return this.o3d.position
+		return this.node.position
 	}
 
 	get tile() {

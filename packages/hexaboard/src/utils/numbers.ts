@@ -40,3 +40,7 @@ export function numbers(maxP: number, min = 0, step = 1) {
 export function subSeed(...seeds: (number | string)[]) {
 	return seeds.reduce<number>((acc, seed) => acc ^ (numeric(seed) * c), 0)
 }
+
+export function clamp(value: number, min: number, max: number) {
+	return Math.min(Math.max(value, min), max)
+}

@@ -1,7 +1,7 @@
 //import { createGame } from '$lib/hexClash/game'
-import { createGame } from '$lib/gameX/game'
+import GameX from '$lib/gameX/game'
 import type { DockviewApi } from 'dockview-core'
-import { type Game, debugInformation } from 'hexaboard'
+import { type Game, type GameView, debugInformation } from 'hexaboard'
 
 export interface IConfiguration {
 	darkMode?: boolean
@@ -16,8 +16,14 @@ export const configuration = $state(
 			}
 )
 
-export const games: Record<PropertyKey, Game> = {
-	GameX: createGame('GameX', 59676782),
+const games: Record<string, { new (gameView: GameView, seed: number): Game }> = {
+	GameX,
+}
+
+export let game: Game | undefined
+export function loadGame(type: string, gameView: GameView, seed: number) {
+	game = new games[type](gameView, seed)
+	return game
 }
 
 export const dockview = $state({ api: {} as DockviewApi } as { api: DockviewApi })

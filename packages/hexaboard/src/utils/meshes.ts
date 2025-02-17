@@ -1,43 +1,58 @@
 import {
-	IcosahedronGeometry,
-	Mesh,
-	MeshBasicMaterial,
-	type MeshBasicMaterialParameters,
-	SphereGeometry,
+	type IVector3Like,
+	type Mesh,
+	MeshBuilder,
+	type Scene,
+	StandardMaterial,
 	Vector3,
-} from 'three'
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { MeshCopy, MeshPaste } from '~/three'
+} from '@babylonjs/core'
 
-// #region Common shapes
-export function sphere(radius: number, params: MeshBasicMaterialParameters) {
-	return new Mesh(new SphereGeometry(radius, 32, 32), new MeshBasicMaterial(params))
+export function vector3from(position: IVector3Like) {
+	return new Vector3(position.x, position.y, position.z)
 }
 
-export function icosahedron(radius: number, params: MeshBasicMaterialParameters) {
-	return new Mesh(new IcosahedronGeometry(radius), new MeshBasicMaterial(params))
-}
-// #endregion
-/**
- * Retrieve a vertex of a mesh
- * @param mesh Mesh
- * @param index Vertex index
- */
-export function meshVector3(mesh: Mesh, index: number): Vector3 {
-	const p = mesh.geometry.attributes.position
-	return new Vector3().fromBufferAttribute(p, index)
+export function vector3position(position: Vector3) {
+	return { x: position.x, y: position.y, z: position.z }
 }
 
-/**
- * Retrieve all vertices of a mesh
- * @param mesh Mesh
- */
-export function* meshVectors3(mesh: Mesh): Generator<Vector3> {
-	const p = mesh.geometry.attributes.position
-	for (let i = 0; i < p.count; i++) yield new Vector3().fromBufferAttribute(p, i)
+export class MeshUtils {
+	constructor(private scene: Scene) {}
+
+	private materialized(mesh: Mesh, params?: Partial<StandardMaterial>) {
+		const { scene } = this
+		const material = new StandardMaterial(`${mesh.name}-material`, scene)
+		if (params) Object.assign(material, params)
+		mesh.material = material
+		return mesh
+	}
+	// #region Common shapes
+	sphere(name: string, radius: number, params?: Partial<StandardMaterial>): Mesh {
+		const { scene } = this
+
+		return this.materialized(
+			MeshBuilder.CreateSphere(
+				name,
+				{
+					diameter: radius * 2,
+					segments: 32,
+				},
+				scene
+			),
+			params
+		)
+	}
+
+	icosahedron(name: string, radius: number, params?: Partial<StandardMaterial>): Mesh {
+		const { scene } = this
+
+		return this.materialized(
+			MeshBuilder.CreatePolyhedron(name, { type: 3, size: radius }, scene),
+			params
+		)
+	}
 }
 
+/*
 const assetsCache: Record<string, Promise<MeshCopy>> = {}
 
 const gltfLoader = new GLTFLoader()
@@ -55,3 +70,4 @@ export function meshAsset(url: string) {
 			.then((obj) => new MeshCopy(obj))
 	return new MeshPaste(assetsCache[url])
 }
+*/

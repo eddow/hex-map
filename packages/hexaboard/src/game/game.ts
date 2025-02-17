@@ -1,19 +1,16 @@
-import {
-	AmbientLight,
-	Clock,
-	DirectionalLight,
-	Group,
-	type Object3D,
-	Scene,
-	type Vector3Like,
-} from 'three'
+import type { TransformNode } from '@babylonjs/core'
 import type { Land, TileBase } from '~/ground/land'
-import type { InputInteraction } from '~/input/inputInteraction'
-import { Eventful } from '~/utils'
-import { GameView } from './gameView'
+import {
+	type InputActions,
+	InputInteraction,
+	type InputMode,
+	type InterfaceConfigurations,
+} from '~/input'
+import { Eventful, MeshUtils } from '~/utils'
+import type { GameView } from './gameView'
 
 export abstract class GameEntity {
-	constructor(public readonly o3d: Object3D) {}
+	constructor(public readonly node: TransformNode) {}
 	progress(dt: number) {}
 }
 
@@ -21,110 +18,36 @@ export type GameEvents = {
 	progress(dt: number): void
 }
 
-export class Game<Tile extends TileBase = TileBase> extends Eventful<GameEvents> {
-	public readonly views = new Map<GameView, InputInteraction | null>()
-	public readonly lights = new Group()
-	public readonly scene = new Scene()
-	private _land: Land<Tile>
-
+export class Game<
+	Tile extends TileBase = TileBase,
+	Actions extends InputActions = InputActions,
+> extends Eventful<GameEvents> {
+	public gameSpeed = 1
+	public readonly meshUtils: MeshUtils
+	public readonly inputInteraction: InputInteraction<Actions>
 	constructor(
-		land: Land<Tile>,
-		private readonly mainGameInteraction: InputInteraction
+		public readonly gameView: GameView,
+		public readonly land: Land<Tile>,
+		configurations: InterfaceConfigurations<Actions>,
+		globalMode: InputMode<Actions>,
+		usedMode?: InputMode<Actions>
 	) {
 		super()
-		this.scene.matrixWorldAutoUpdate = false
-		this._land = land
-		this.lights.add(new AmbientLight(0x404040))
-		const light = new DirectionalLight(0xffffff, 1)
-		light.position.set(0, 0, 300)
-		light.target.position.set(0, 0, 0)
-		this.lights.add(light)
-		this.lights.updateMatrixWorld(true)
-		this.scene.add(this.lights, land.group, this.entitiesGroup)
-	}
-
-	// #region Game entities
-
-	private _entities = new Set<GameEntity>()
-	private entitiesGroup = new Group()
-	entities() {
-		return this._entities.values()
-	}
-	addEntity(entity: GameEntity) {
-		this._entities.add(entity)
-		this.entitiesGroup.add(entity.o3d)
-	}
-
-	// #endregion
-	// #region Progress
-
-	progress(dt: number) {
-		for (const entity of this._entities) entity.progress(dt)
-		this.land.progress(dt)
-	}
-	animate = () => {
-		if (!this.clock.running) return
-		const dt = this.clock.getDelta()
-		this.emit('progress', dt)
-		this.updateViews()
-		this.progress(dt)
-		for (const view of this.views.keys()) view.render()
-		if (this.clock.running) requestAnimationFrame(this.animate)
-	}
-	private clock = new Clock(false)
-	set running(value: boolean) {
-		if (this.clock.running === value) return
-		if (value) {
-			this.clock.start()
-			requestAnimationFrame(this.animate)
-		} else {
-			this.clock.stop()
-		}
-	}
-
-	private viewPositions = new WeakMap<GameView, Vector3Like>()
-	updateViews() {
-		const movedViews: GameView[] = []
-		for (const view of this.views.keys()) {
-			const { camera } = view
-			const oldViewPosition = this.viewPositions.get(view)
-			if (!oldViewPosition || !camera.position.equals(oldViewPosition)) {
-				this.viewPositions.set(view, camera.position.clone())
-				movedViews.push(view)
+		gameView.game = this
+		this.meshUtils = new MeshUtils(gameView.scene)
+		this.inputInteraction = new InputInteraction(gameView, configurations, globalMode, usedMode)
+		// TODO: add background game evolution?
+		gameView.scene.onBeforeRenderObservable.add(() => {
+			const dt = (this.gameView.scene.deltaTime * this.gameSpeed) / 1000 // seconds
+			if (this.gameView.updated) this.land.updateView()
+			if (this.gameSpeed > 0) {
+				this.land.progress(dt)
+				this.emit('progress', dt)
 			}
-		}
-		if (movedViews.length) this.land.updateViews(Array.from(this.views.keys().map((v) => v.camera)))
+		})
 	}
-
-	// #endregion
-	// #region Composition
-
-	get land() {
-		return this._land
+	dispose() {
+		this.inputInteraction.dispose()
+		this.gameView.dispose()
 	}
-	set land(value) {
-		this.scene.remove(this._land.group)
-		this.scene.add(value.group)
-		this._land = value
-	}
-
-	createView(
-		canvas?: HTMLCanvasElement,
-		interaction: InputInteraction | null = this.mainGameInteraction,
-		{ near = 0.1, far = 1000 }: { near: number; far: number } = { near: 0.1, far: 2000 }
-	) {
-		// @ts-ignore Ignore tiles for the views
-		const view = new GameView(this, canvas, interaction, { near, far })
-		this.views.set(view, interaction)
-		this.scene.add(view.camera)
-		interaction?.attach(view)
-		return view
-	}
-	removeView(view: GameView) {
-		this.views.get(view)?.detach(view)
-		this.views.delete(view)
-		this.scene.remove(view.camera)
-	}
-
-	// #endregion
 }
