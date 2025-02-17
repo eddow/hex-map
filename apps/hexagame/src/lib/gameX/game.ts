@@ -18,7 +18,7 @@ import {
 } from 'hexaboard'
 import { debugInfo, dockview } from '../globals.svelte'
 import { type GameXActions, inputsConfiguration } from './inputs'
-import { seaLevel, terrainFactory } from './world/transition'
+import { seaLevel, terrainFactory, terrainHeight } from './world/transition'
 
 export type GameXTile = ColorTile & TerrainTile
 export type GameXLand = Land<GameXTile>
@@ -26,7 +26,7 @@ export type GameXLand = Land<GameXTile>
 const navigationMode = new InputMode<GameXActions>(
 	pointActions({
 		zoom(point, event) {
-			event.gameView.zoom(point, event.delta, { min: 150, max: 100 })
+			event.gameView.zoom(point, event.delta, { min: terrainHeight, max: 2000 })
 		},
 	}),
 	viewActions({

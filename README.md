@@ -11,3 +11,20 @@ The idea is to have room to write terrain generation (and show it), a 3D environ
 `npm i` blah blah
 
 > Build `packages/hexaboard` *before* trying `apps/hexagame` ! (it has a vite plugin)
+
+### Ubuntu
+
+```bash
+# 1. Add Google Repository
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | \
+sudo tee /etc/apt/sources.list.d/google-chrome.list
+
+# 2. Add Google Signing Key
+wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
+
+# 3. Update and Install
+sudo apt update
+sudo apt install google-chrome-stable
+
+google-chrome
+```

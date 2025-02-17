@@ -16,7 +16,7 @@ export class ContinuousColorLandscape<
 	protected readonly material: Material
 	constructor(game: Game) {
 		super(game)
-		const material = new StandardMaterial('vertexColorMaterial', game.gameView.scene)
+		const material = new StandardMaterial('colorLandscapeMaterial', game.gameView.scene)
 		material.wireframe = true
 		material.disableLighting = true
 		material.emissiveColor = new Color3(1, 1, 1)

@@ -126,6 +126,7 @@ export abstract class ContinuousLandscape<Tile extends TileBase>
 		const mesh = new Mesh(this.nameFor(sector), this.game.gameView.scene)
 		mesh.material = this.material
 		vertexData.applyToMesh(mesh)
+		mesh.setIndices(triangles.flatMap(({ points }) => points))
 		if (this.mouseHandler)
 			mesh.metadata = {
 				mouseHandler: ((pick: PickingInfo) =>

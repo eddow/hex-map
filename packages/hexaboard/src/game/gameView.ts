@@ -1,16 +1,15 @@
 import {
-	type AbstractEngine,
 	Color3,
 	Color4,
 	DirectionalLight,
-	Engine,
-	type EngineOptions,
 	FreeCamera,
 	HemisphericLight,
 	type IVector2Like,
 	Scene,
 	type SceneOptions,
 	Vector3,
+	WebGPUEngine,
+	type WebGPUEngineOptions,
 } from '@babylonjs/core'
 import { clamp } from '~/utils'
 import type { Game } from './game'
@@ -18,14 +17,35 @@ import type { Game } from './game'
 export class GameView {
 	public readonly camera: FreeCamera
 	public readonly scene: Scene
-	public readonly engine: AbstractEngine
+
 	public game: Game = null!
-	constructor(
-		public readonly canvas: HTMLCanvasElement,
-		engineOptions?: EngineOptions,
+	static async create(
+		canvas: HTMLCanvasElement,
+		engineOptions?: WebGPUEngineOptions,
 		sceneOptions?: SceneOptions
 	) {
-		this.engine = new Engine(canvas, true, engineOptions)
+		if (!navigator.gpu) {
+			alert('❌ WebGPU not supported or disabled.')
+			/*} else {
+			const adapter = await navigator.gpu.requestAdapter({featureLevel: })
+			if (!adapter) alert('❌ WebGPU adapter not found.')*/
+		}
+		try {
+			return new GameView(
+				canvas,
+				await WebGPUEngine.CreateAsync(canvas, engineOptions),
+				sceneOptions
+			)
+		} catch (e) {
+			if (typeof e === 'string') alert(e)
+			throw e
+		}
+	}
+	private constructor(
+		public readonly canvas: HTMLCanvasElement,
+		public readonly engine: WebGPUEngine,
+		sceneOptions?: SceneOptions
+	) {
 		const scene = new Scene(this.engine, sceneOptions)
 		scene.clearColor = new Color4(0, 0, 0, 1)
 
@@ -120,7 +140,7 @@ export class GameView {
 		camera.position.addInPlace(projectedUp.scale(delta.y * displacement)) // Vertical (Z-axis)
 	}
 
-	zoom(center: Vector3, delta: number, clampCamZ: { max: number; min: number }, zoomFactor = 1.2) {
+	zoom(center: Vector3, delta: number, clampCamY: { max: number; min: number }, zoomFactor = 1.2) {
 		const { camera } = this
 		// 1️⃣ Distance from center
 		const dist = camera.position.clone().subtract(center)
@@ -129,7 +149,7 @@ export class GameView {
 		// 3️⃣ Move camera
 		camera.position.copyFrom(center).addInPlace(dist)
 		// 4️⃣ Clamp Z-axis
-		camera.position.z = clamp(camera.position.z, clampCamZ.min, clampCamZ.max)
+		camera.position.y = clamp(camera.position.y, clampCamY.min, clampCamY.max)
 	}
 
 	private oldPosition = new Vector3()

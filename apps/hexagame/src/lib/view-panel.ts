@@ -3,24 +3,26 @@ import type { GroupPanelPartInitParameters, IContentRenderer } from 'dockview-co
 import { type Game, GameView } from 'hexaboard'
 
 export class GameViewRenderer implements IContentRenderer {
-	private gameView: GameView
+	private gameView: Promise<GameView>
 	private canvas: HTMLCanvasElement
 	private game?: Game
 	constructor(public readonly id: string) {
 		this.canvas = document.createElement('canvas')
 		this.canvas.style.width = '100%'
 		this.canvas.style.height = '100%'
-		this.gameView = new GameView(this.canvas)
+		this.gameView = GameView.create(this.canvas, { powerPreference: 'low-power' })
 	}
 	get element(): HTMLElement {
 		return this.canvas
 	}
-	init(parameters: GroupPanelPartInitParameters): void {
+	async init(parameters: GroupPanelPartInitParameters) {
 		const { game } = parameters.params
-		this.game = loadGame(game, this.gameView, 592338)
+		const gameView = await this.gameView
+		this.game = loadGame(game, gameView, 592338)
 	}
-	layout?(width: number, height: number): void {
-		this.gameView.resize(width, height)
+	async layout?(width: number, height: number) {
+		const gameView = await this.gameView
+		gameView.resize(width, height)
 	}
 	dispose(): void {
 		this.game?.dispose()

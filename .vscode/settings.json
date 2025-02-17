@@ -25,7 +25,8 @@
 		"replit",
 		"smoothstep",
 		"unlisten",
-		"voronoi"
+		"voronoi",
+		"WGSL"
 	],
 	
 	"recommendations": [
