@@ -1,10 +1,10 @@
 import { Color3, type Material, StandardMaterial, VertexData } from '@babylonjs/core'
 import type { Game } from '~/game'
-import type { AxialCoord } from '~/utils'
+import type { Axial, AxialCoord } from '~/utils'
 import type { TileBase } from '../land'
 import type { Sector } from '../sector'
 import { CompleteLandscape } from './completeLandscape'
-import { type LandscapeTriangle, centeredTiles } from './landscape'
+import type { LandscapeTriangle } from './landscape'
 
 export interface ColorTile extends TileBase {
 	color: Color3
@@ -25,32 +25,13 @@ export class ContinuousColorLandscape<
 	async createVertexData(
 		sector: Sector<Tile>,
 		triangles: LandscapeTriangle<number>[],
-		vertex: AxialCoord[]
+		vertex: Axial[]
 	): Promise<VertexData> {
 		const vertexData = new VertexData()
-		const tiles = centeredTiles(vertex, sector)
-		/*vertexData.positions = tiles.flatMap(({ tile: { position } }) => [
-			position.x,
-			position.y,
-			position.z,
-		])
-		vertexData.colors = tiles.flatMap(({ tile: { color } }) => [
-			color.r ?? 0,
-			color.g ?? 0,
-			color.b ?? 0,
-			1,
-		])
-		vertexData.indices = triangles.flatMap(({ points }) => points)*/
-		vertexData.positions = []
-		vertexData.colors = []
-		vertexData.indices = []
-		const indices = triangles.flatMap(({ points }) => points)
-		for (const index of indices) {
-			const { tile, point } = tiles[index]
-			vertexData.positions.push(tile.position.x, tile.position.y, tile.position.z)
-			vertexData.colors.push(tile.color.r ?? 0, tile.color.g ?? 0, tile.color.b ?? 0, 1)
-			vertexData.indices.push(vertexData.indices.length)
-		}
+		const tiles = vertex.map((point) => sector.tile(point))
+		vertexData.positions = tiles.flatMap(({ position }) => [position.x, position.y, position.z])
+		vertexData.colors = tiles.flatMap(({ color }) => [color.r ?? 0, color.g ?? 0, color.b ?? 0, 1])
+		vertexData.indices = triangles.flatMap(({ points }) => points)
 		return vertexData
 	}
 	refineTile(tile: TileBase, coord: AxialCoord): Tile {

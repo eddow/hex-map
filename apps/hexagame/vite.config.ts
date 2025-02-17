@@ -40,9 +40,9 @@ export default defineConfig({
 						if (dependencies.every((file) => fs.existsSync(file))) {
 							next()
 						} else if (retries-- > 0) {
-							setTimeout(checkFile, 1500) // Wait 1.5s and check again
+							setTimeout(checkFile, 2000) // Wait 2 seconds and check again
 						} else {
-							next() // After 1.5 seconds, return 404 if still missing
+							next() // After 2 seconds, return 404 if still missing
 						}
 					}
 					checkFile()

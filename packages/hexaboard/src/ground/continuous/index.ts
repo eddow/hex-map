@@ -3,7 +3,7 @@
  */
 // TODO: re-export
 //export * from './colorRoad'
-//export * from './oceanLandscape'
+export * from './oceanLandscape'
 //export * from './resourceful'
 //export * from './rivers'
 //export * from './road'

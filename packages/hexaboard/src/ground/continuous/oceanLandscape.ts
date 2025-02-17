@@ -1,9 +1,12 @@
-import { BufferGeometry, Float32BufferAttribute, ShaderMaterial } from 'three'
-import type { WalkTimeSpecification } from '../land'
+import { Color3, type Material, StandardMaterial, VertexData } from '@babylonjs/core'
+import { ShaderMaterial } from 'three'
+import type { Game } from '~/game'
+import type { Axial } from '~/utils'
+import type { TileBase, WalkTimeSpecification } from '../land'
 import type { Sector } from '../sector'
 import type { LandscapeTriangle } from './landscape'
 import { ContinuousPartialLandscape } from './partialLandscape'
-import type { RiverTile } from './rivers'
+//import type { RiverTile } from './rivers'
 
 const oceanMaterial = new ShaderMaterial({
 	transparent: true,
@@ -35,27 +38,38 @@ void main() {
 })
 
 // TODO: become a partialLandscape
-export class OceanLandscape<
-	Tile extends RiverTile = RiverTile,
-> extends ContinuousPartialLandscape<Tile> {
-	protected readonly material = oceanMaterial
+export class OceanLandscape<Tile extends TileBase> extends ContinuousPartialLandscape<Tile> {
+	protected readonly material: Material
 	constructor(
-		sectorRadius: number,
+		game: Game,
 		private readonly seaLevel: number
 	) {
-		super(sectorRadius)
+		super(game)
+		const material = new StandardMaterial('vertexColorMaterial', game.gameView.scene)
+		material.disableLighting = true
+		material.emissiveColor = new Color3(0, 0, 1)
+		material.alpha = 0.5
+		this.material = material
 	}
 	filterTriangles(sector: Sector<Tile>): (triangle: LandscapeTriangle) => boolean {
 		const seaLevel = this.seaLevel
 		return (triangle) => {
 			const triangleTiles = triangle.points.map((point) => sector.tiles.get(point)!)
-			return (
-				triangleTiles.some((tile) => tile.position.z < seaLevel) &&
-				triangleTiles.every((tile) => tile.riverHeight === undefined)
-			)
+			return triangleTiles.some((tile) => tile.position.y < seaLevel) /*&&
+				triangleTiles.every((tile) => tile.riverHeight === undefined)*/
 		}
 	}
-	async createPartialGeometry(sector: Sector<Tile>, triangles: LandscapeTriangle[]) {
+	protected async createVertexData(
+		sector: Sector<Tile>,
+		triangles: LandscapeTriangle<number>[],
+		vertex: Axial[]
+	): Promise<VertexData> {
+		const vertexData = new VertexData()
+		const tiles = vertex.map((point) => sector.tile(point))
+		vertexData.positions = tiles.flatMap(({ position }) => [position.x, this.seaLevel, position.z])
+		vertexData.indices = triangles.flatMap(({ points }) => points)
+		return vertexData
+		/*
 		const positions: number[] = []
 		const opacities: number[] = []
 		const indices: number[] = []
@@ -81,9 +95,9 @@ export class OceanLandscape<
 		geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
 		geometry.setAttribute('opacity', new Float32BufferAttribute(opacities, 1))
 		geometry.setIndex(indices)
-		return geometry
+		return geometry*/
 	}
 	walkTimeMultiplier(movement: WalkTimeSpecification<Tile>): number | undefined {
-		if (movement.on.position.z < this.seaLevel) return Number.NaN
+		if (movement.on.position.y < this.seaLevel) return Number.NaN
 	}
 }

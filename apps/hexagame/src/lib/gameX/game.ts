@@ -1,3 +1,4 @@
+import { Color3, type Mesh } from '@babylonjs/core'
 import {
 	type ColorTile,
 	ContinuousColorLandscape,
@@ -6,6 +7,7 @@ import {
 	InputMode,
 	Land,
 	Landscaper,
+	OceanLandscape,
 	type TerrainTile,
 	TileHandle,
 	axial,
@@ -16,7 +18,7 @@ import {
 } from 'hexaboard'
 import { debugInfo, dockview } from '../globals.svelte'
 import { type GameXActions, inputsConfiguration } from './inputs'
-import { terrainFactory } from './world/transition'
+import { seaLevel, terrainFactory } from './world/transition'
 
 export type GameXTile = ColorTile & TerrainTile
 export type GameXLand = Land<GameXTile>
@@ -37,6 +39,7 @@ const navigationMode = new InputMode<GameXActions>(
 	})
 )
 export default class GameX extends Game {
+	cursor: Mesh
 	selectionMode = new InputMode<GameXActions>(
 		handledActions(TileHandle)<GameXActions>({
 			select(target, event) {
@@ -50,41 +53,48 @@ export default class GameX extends Game {
 					floating: true,
 				})
 			},
-			hover(tile, event) {
-				//cursor.tile = event.buttonHoverType && event.keyModHoverType ? tile : undefined
+			hover: (tile, event) => {
+				this.cursor.setEnabled(true)
+				this.cursor.position = tile.position
 				debugInfo.tile = tile.point
 			},
 		}),
 		viewActions({
-			hover() {
-				//cursor.tile = undefined
+			hover: () => {
+				this.cursor.setEnabled(false)
 				debugInfo.tile = undefined
 			},
 		})
 	)
 	constructor(gameView: GameView, seed: number) {
+		const { scene } = gameView
 		super(
 			gameView,
 			new Land<GameXTile>(gameView, debugHole ? 0 : 5, 20),
 			inputsConfiguration,
 			navigationMode
 		)
-		/*const cursor = new TileCursor(
-			icosahedron(20, {
-				color: 0xffffff,
-				wireframe: true,
-			})
-		)*/
+		this.cursor = this.meshUtils.icosahedron('cursor', 20, {
+			emissiveColor: new Color3(1, 1, 1),
+			wireframe: true,
+		})
+		this.cursor.setEnabled(false)
+		this.cursor.isPickable = false
+
+		scene.onBeforeRenderObservable.add(() => {
+			this.cursor.rotation.x += 0.01
+		})
+		this.inputInteraction.setMode(this.selectionMode)
 		const { land } = this
 		land.addPart(
 			terrainFactory(seed),
 
 			new Landscaper<GameXTile>(
-				new ContinuousColorLandscape<GameXTile>(this)
+				new ContinuousColorLandscape<GameXTile>(this),
 				//landscape as Landscape<GameXTile>,
 				//new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),
 				//grid,
-				//new OceanLandscape<GameXTile>(land.sectorRadius, seaLevel)
+				new OceanLandscape<GameXTile>(this, seaLevel)
 			)
 			//new Resourceful(terrainTypes, seed, s
 		)
