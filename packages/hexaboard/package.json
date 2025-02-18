@@ -46,6 +46,7 @@
 	"license": "ISC",
 	"dependencies": {
 		"@babel/preset-typescript": "^7.26.0",
-		"@babylonjs/core": "^7.49.0"
+		"@babylonjs/core": "^7.49.0",
+		"@babylonjs/loaders": "^7.49.0"
 	}
 }

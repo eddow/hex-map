@@ -6,6 +6,7 @@ import {
 	StandardMaterial,
 	Vector3,
 } from '@babylonjs/core'
+import '@babylonjs/loaders'
 
 export function vector3from(position: IVector3Like) {
 	return new Vector3(position.x, position.y, position.z)
@@ -51,23 +52,3 @@ export class MeshUtils {
 		)
 	}
 }
-
-/*
-const assetsCache: Record<string, Promise<MeshCopy>> = {}
-
-const gltfLoader = new GLTFLoader()
-const fbxLoader = new FBXLoader()
-export function meshAsset(url: string) {
-	//const loader = url.endsWith('.fbx') ? fbxLoader : gltfLoader
-	if (!assetsCache[url])
-		assetsCache[url] = gltfLoader
-			.loadAsync(url)
-			// We use `z` as "up" while most models use `y`
-			.then((gltf) => {
-				gltf.scene.rotateX(Math.PI / 2).updateMatrixWorld()
-				return gltf.scene
-			})
-			.then((obj) => new MeshCopy(obj))
-	return new MeshPaste(assetsCache[url])
-}
-*/

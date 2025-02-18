@@ -1,4 +1,4 @@
-import { Group, type Object3D } from 'three'
+import { TransformNode } from '@babylonjs/core'
 import { Handelable, type ResourcefulTerrain } from '~/game'
 import { Eventful, LCG, type RandGenerator, genTilePosition } from '~/utils'
 import type { LandPart, RenderedEvents, WalkTimeSpecification } from '../land'
@@ -24,7 +24,7 @@ function placeInTile(i: number, gen: RandGenerator) {
 }
 
 export interface TileContent {
-	readonly mesh?: Object3D
+	readonly mesh?: TransformNode
 	readonly walkTimeMultiplier: number
 }
 
@@ -78,7 +78,7 @@ export class Resourceful<
 
 	async renderSector(sector: Sector<Tile>) {
 		//console.log('Rendering sector', sector.center)
-		const group = new Group()
+		const group = new TransformNode(`Resources #${sector.point.key}`)
 		for (const [tRef, tile] of sector.tiles.entries()) {
 			// Resource content is generated in the `render` phase so that the terrain is completely generated for sure
 			// TODO: Shouldn't it be in the `spread` phase?
@@ -91,7 +91,7 @@ export class Resourceful<
 							)
 						)
 					: []
-			if (tile.content.some((r) => r)) {
+			if (tile.content?.some((r) => r)) {
 				const gen = LCG(this.seed, 'placeInTile', tRef)
 				//const gen = (max = 1, min = 0) => (min + max) / 2
 				for (let aRef = 0; aRef < tile.content.length; aRef++) {

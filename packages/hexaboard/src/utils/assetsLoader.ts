@@ -1,0 +1,136 @@
+import { type AssetContainer, LoadAssetContainerAsync, type Scene, Texture } from '@babylonjs/core'
+import '@babylonjs/loaders'
+import { Eventful } from './events'
+
+export interface LoadingEvolution {
+	loaded: number
+	total: number
+	done: boolean
+}
+
+export type LoadingEvents = {
+	loading(evolution: {
+		textures: LoadingEvolution
+		models: LoadingEvolution
+		all: LoadingEvolution
+	}): void
+	loaded(): void
+	error(
+		url: string,
+		error: {
+			message?: string
+			exception?: any
+		}
+	): void
+}
+
+export class AssetsLoader extends Eventful<LoadingEvents> {
+	public readonly textures: Record<string, Texture> = {}
+	public readonly models: Record<string, AssetContainer> = {}
+	private texturePromises: Promise<Texture>[] = []
+	private modelPromises: Promise<AssetContainer>[] = []
+	private loadedCount = { textures: 0, models: 0 }
+	private specified = false
+	private loadedResolve?: () => void
+	public readonly loaded = new Promise<void>((resolve) => {
+		this.loadedResolve = resolve
+	})
+
+	constructor(public readonly scene: Scene) {
+		super()
+	}
+	evolve() {
+		const textures = {
+			loaded: this.loadedCount.textures,
+			total: this.texturePromises.length,
+			done: this.loadedCount.textures === this.texturePromises.length,
+		}
+		const models = {
+			loaded: this.loadedCount.models,
+			total: this.modelPromises.length,
+			done: this.loadedCount.models === this.modelPromises.length,
+		}
+		this.emit('loading', {
+			textures,
+			models,
+			all: {
+				loaded: textures.loaded + models.loaded,
+				total: textures.total + models.total,
+				done: textures.done && models.done,
+			},
+		})
+		if (textures.done && models.done && this.specified) {
+			this.loadedResolve?.()
+			this.emit('loaded')
+		}
+	}
+	async dispose() {
+		const [textures, models] = await Promise.all([
+			Promise.all(this.texturePromises),
+			Promise.all(this.modelPromises),
+		])
+		for (const texture of textures) texture.dispose()
+		for (const model of models) model.dispose()
+	}
+	/**
+	 * Is to be called when all the assets to load have been specified
+	 */
+	endSpecification() {
+		this.specified = true
+		this.evolve()
+	}
+	registerTexture(name: string, url: string): Texture
+	registerTexture<T extends Record<string, string>>(urls: T): Record<keyof T, Texture>
+	registerTexture(name: string | Record<string, string>, url?: string) {
+		if (typeof name === 'string') {
+			return this.registerTexture({ [name]: url ?? name })[name]
+		}
+		const rv: Record<keyof typeof name, Texture> = {}
+		for (const [key, value] of Object.entries(name)) {
+			if (this.textures[key]) {
+				console.warn(`Texture ${key} already registered`)
+				continue
+			}
+			const texture = new Texture(value, this.scene)
+			this.textures[key] = texture
+			rv[key] = texture
+			this.texturePromises.push(
+				((value) =>
+					new Promise((resolve) => {
+						texture.onLoadObservable.addOnce(() => {
+							this.loadedCount.textures++
+							if (texture.errorObject) this.emit('error', value, texture.errorObject)
+							this.evolve()
+							resolve(texture)
+						})
+					}))(value)
+			)
+		}
+		this.evolve()
+		return rv
+	}
+	registerModel(name: string, url: string): Promise<AssetContainer>
+	registerModel<T extends Record<string, string>>(urls: T): Record<keyof T, Promise<AssetContainer>>
+	registerModel(name: string | Record<string, string>, url?: string) {
+		if (typeof name === 'string') {
+			return this.registerModel({ [name]: url ?? name })[name]
+		}
+		const rv: Record<keyof typeof name, Promise<AssetContainer>> = {}
+		for (const [key, value] of Object.entries(name)) {
+			if (this.textures[key]) {
+				console.warn(`Model ${key} already registered`)
+				continue
+			}
+			const promise = LoadAssetContainerAsync(value, this.scene).then((container) => {
+				this.loadedCount.models++
+				this.models[key] = container
+				this.evolve()
+				return container
+			})
+			rv[key] = promise
+			this.modelPromises.push(promise)
+		}
+		this.evolve()
+		return rv
+	}
+}

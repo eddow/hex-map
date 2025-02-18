@@ -23,7 +23,7 @@ export class OceanLandscape<Tile extends TileBase> extends ContinuousPartialLand
 		private readonly seaLevel: number
 	) {
 		super(game)
-		this.material = oceanMaterial(game.gameView.scene, new Color3(0, 0.2, 1), 0.1)
+		this.material = oceanMaterial(game.gameView.scene, new Color3(0, 0.2, 1), 0.2)
 	}
 	filterTriangles(sector: Sector<Tile>): (triangle: LandscapeTriangle) => boolean {
 		const seaLevel = this.seaLevel
@@ -76,7 +76,7 @@ varying float alpha;
 void main() {
 	// Apply the weights to the colors
 	if(alpha < 0.00) discard;
-	gl_FragColor = vec4(color, smoothstep(shoreOpacity, 1.0, alpha));
+	gl_FragColor = vec4(color, mix(shoreOpacity, 1.0, alpha));
 }
 			`,
 		},
