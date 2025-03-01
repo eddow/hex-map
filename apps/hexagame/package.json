@@ -36,6 +36,7 @@
 		"dockview-core": "^3.0.2",
 		"dockview-svelte": "^1.0.0",
 		"hexaboard": "^1.0.0",
+		"webgpgpu.ts": "^0.0.3",
 		"three": "^0.172.0"
 	}
 }

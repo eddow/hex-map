@@ -8,6 +8,7 @@
 		"fract",
 		"glsl",
 		"GLTF",
+		"gpgpu",
 		"Handelable",
 		"heapify",
 		"hexaboard",
@@ -23,7 +24,9 @@
 		"replit",
 		"smoothstep",
 		"unlisten",
-		"voronoi"
+		"voronoi",
+		"webgpgpu",
+		"webgpu"
 	],
 	
 	"recommendations": [

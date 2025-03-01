@@ -7,8 +7,8 @@ import {
 	type TerrainKey,
 } from 'hexaboard'
 import { RepeatWrapping, TextureLoader } from 'three'
+import type { GameXTile } from '../game'
 import { Rock, Tree } from './handelable'
-import type { HexClashTile } from '$lib/hexClash/world/terrain'
 
 const textureLoader = new TextureLoader()
 function assetTexture(asset: string) {
@@ -90,7 +90,7 @@ export const roadTypes: Record<RoadKey, ColorRoad> = {
 const mountainsFrom = 130
 
 export function terrainFactory(seed: number) {
-	return new PerlinTerrain<HexClashTile, 'height' | 'type' | 'rocky'>(
+	return new PerlinTerrain<GameXTile, 'height' | 'type' | 'rocky'>(
 		seed,
 		{
 			height: {
@@ -116,26 +116,28 @@ export function terrainFactory(seed: number) {
 						z: generation.height + generation.rocky * (generation.height - mountainsFrom),
 					},
 					terrain: generation.height > 155 ? 'snow' : 'stone',
-				}
+				} as GameXTile
 			}
 			const z = generation.height
-			return z > 75
-				? {
-						...from,
-						position: {
-							...from.position,
-							z,
-						},
-						terrain: generation.type > 0 ? 'forest' : 'grass',
-					}
-				: {
-						...from,
-						position: {
-							...from.position,
-							z,
-						},
-						terrain: 'sand',
-					}
+			return (
+				z > 75
+					? {
+							...from,
+							position: {
+								...from.position,
+								z,
+							},
+							terrain: generation.type > 0 ? 'forest' : 'grass',
+						}
+					: {
+							...from,
+							position: {
+								...from.position,
+								z,
+							},
+							terrain: 'sand',
+						}
+			) as GameXTile
 		}
 	)
 }

@@ -1,0 +1,3 @@
+[submodule "packages/webgpgpu"]
+	path = packages/webgpgpu
+	url = https://github.com/eddow/webgpgpu.git

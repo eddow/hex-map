@@ -15,6 +15,7 @@
 	},
 	"references": [
 		{ "path": "../../packages/hexaboard" },
+		{ "path": "../../packages/webgpgpu" },
 		{ "path": "../../packages/dockview-svelte" }
 	]
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias

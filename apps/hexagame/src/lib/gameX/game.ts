@@ -13,7 +13,6 @@ import {
 	OceanLandscape,
 	Resourceful,
 	type RiverTile,
-	Rivers,
 	type RoadKey,
 	type SeamlessTextureTerrain,
 	TileCursor,
@@ -37,7 +36,7 @@ import {
 } from 'three'
 import { debugInfo, dockview } from '../globals.svelte'
 import { type GameXActions, inputsConfiguration } from './inputs'
-import { roadTypes, seaLevel, terrainFactory, terrainHeight, terrainTypes } from './world/terrain'
+import { roadTypes, seaLevel, terrainFactory, terrainTypes } from './world/terrain'
 
 export type GameXTile = ContentTile & RiverTile
 export type GameXLand = Land<GameXTile>
@@ -167,7 +166,7 @@ export function createGame(name: string, seed: number) {
 
 		new Landscaper<GameXTile>(
 			landscape as Landscape<GameXTile>,
-			new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),
+			//new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),
 			grid,
 			new OceanLandscape<GameXTile>(land.sectorRadius, seaLevel)
 		),
