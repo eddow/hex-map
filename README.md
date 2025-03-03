@@ -8,6 +8,6 @@ The idea is to have room to write terrain generation (and show it), a 3D environ
 
 ## Installation
 
-`npm i` blah blah
+`pnpm i` blah blah
 
 > Build `packages/hexaboard` *before* trying `apps/hexagame` ! (it has a vite plugin)

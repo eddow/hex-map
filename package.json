@@ -13,15 +13,18 @@
 		"type": "git",
 		"url": "git+https://github.com/eddow/hex-map.git"
 	},
-	"workspaces": [
-		"packages/*",
-		"apps/*"
-	],
+	"private": true,
 	"dependencies": {
 		"@biomejs/biome": "^1.9.4",
 		"concurrently": "^9.1.2"
 	},
 	"devDependencies": {
 		"lerna": "^8.1.9"
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"@biomejs/biome",
+			"nx"
+		]
 	}
 }
