@@ -153,7 +153,6 @@ export function createGame(name: string, seed: number) {
 		//roadDrawMode('hc')
 		selectionMode
 	)
-	//DEBUG VALUE
 	const land = new Land<GameXTile>(debugHole ? 0 : 5, 20)
 	const landscape = new ContinuousTextureLandscape<GameXTile, SeamlessTextureTerrain>(
 		land.sectorRadius,

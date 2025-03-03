@@ -33,6 +33,7 @@
 		}
 	},
 	"peerDependencies": {
+		"dockview-core": "^3.0.2",
 		"svelte": "^5.0.0"
 	},
 	"devDependencies": {

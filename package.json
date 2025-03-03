@@ -3,10 +3,11 @@
 	"author": "fmdm",
 	"license": "ISC",
 	"scripts": {
-		"dev": "concurrently \"npm:dev:dockview-svelte\" \"npm:dev:hexaboard\" \"npm:dev:hexagame\"",
-		"dev:dockview-svelte": "npm run dev:repo --workspace=dockview-svelte",
-		"dev:hexaboard": "npm run dev:repo --workspace=hexaboard",
-		"dev:hexagame": "npm run dev --workspace=hexagame",
+		"dev": "concurrently \"pnpm --filter dockview-svelte run dev:repo\" \"pnpm --filter webgpgpu run watch\" \"pnpm --filter hexaboard run dev:repo\" \"pnpm --filter hexagame run dev\"",
+		"dev:dockview-svelte": "pnpm --filter dockview-svelte run dev:repo",
+		"dev:hexaboard": "pnpm --filter hexaboard run dev:repo",
+		"dev:hexagame": "pnpm --filter hexagame run dev",
+		"dev:webgpgpu": "pnpm --filter webgpgpu run watch",
 		"build:all": "lerna run build --stream"
 	},
 	"repository": {

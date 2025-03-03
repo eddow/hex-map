@@ -8,6 +8,19 @@ The idea is to have room to write terrain generation (and show it), a 3D environ
 
 ## Installation
 
+### webgpgpu
+
+`package/webgpgpu` is a submodule, so clone with `--recurse-submodules` or, after cloning:
+```bash
+git submodule update --init --recursive
+```
+Fetch last version:
+```bash
+git submodule update --remote --recursive
+```
+
+### apps/hexagame
+
 `pnpm i` blah blah
 
-> Build `packages/hexaboard` *before* trying `apps/hexagame` ! (it has a vite plugin)
+> Build `packages/hexaboard` *before* trying `apps/hexagame` ! (it contains a vite plugin)

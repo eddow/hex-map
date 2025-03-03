@@ -22,7 +22,8 @@ export class SectorNotGeneratedError extends Error {
 	}
 }
 
-export const debugHole = true
+// DEBUG VALUE
+export const debugHole = false
 
 export interface TileBase {
 	position: Vector3Like
