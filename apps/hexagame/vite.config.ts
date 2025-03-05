@@ -53,7 +53,7 @@ export default defineConfig({
 		mkcert(),
 	],
 	server: {
-		//https: {},
+		//TODO: take libs from source finally ?
 		fs: {
 			allow: ['../../hexaboard/dist', '../../dockview-svelte/dist'],
 		},

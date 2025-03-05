@@ -9,7 +9,7 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:e2e": "playwright test",
-		"test": "npm run test:e2e"
+		"test": "pnpm run test:e2e"
 	},
 	"devDependencies": {
 		"@inlang/paraglide-js": "1.11.8",

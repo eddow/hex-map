@@ -31,5 +31,5 @@
 	"recommendations": [
 		"inlang.vs-code-extension"
 	],
-	"npm.packageManager": "npm"
+	"pnpm.packageManager": "pnpm"
 }
