@@ -27,9 +27,8 @@
 		"webgpu",
 		"wgsl"
 	],
-	
 	"recommendations": [
 		"inlang.vs-code-extension"
 	],
-	"pnpm.packageManager": "pnpm"
+	"npm.packageManager": "pnpm"
 }

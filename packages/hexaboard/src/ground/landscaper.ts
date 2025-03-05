@@ -2,7 +2,7 @@ import type { Object3D } from 'three'
 import { MouseHandle } from '~/input'
 import { Eventful } from '~/utils'
 import type { Axial } from '~/utils/axial'
-import type { LandPart, RenderedEvents, TileBase, TileUpdater, WalkTimeSpecification } from './land'
+import type { LandPart, RenderedEvents, TileBase, WalkTimeSpecification } from './land'
 import type { Sector } from './sector'
 
 export interface Landscape<Tile extends TileBase> extends LandPart<Tile> {
@@ -63,13 +63,6 @@ export class Landscaper<Tile extends TileBase>
 
 			sector.setPartO3d(landscape, o3d)
 		}
-	}
-	/**
-	 * @param updateTile Function to call when a tile is modified
-	 */
-	spreadGeneration?(updateTile: TileUpdater<Tile>): void {
-		for (let i = 0; i < this.landscapes.length; i++)
-			this.landscapes[i].spreadGeneration?.(updateTile)
 	}
 
 	refineTile(tile: TileBase, coord: Axial): Tile {

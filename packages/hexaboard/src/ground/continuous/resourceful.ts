@@ -81,7 +81,7 @@ export class Resourceful<
 		const group = new Group()
 		for (const [tRef, tile] of sector.tiles.entries()) {
 			// Resource content is generated in the `render` phase so that the terrain is completely generated for sure
-			// TODO: Shouldn't it be in the `spread` phase?
+			// TODO: If after all terrain modification (ocean/river/...?) should be in the generation phase
 			tile.content =
 				tile.position.z > this.seaLevel
 					? Array.from(

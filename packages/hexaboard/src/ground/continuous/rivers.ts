@@ -61,7 +61,13 @@ export type RivesOptions = {
 	minBankSlope: number
 	minStreamSlope: number
 }
-// TODO: become a partialLandscape
+/**
+ * Generate rivers and lakes.
+ *
+ * Spreading version (with modifications across sectors)
+ *
+ * @deprecated We'll do one context-less
+ */
 export class Rivers<Tile extends RiverTile = RiverTile> extends ContinuousPartialLandscape<Tile> {
 	options: RivesOptions
 	protected readonly material = riverMaterial

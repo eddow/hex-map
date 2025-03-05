@@ -74,10 +74,6 @@ export interface LandPart<Tile extends TileBase> extends Eventful<RenderedEvents
 	 * @param sector
 	 */
 	renderSector?(sector: Sector<Tile>): Promise<void>
-	/**
-	 * @param updateTile Function to call when a tile is modified
-	 */
-	spreadGeneration?(updateTile: TileUpdater<Tile>): void
 
 	walkTimeMultiplier?(movement: WalkTimeSpecification<Tile>): number | undefined
 }
@@ -193,16 +189,6 @@ export class Land<Tile extends TileBase = TileBase> {
 		return axial.round(scaleAxial(coord, 1 / (3 * this.sectorRadius)))
 	}
 
-	private needGenerationSpread = false
-	spreadGeneration() {
-		if (this.needGenerationSpread)
-			for (const part of this.parts)
-				if (part.spreadGeneration)
-					part.spreadGeneration((sectors, aRef, modifications) =>
-						this.tileUpdater(sectors, aRef, modifications)
-					)
-	}
-
 	propagateDebugInformation() {
 		debugInformation.set('landGroup', this.group.children.length)
 		debugInformation.set('tiles', this.tiles.size)
@@ -235,8 +221,6 @@ export class Land<Tile extends TileBase = TileBase> {
 
 	async renderSector(sector: Sector<Tile>) {
 		const sectorRenderers = this.parts.filter((part) => part.renderSector)
-		// todo await setTimeout <- spreadGeneration
-		this.spreadGeneration()
 		const { invalidParts } = sector
 		sector.invalidParts = new Set()
 		// Must be sequential as there is inter-dependency (cf. terrainHeight)
@@ -274,7 +258,6 @@ export class Land<Tile extends TileBase = TileBase> {
 			sector.promise = undefined
 			sector.status = 'existing'
 		})()
-		this.needGenerationSpread = true
 		return sector
 	}
 	async createSectors(added: Iterable<AxialCoord>) {
@@ -285,7 +268,6 @@ export class Land<Tile extends TileBase = TileBase> {
 			})
 		)
 		for (const toSee of added) {
-			this.needGenerationSpread = true
 			const sector = this.asyncCreateSector(kernel, toSee)
 			SDU?.assertInvariant('0', toSee, this.sectors)
 			this.sectors.set(toSee, sector) // SectorInvariant: 0->1
@@ -331,7 +313,6 @@ export class Land<Tile extends TileBase = TileBase> {
 					if ((!deletedSector.markedForDeletion && !direct) || !this.sectors.delete(key)) return
 					deletedSector.status = 'deleted'
 					SDU?.log(deletedSector, { type: `freeResources[${direct ? 'direct' : 'delayed'}]` })
-					SDU?.log(deletedSector, { type: 'group-remove' })
 					assert(
 						this.group.children.includes(deletedSector.group),
 						'Deleted sector group not found'
@@ -400,24 +381,6 @@ export class Land<Tile extends TileBase = TileBase> {
 		}
 	}
 
-	/**
-	 * Callback given to functions susceptible to update tiles - keep track of sectors who have to be re-rendered, &c
-	 * @param sectors
-	 * @param aRef
-	 * @param modifications
-	 * @returns
-	 */
-	tileUpdater(sectors: Sector<Tile>[], aRef: AxialRef, modifications?: Partial<Tile>) {
-		const tile = this.tile(aRef)
-		if (modifications) Object.assign(tile, modifications)
-		for (const sector of sectors)
-			if (!tile.sectors.includes(sector)) {
-				tile.sectors.push(sector)
-				sector.attachedTiles.add(aRef)
-			}
-		for (const sector of tile.sectors) this.willMarkToRender(sector)
-		return tile
-	}
 	addPart(...parts: LandPart<Tile>[]) {
 		this.parts.push(...parts)
 		for (const part of parts)
@@ -427,37 +390,14 @@ export class Land<Tile extends TileBase = TileBase> {
 			})
 	}
 
-	progress(dt: number) {
-		for (const [key, tile] of this.temporaryTiles) if (!tile.sectors.length) this.tiles.delete(key)
-		this.temporaryTiles.clear()
-	}
+	progress(dt: number) {}
+
 	// #region Tile access
 
-	temporaryTiles = new AxialKeyMap<Tile>()
-	generateOneTile(aRef: AxialRef) {
-		// TODO: if (Number.isFinite(this.landRadius)) return null
-		const point = axial.access(aRef)
-		let tile: TileBase = {
-			position: { ...cartesian(point, this.tileSize), z: 0 },
-			sectors: [],
-		}
-		this.needGenerationSpread = true
-		for (const part of this.parts) if (part.refineTile) tile = part.refineTile(tile, point) ?? tile
-		const completeTile = tile as Tile
-		this.tiles.set(point.key, completeTile)
-		this.temporaryTiles.set(point.key, completeTile)
-		for (const part of this.parts)
-			part.spreadGeneration?.((sectors, aRef, modifications) => {
-				const tile = this.tileUpdater(sectors, aRef, modifications)
-				if (!tile.sectors.length) this.temporaryTiles.set(aRef, tile)
-			})
-		return completeTile
-	}
 	tile(aRef: AxialRef): Tile {
 		const renderedTile = this.tiles.get(aRef)
 		if (renderedTile) return renderedTile
 		throw new SectorNotGeneratedError(axial.access(aRef).key)
-		//return this.generateOneTile(aRef)
 	}
 
 	tileAt(vec2: Vector2Like) {
