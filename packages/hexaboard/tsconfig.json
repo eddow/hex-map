@@ -1,6 +1,7 @@
 {
 	"compilerOptions": {
 		"composite": true,
+		"declaration": true,
 		"target": "ESNext",
 		"module": "ESNext",
 		"moduleResolution": "node",
@@ -15,11 +16,16 @@
 		"baseUrl": ".",
 		"verbatimModuleSyntax": true,
 		"paths": {
-			"~/*": ["./src/*"]
+			"~/*": ["./src/*"],
+			"webgpgpu": ["./node_modules/webgpgpu.ts"]
 		},
 		"types": [
 			"three",
-			"vite/client"
+			"vite/client",
+			"@webgpu/types"
 		]
-	}
+	},
+	"references": [
+		{ "path": "../webgpgpu" }
+	]
 }

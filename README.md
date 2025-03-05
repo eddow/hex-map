@@ -4,7 +4,7 @@ Sand-boxing tool for strategical hexagonal board games.
 
 The idea is to have room to write terrain generation (and show it), a 3D environment with mouse events on the 3D entities, an easy way to add an UI (svelte) and ways to sandbox ideas on that topic
 
-[Demo](https://hexboard.netlify.app/)
+Demo: [![Netlify Status](https://api.netlify.com/api/v1/badges/d2667401-2b27-44c9-a783-102f8d593336/deploy-status)](https://hexboard.netlify.app/)
 
 ## Installation
 

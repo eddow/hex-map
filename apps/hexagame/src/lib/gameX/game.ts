@@ -162,7 +162,6 @@ export function createGame(name: string, seed: number) {
 	const grid = new ColorRoadGrid(land.sectorRadius, roadTypes)
 	land.addPart(
 		terrainFactory(seed),
-
 		new Landscaper<GameXTile>(
 			landscape as Landscape<GameXTile>,
 			//new Rivers<GameXTile>(land, seed, seaLevel, terrainHeight, 96, 0.03),

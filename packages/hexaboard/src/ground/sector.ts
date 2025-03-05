@@ -25,7 +25,7 @@ export interface SectorDebugUtils {
 
 /*
 0- inexistent: land.sectors[key] -> undefined
-g - generating: land.generating[key] -> defined
+g- generating: land.generating[key] -> defined
 x- cancelled: land.markedForDeletion[key]-> defined
 1- generated
 */

@@ -34,7 +34,6 @@ export default defineConfig({
 		},
 	},
 	plugins: [
-		// @ts-expect-error: ...() is not a `PluginOption` but a `vite.Plugin`
 		dts({
 			insertTypesEntry: true,
 			copyDtsFiles: true,
@@ -44,6 +43,7 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			'~': resolve(__dirname, 'src'),
+			webgpgpu: resolve(__dirname, 'node_modules/webgpgpu.ts'),
 		},
 	},
 })

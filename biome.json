@@ -4,6 +4,7 @@
 		"include": ["**/*.ts", "**/*.js"],
 		"ignore": [
 			"dist/**/*",
+			"lib/**/*",
 			"$types.d.ts",
 			".svelte-kit/**/*",
 			"node_modules/**/*",

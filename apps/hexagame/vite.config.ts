@@ -4,6 +4,7 @@ import { paraglide } from '@inlang/paraglide-sveltekit/vite'
 import { sveltekit } from '@sveltejs/kit/vite'
 import hexaboardWorkers from 'hexaboard/vite'
 import { defineConfig } from 'vite'
+import mkcert from 'vite-plugin-mkcert'
 
 // Transform decorators but let the remaining untouched
 const target = 'es2023'
@@ -49,8 +50,10 @@ export default defineConfig({
 				})
 			},
 		},
+		mkcert(),
 	],
 	server: {
+		//https: {},
 		fs: {
 			allow: ['../../hexaboard/dist', '../../dockview-svelte/dist'],
 		},

@@ -6,8 +6,6 @@
 		"coef",
 		"dockview",
 		"fract",
-		"glsl",
-		"GLTF",
 		"gpgpu",
 		"Handelable",
 		"heapify",
@@ -26,7 +24,8 @@
 		"unlisten",
 		"voronoi",
 		"webgpgpu",
-		"webgpu"
+		"webgpu",
+		"wgsl"
 	],
 	
 	"recommendations": [
