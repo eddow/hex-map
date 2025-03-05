@@ -1,5 +1,5 @@
 import { Group, type PerspectiveCamera, type Vector2Like, type Vector3Like } from 'three'
-import { GGBatch, vec2f, vec3f } from 'webgpgpu'
+import { GGBatch, vec2f, vec3f } from 'webgpgpu.ts'
 import {
 	assert,
 	type Axial,

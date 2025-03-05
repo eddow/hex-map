@@ -1,4 +1,4 @@
-import createWebGpGpu, { WebGpGpu, WebGpuNotSupportedError, type RootWebGpGpu } from 'webgpgpu'
+import createWebGpGpu, { WebGpGpu, WebGpuNotSupportedError, type RootWebGpGpu } from 'webgpgpu.ts'
 
 const shaders: Record<string, string> = {}
 

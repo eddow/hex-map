@@ -3,10 +3,10 @@
 	"author": "fmdm",
 	"license": "ISC",
 	"scripts": {
-		"dev": "concurrently \"pnpm --filter dockview-svelte run dev:repo\" \"pnpm --filter webgpgpu run watch\" \"pnpm --filter hexaboard run dev:repo\" \"pnpm --filter hexagame run dev\"",
+		"dev": "concurrently \"pnpm run dev:dockview-svelte\" \"pnpm run dev:webgpgpu\" \"pnpm run dev:hexaboard\" \"pnpm run dev:hexagame\"",
 		"dev:dockview-svelte": "pnpm --filter dockview-svelte run dev:repo",
 		"dev:hexaboard": "pnpm --filter hexaboard run dev:repo",
-		"dev:hexagame": "pnpm --filter hexagame run dev",
+		"dev:hexagame": "pnpm --filter hexagame run dev:repo",
 		"dev:webgpgpu": "pnpm --filter webgpgpu run watch",
 		"build:all": "lerna run build --stream"
 	},
@@ -17,7 +17,9 @@
 	"private": true,
 	"dependencies": {
 		"@biomejs/biome": "^1.9.4",
-		"concurrently": "^9.1.2"
+		"concurrently": "^9.1.2",
+		"npm-run-all": "^4.1.5",
+		"wait-on": "^8.0.2"
 	},
 	"devDependencies": {
 		"lerna": "^8.1.9"

@@ -43,7 +43,6 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			'~': resolve(__dirname, 'src'),
-			webgpgpu: resolve(__dirname, 'node_modules/webgpgpu.ts'),
 		},
 	},
 })

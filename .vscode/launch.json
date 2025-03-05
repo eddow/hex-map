@@ -1,0 +1,36 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "chrome",
+			"request": "launch",
+			"name": "Launch Chrome for Hexagame",
+			"url": "https://localhost:5173",
+			"webRoot": "${workspaceFolder}/apps/hexagame",
+			"sourceMaps": true,
+			"preLaunchTask": "start:hexagame",
+			"postDebugTask": "stop:hexagame",
+			"runtimeArgs": [
+				"--remote-debugging-port=9222",
+				"--user-data-dir=/tmp/chrome-debug-profile",
+				"--enable-webgpu",
+				"--enable-unsafe-webgpu",
+				"--enable-webgpu-developer-features",
+				"--enable-vulkan",
+				"--enable-features=Vulkan"
+			]
+		},
+		{
+			"type": "chrome",
+			"request": "attach",
+			"name": "Attach to Chrome for Hexagame",
+			"port": 9222,
+			"urlFilter": "https://localhost:5173/*",
+			"webRoot": "${workspaceFolder}/apps/hexagame",
+			"sourceMaps": true
+		}
+	]
+}

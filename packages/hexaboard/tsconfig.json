@@ -16,8 +16,7 @@
 		"baseUrl": ".",
 		"verbatimModuleSyntax": true,
 		"paths": {
-			"~/*": ["./src/*"],
-			"webgpgpu": ["./node_modules/webgpgpu.ts"]
+			"~/*": ["./src/*"]
 		},
 		"types": [
 			"three",

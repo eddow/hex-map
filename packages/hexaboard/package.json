@@ -33,7 +33,10 @@
 	"scripts": {
 		"vite": "vite dev",
 		"build": "vite build",
-		"dev:repo": "vite build --watch"
+		"dev:repo": "npm-run-all rm:dist wait:dependencies watch",
+		"rm:dist": "rm -rf dist",
+		"wait:dependencies": "wait-on ../webgpgpu/lib/client.js",
+		"watch": "vite build --watch"
 	},
 	"peerDependencies": {
 		"three": "^0.172.0"
@@ -45,7 +48,8 @@
 		"@webgpu/types": "^0.1.54",
 		"typescript": "^5.7.3",
 		"vite": "^6.0.11",
-		"vite-plugin-dts": "^4.5.0"
+		"vite-plugin-dts": "^4.5.0",
+		"wait-on": "^8.0.2"
 	},
 	"author": "fmdm",
 	"license": "ISC",
