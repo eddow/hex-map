@@ -56,9 +56,15 @@
 			}
 		}
 	}
-	const layoutJson = location.host.startsWith('localhost') ? localStorage.getItem('layout') : null
+	const layoutJson = false //location.host.startsWith('localhost') ? localStorage.getItem('layout') : null
 	onMount(() => {
-		if (layoutJson) api.fromJSON(JSON.parse(layoutJson))
+		if (layoutJson)
+			try {
+				api.fromJSON(JSON.parse(layoutJson))
+				return
+			} catch {
+				localStorage.removeItem('layout')
+			}
 		else {
 			showSystem('configuration')()
 

@@ -1,5 +1,13 @@
 import { Group, type PerspectiveCamera, type Vector2Like, type Vector3Like } from 'three'
-import { GGBatch, vec2f, vec3f } from 'webgpgpu.ts'
+import {
+	type Inferred,
+	type Input1D,
+	type WebGpGpu,
+	mapEntries,
+	type vec2,
+	vec2f,
+	vec3f,
+} from 'webgpgpu.ts'
 import {
 	assert,
 	type Axial,
@@ -15,6 +23,7 @@ import {
 	debugInformation,
 	fromCartesian,
 } from '~/utils'
+import { cached } from '~/utils/decorators'
 import gpu from '~/utils/gpu'
 import { SDU, Sector } from './sector'
 
@@ -62,13 +71,22 @@ export type WalkTimeSpecification<Tile extends TileBase> = {
 	direction: AxialDirection
 }
 
+type LandGpGpu = WebGpGpu<
+	{
+		'threads.x': Inferred
+		'threads.y': Inferred
+	},
+	{ centers: Input1D<vec2> },
+	any
+>
+
 export interface LandPart<Tile extends TileBase> extends Eventful<RenderedEvents<Tile>> {
 	/**
 	 * Refine tile information
 	 * @param tile
 	 * @param coord
 	 */
-	refineTile?(tile: TileBase, coord: Axial): undefined | Tile
+	refineTile?(tile: TileBase, coord: Axial, tilePrecalc: Record<string, any>): undefined | Tile
 	/**
 	 * Add Object3D to sector with `sector.add`
 	 * @param sector
@@ -76,6 +94,8 @@ export interface LandPart<Tile extends TileBase> extends Eventful<RenderedEvents
 	renderSector?(sector: Sector<Tile>): Promise<void>
 
 	walkTimeMultiplier?(movement: WalkTimeSpecification<Tile>): number | undefined
+
+	calculus?(wgg: LandGpGpu): LandGpGpu
 }
 
 function distance(p1: { x: number; y: number }, p2: { x: number; y: number }): number {
@@ -124,8 +144,11 @@ export interface PositionInTile {
 
 function scaleAxial({ q, r }: AxialCoord, scale: number) {
 	return {
+		//*
 		q: (q + 2 * r) * scale,
-		r: (q - r) * scale,
+		r: (q - r) * scale /*/,
+		q: q * scale,
+		r: r * scale, //*/,
 	}
 }
 
@@ -140,34 +163,32 @@ export class Land<Tile extends TileBase = TileBase> {
 	 */
 	public readonly sectorDist0: number
 	private readonly precalcTiles: AxialCoord[]
-	private wgg = gpu((wgg) => {
-		return GGBatch.createRoot(wgg)
+	/**
+	 * WebGpGpu Promise
+	 */
+	private landKernel = gpu((wgg) => {
+		let rv: LandGpGpu = wgg
+			.import('axial')
 			.common({
 				localCoords: vec2f.array('threads.x').value(this.precalcTiles.map(({ q, r }) => [q, r])),
 			})
-			.input({ centers: vec2f })
-			.output({ positions: vec3f.array('threads.x') })
-			.define({
-				initialization: /*wgsl*/ `
-		let worldCoords = localCoords[thread.x]+centers[thread.z];
-		let position = vec3f(cartesian(worldCoords), 0f);
-		`,
-				computation: /*wgsl*/ `
-		positions[dot(thread.zx, positionsStride)] = position;
-		`,
-			})
+			.input({ centers: vec2f.array('threads.y') })
+			.output({ positions: vec3f.array('threads.y', 'threads.x') })
+			.define(/*wgsl*/ `
+@declare
+override seed: f32 = 0.0;
+@init
+	let zero = (tileSize+seed)*0.0;	// Avoid optimizing out overrides
+	let worldCoords = localCoords[thread.x]+centers[thread.y];
+	let position = vec3f(cartesian(worldCoords), zero);
+@finalize
+	positions[dot(thread.yx, positionsStride)] = position;
+		`)
+		for (const part of this.parts) if (part.calculus) rv = part.calculus(rv)
+		return rv.kernel('', { seed: this.seed, tileSize: this.tileSize })
 	})
-	private _sectorCreationBatch?: Promise<ReturnType<Awaited<typeof this.wgg>['batch']>>
-
-	private runningSectorCreationBatch?: Promise<
-		ReturnType<ReturnType<Awaited<typeof this.wgg>['batch']>>
-	>
-	get sectorCreationBatch() {
-		// Create once after all the parts & kernel specs have been given
-		this._sectorCreationBatch ??= this.wgg.then((wgg) => wgg.batch({ tileSize: this.tileSize }))
-		return this._sectorCreationBatch
-	}
 	constructor(
+		public readonly seed: number,
 		public readonly sectorScale: number,
 		public readonly tileSize: number,
 		/**
@@ -228,47 +249,57 @@ export class Land<Tile extends TileBase = TileBase> {
 		for (const part of invalidParts ?? sectorRenderers) await part.renderSector!(sector)
 	}
 
-	asyncCreateSector(
-		kernel: ReturnType<ReturnType<Awaited<typeof this.wgg>['batch']>>,
-		key: AxialCoord
-	) {
-		const center = this.sector2tile(key)
-		const sector = new Sector(this, center) as Sector<Tile>
-		const tileRefiners = this.parts.filter((part) => part.refineTile)
-		sector.promise = (async () => {
-			const precalc = await kernel({ centers: [center.q, center.r] })
-			const { positions } = precalc
-			const sectorTiles = this.precalcTiles.map((lclCoord, index): [AxialKey, Tile] => {
-				const point = axial.coordAccess(axial.linear(center, lclCoord))
-				let completeTile = this.tiles.get(point.key)
-				if (completeTile) return [point.key, completeTile]
-				const gpu = positions[index]
-				let tile: TileBase = {
-					//position: { ...cartesian(point, this.tileSize), z: 0 },
-					position: { x: gpu[0], y: gpu[1], z: gpu[2] },
-					sectors: [],
-				}
-				for (const part of tileRefiners) tile = part.refineTile!(tile, point) ?? tile
-				completeTile = tile as Tile
-				this.tiles.set(point.key, completeTile)
-				return [point.key, completeTile]
-			})
-
-			sector.tiles = new AxialKeyMap(sectorTiles)
-			sector.promise = undefined
-			sector.status = 'existing'
-		})()
-		return sector
+	@cached()
+	get tileRefiners() {
+		return this.parts.filter((part) => part.refineTile)
 	}
-	async createSectors(added: Iterable<AxialCoord>) {
-		let start: () => void
-		const kernel = (await this.sectorCreationBatch)(
-			new Promise<void>((resolve) => {
-				start = resolve
-			})
+
+	asyncCreateSector(sector: Sector<Tile>, precalc: any) {
+		const { positions } = precalc
+		const sectorTiles = this.precalcTiles.map((lclCoord, index): [AxialKey, Tile] => {
+			const point = axial.coordAccess(axial.linear(sector.center, lclCoord))
+			let completeTile = this.tiles.get(point.key)
+			if (completeTile) return [point.key, completeTile]
+			const tilePrecalc = mapEntries(precalc as Record<string, any>, (v) => v[index]) as Record<
+				string,
+				any
+			>
+			const pos = tilePrecalc.positions
+			let tile: TileBase = {
+				//position: { ...cartesian(point, this.tileSize), z: 0 },
+				position: { x: pos[0], y: pos[1], z: pos[2] },
+				sectors: [],
+			}
+			for (const part of this.tileRefiners)
+				tile = part.refineTile!(tile, point, tilePrecalc) ?? tile
+			completeTile = tile as Tile
+			this.tiles.set(point.key, completeTile)
+			return [point.key, completeTile]
+		})
+
+		sector.tiles = new AxialKeyMap(sectorTiles)
+		sector.promise = undefined
+		sector.status = 'existing'
+	}
+	createSectors(added: Iterable<AxialCoord>) {
+		const addedArray = Array.from(added)
+		const centers = addedArray.map((coord) => this.sector2tile(coord))
+		const allSectorsCalculus = this.landKernel.then((kernel) =>
+			kernel({ centers: centers.map(({ q, r }) => [q, r]) })
 		)
-		for (const toSee of added) {
-			const sector = this.asyncCreateSector(kernel, toSee)
+
+		for (let i = 0; i < addedArray.length; ++i) {
+			const toSee = addedArray[i]
+			const center = centers[i]
+			const sector = new Sector(
+				this,
+				center,
+				allSectorsCalculus.then((calculusBunch) => {
+					const precalc: any = {}
+					for (const c in calculusBunch) precalc[c] = calculusBunch[c][i]
+					this.asyncCreateSector(sector, precalc)
+				})
+			)
 			SDU?.assertInvariant('0', toSee, this.sectors)
 			this.sectors.set(toSee, sector) // SectorInvariant: 0->1
 			SDU?.addIn(this.group, sector)
@@ -283,7 +314,6 @@ export class Land<Tile extends TileBase = TileBase> {
 				this.propagateDebugInformation()
 			})
 		}
-		start!()
 	}
 
 	/**

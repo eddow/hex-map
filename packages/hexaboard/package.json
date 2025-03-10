@@ -35,7 +35,7 @@
 		"build": "vite build",
 		"dev:repo": "npm-run-all rm:dist wait:dependencies watch",
 		"rm:dist": "rm -rf dist",
-		"wait:dependencies": "wait-on ../webgpgpu/lib/client.js",
+		"wait:dependencies": "wait-on ../webgpgpu/dist/client.js",
 		"watch": "vite build --watch"
 	},
 	"peerDependencies": {

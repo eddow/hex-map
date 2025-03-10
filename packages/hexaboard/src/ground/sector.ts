@@ -91,7 +91,7 @@ export const SDU: SectorDebugUtils | undefined = debugSectorLeak && {
 export class Sector<Tile extends TileBase = TileBase> {
 	status: SectorStatus
 	markedForDeletion?: true
-	promise?: Promise<void>
+
 	public readonly group = new Group()
 	private parts = new Map<LandPart<Tile>, Object3D>()
 	public invalidParts?: Set<LandPart<Tile>>
@@ -99,7 +99,8 @@ export class Sector<Tile extends TileBase = TileBase> {
 	private allocatedTiles?: AxialKeyMap<Tile>
 	constructor(
 		public readonly land: Land<Tile>,
-		public readonly center: AxialCoord
+		public readonly center: AxialCoord,
+		public promise: Promise<void> | undefined
 	) {
 		this.status = 'creating'
 		SDU?.create(this)

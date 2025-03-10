@@ -7,7 +7,10 @@ import { defineConfig } from 'vite'
 import mkcert from 'vite-plugin-mkcert'
 
 // Transform decorators but let the remaining untouched
-const target = 'es2023'
+const build = {
+	sourcemap: true,
+	target: 'es2023',
+}
 export default defineConfig({
 	plugins: [
 		sveltekit(),
@@ -53,15 +56,15 @@ export default defineConfig({
 		mkcert(),
 	],
 	server: {
-		//TODO: take libs from source finally ?
 		fs: {
-			allow: ['../../hexaboard/dist', '../../dockview-svelte/dist'],
+			allow: [
+				'.',
+				'../../packages/webgpgpu/dist',
+				'../../packages/hexaboard/dist',
+				'../../packages/dockview-svelte/dist',
+			],
 		},
 	},
-	build: {
-		target,
-	},
-	esbuild: {
-		target,
-	},
+	build,
+	esbuild: build,
 })

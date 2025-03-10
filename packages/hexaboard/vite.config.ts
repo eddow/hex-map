@@ -25,12 +25,12 @@ export default defineConfig({
 		rollupOptions: {
 			// make sure to externalize deps that shouldn't be bundled
 			// into your library
-			external: ['three', 'node:fs', 'node:path'],
-			output: {
+			external: ['three', 'node:fs', 'node:path', 'webgpgpu.ts'],
+			/*output: {
 				globals: {
 					three: 'THREE',
 				},
-			},
+			},*/
 		},
 	},
 	plugins: [

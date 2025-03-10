@@ -1,5 +1,5 @@
 import { debugInformation } from './debug'
-
+// TODO: import from webgpgpu?
 export function cached<T>(...needed: PropertyKey[]) {
 	return (original: () => T, context: ClassGetterDecoratorContext<unknown, T>) => {
 		return function (this: any) {

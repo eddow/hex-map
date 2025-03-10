@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev",
+		"dev": "vite dev --force",
 		"dev:repo": "npm-run-all wait:dependencies dev",
 		"wait:dependencies": "wait-on ../../packages/hexaboard/dist/hexaboard.js && wait-on ../../packages/dockview-svelte/dist/index.js",
 		"build": "vite build",

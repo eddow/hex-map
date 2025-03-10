@@ -41,7 +41,7 @@ export class PerlinTerrain<Tile extends TileBase, Keys extends PropertyKey>
 	constructor(
 		seed: number,
 		configurations: Record<Keys, PerlinConfiguration>,
-		private readonly calculus: (from: TileBase, generation: Record<Keys, number>) => Tile,
+		private readonly cpuCalculus: (from: TileBase, generation: Record<Keys, number>) => Tile,
 		public readonly walkTimeMultiplier: (
 			movement: WalkTimeSpecification<Tile>
 		) => number | undefined = () => undefined
@@ -72,6 +72,6 @@ export class PerlinTerrain<Tile extends TileBase, Keys extends PropertyKey>
 				configurable: true,
 			})
 		}
-		return this.calculus(tile, subGen)
+		return this.cpuCalculus(tile, subGen)
 	}
 }

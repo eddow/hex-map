@@ -7,7 +7,7 @@
 		"dev:dockview-svelte": "pnpm --filter dockview-svelte run dev:repo",
 		"dev:hexaboard": "pnpm --filter hexaboard run dev:repo",
 		"dev:hexagame": "pnpm --filter hexagame run dev:repo",
-		"dev:webgpgpu": "pnpm --filter webgpgpu run watch",
+		"dev:webgpgpu": "pnpm --filter webgpgpu.ts run watch",
 		"build:all": "lerna run build --stream"
 	},
 	"repository": {

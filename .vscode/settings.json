@@ -17,6 +17,7 @@
 		"Mobi",
 		"onready",
 		"perlin",
+		"petamoriken",
 		"poppanator",
 		"Raycaster",
 		"replit",
@@ -27,8 +28,6 @@
 		"webgpu",
 		"wgsl"
 	],
-	"recommendations": [
-		"inlang.vs-code-extension"
-	],
+	"recommendations": ["inlang.vs-code-extension"],
 	"npm.packageManager": "pnpm"
 }

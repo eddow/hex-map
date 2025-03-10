@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"composite": true,
 		"declaration": true,
-		"target": "ESNext",
+		"target": "ES2023",
 		"module": "ESNext",
 		"moduleResolution": "node",
 		"allowSyntheticDefaultImports": true,
