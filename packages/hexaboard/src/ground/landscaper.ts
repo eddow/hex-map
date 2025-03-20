@@ -65,9 +65,9 @@ export class Landscaper<Tile extends TileBase>
 		}
 	}
 
-	refineTile(tile: TileBase, coord: Axial): Tile {
+	refineTile(tile: TileBase, coord: Axial, tilePrecalc: Record<string, any>): Tile {
 		for (let i = 0; i < this.landscapes.length; i++)
-			tile = this.landscapes[i].refineTile?.(tile, coord) ?? tile
+			tile = this.landscapes[i].refineTile?.(tile, coord, tilePrecalc) ?? tile
 		return tile as Tile
 	}
 

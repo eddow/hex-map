@@ -4,10 +4,11 @@ import { type Axial, type AxialKey, AxialKeyMap, LCG, axial } from '~/utils'
 import {
 	type Land,
 	SectorNotGeneratedError,
+	type TerrainKey,
+	type TerrainTile,
 	type TileUpdater,
 	type WalkTimeSpecification,
 } from '../land'
-import type { TerrainKey, TerrainTile } from '../perlinTerrain'
 import type { Sector } from '../sector'
 import type { LandscapeTriangle } from './landscape'
 import { ContinuousPartialLandscape } from './partialLandscape'

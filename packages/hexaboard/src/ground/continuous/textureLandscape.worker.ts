@@ -1,9 +1,9 @@
 import type { Triplet } from '~/types'
 import { type Axial, type AxialCoord, type AxialKey, AxialKeyMap, LCG, axial } from '~/utils'
 import { type FunctionParts, exposeThreadTask, makeFunction } from '~/utils/workers/definition'
-import type { TerrainKey } from '../perlinTerrain'
 import { centeredTriangles, sectorTriangles } from './landscape'
 import type { TileTextureStyle } from './textureLandscape'
+import type { TerrainKey } from '../land'
 
 export interface TileTextureStyleTransfer {
 	weightMix: string

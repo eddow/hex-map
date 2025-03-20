@@ -1,77 +1,47 @@
+import { f32 } from 'webgpgpu.ts'
 import type { Pair } from '~/types'
-import { Eventful, subSeed } from '~/utils'
-import { HeightMap } from '~/utils/perlin'
-import type { LandPart, RenderedEvents, TileBase, WalkTimeSpecification } from './land'
-
-export type TerrainKey = PropertyKey
-
-export interface TerrainBase {
-	color: { r: number; g: number; b: number }
-	walkTimeMultiplier?: number
-}
-
-export interface TerrainTile extends TileBase {
-	terrain: TerrainKey
-}
+import { type Axial, Eventful } from '~/utils'
+import type { LandGpGpu, LandPart, RenderedEvents, TileBase, WalkTimeSpecification } from './land'
 
 export interface PerlinConfiguration {
 	/**
 	 * How zoomed ou a terrain look. A small number will bring very varying small details while a big number will make big smooth surfaces
 	 * Usually, two peaks will be separated by 5~10 * scale
-	 * @default 1
 	 */
-	scale?: number
-	/**
-	 * More octaves bring more small variations (and more calculus)
-	 * @default 3
-	 */
-	octaves?: number
+	scale: number
 	/**
 	 * [min, max] of the expected number
 	 * @default [0,1]
 	 */
-	variation: Pair<number>
+	variation?: Pair<number>
 }
 
 export class PerlinTerrain<Tile extends TileBase, Keys extends PropertyKey>
 	extends Eventful<RenderedEvents<Tile>>
 	implements LandPart<Tile>
 {
-	private generators: Record<Keys, HeightMap>
 	constructor(
-		seed: number,
-		configurations: Record<Keys, PerlinConfiguration>,
+		private readonly configurations: Record<Keys, PerlinConfiguration>,
 		private readonly cpuCalculus: (from: TileBase, generation: Record<Keys, number>) => Tile,
 		public readonly walkTimeMultiplier: (
 			movement: WalkTimeSpecification<Tile>
 		) => number | undefined = () => undefined
 	) {
 		super()
-		this.generators = {} as Record<Keys, HeightMap>
-		for (const key in configurations) {
-			const config = configurations[key]
-			this.generators[key as Keys] = new HeightMap(
-				subSeed(seed, 'perlin', key),
-				config.scale ?? 1,
-				config.variation ?? [0, 1],
-				config.octaves ?? 3
-			)
-		}
 	}
-	refineTile(tile: TileBase): Tile {
-		const subGen: Record<Keys, number> = {} as Record<Keys, number>
-		const { generators } = this
-		for (const key in generators) {
-			Object.defineProperty(subGen, key, {
-				// Calculate perlin only when needed + cache
-				get() {
-					const rv = generators[key as Keys].getHeight(tile.position.x, tile.position.y)
-					Object.defineProperty(subGen, key, { value: rv })
-					return rv
-				},
-				configurable: true,
-			})
+	calculus(wgg: LandGpGpu): LandGpGpu {
+		let rv = wgg.import('noise_simplex_2d')
+		for (const key in this.configurations) {
+			const { variation, scale } = this.configurations[key]
+			let v = `simplex2d_fractal(position.xy*${scale}f, seed)`
+			if (variation) v = `mix(${variation[0]}, ${variation[1]}, ${v})`
+			rv = rv
+				.code({ computations: `${key}[dot(thread.yx, ${key}Stride)] = ${v};` })
+				.output({ [key]: f32.array('threads.y', 'threads.x') })
 		}
-		return this.cpuCalculus(tile, subGen)
+		return rv
+	}
+	refineTile(tile: TileBase, _: Axial, tilePrecalc: Record<string, any>): Tile {
+		return this.cpuCalculus(tile, tilePrecalc as Record<Keys, number>)
 	}
 }

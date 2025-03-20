@@ -71,7 +71,18 @@ export type WalkTimeSpecification<Tile extends TileBase> = {
 	direction: AxialDirection
 }
 
-type LandGpGpu = WebGpGpu<
+export type TerrainKey = PropertyKey
+
+export interface TerrainBase {
+	color: { r: number; g: number; b: number }
+	walkTimeMultiplier?: number
+}
+
+export interface TerrainTile extends TileBase {
+	terrain: TerrainKey
+}
+
+export type LandGpGpu = WebGpGpu<
 	{
 		'threads.x': Inferred
 		'threads.y': Inferred
@@ -174,8 +185,7 @@ export class Land<Tile extends TileBase = TileBase> {
 			})
 			.input({ centers: vec2f.array('threads.y') })
 			.output({ positions: vec3f.array('threads.y', 'threads.x') })
-			.define(/*wgsl*/ `
-@declare
+			.code(/*wgsl*/ `
 override seed: f32 = 0.0;
 @init
 	let zero = (tileSize+seed)*0.0;	// Avoid optimizing out overrides
@@ -255,7 +265,6 @@ override seed: f32 = 0.0;
 	}
 
 	asyncCreateSector(sector: Sector<Tile>, precalc: any) {
-		const { positions } = precalc
 		const sectorTiles = this.precalcTiles.map((lclCoord, index): [AxialKey, Tile] => {
 			const point = axial.coordAccess(axial.linear(sector.center, lclCoord))
 			let completeTile = this.tiles.get(point.key)
@@ -287,7 +296,7 @@ override seed: f32 = 0.0;
 		const allSectorsCalculus = this.landKernel.then((kernel) =>
 			kernel({ centers: centers.map(({ q, r }) => [q, r]) })
 		)
-
+		// No async/await as we need sectors to be created with their promise
 		for (let i = 0; i < addedArray.length; ++i) {
 			const toSee = addedArray[i]
 			const center = centers[i]

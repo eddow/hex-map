@@ -1,8 +1,7 @@
 import { Group, type Object3D } from 'three'
 import { Handelable, type ResourcefulTerrain } from '~/game'
 import { Eventful, LCG, type RandGenerator, genTilePosition } from '~/utils'
-import type { LandPart, RenderedEvents, WalkTimeSpecification } from '../land'
-import type { TerrainKey, TerrainTile } from '../perlinTerrain'
+import type { LandPart, RenderedEvents, TerrainKey, TerrainTile, WalkTimeSpecification } from '../land'
 import type { Sector } from '../sector'
 
 // Hardcoded to have 7 (center + 6 sides) places for stuff (resources, supplies, ...) roughly placed at the same place

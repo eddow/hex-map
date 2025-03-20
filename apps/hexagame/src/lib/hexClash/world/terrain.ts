@@ -60,7 +60,7 @@ export const terrainTypes: Record<TerrainKey, SeamlessTextureTerrain & Resourcef
 		resourceDistribution: [[Rock, 1]],
 	},
 }
-
+/* TODO: redo
 export function terrainFactory(seed: number) {
 	return new PerlinTerrain<HexClashTile, 'height' | 'type' | 'rocky'>(
 		seed,
@@ -110,3 +110,4 @@ export function terrainFactory(seed: number) {
 		}
 	)
 }
+*/

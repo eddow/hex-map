@@ -10,7 +10,7 @@ import {
 } from 'three'
 import { type Axial, type AxialCoord, type RandGenerator, numbers } from '~/utils'
 import { ThreadTask, extractFunctionParts } from '~/utils/workers/usage'
-import type { TerrainBase, TerrainKey, TerrainTile } from '../perlinTerrain'
+import type { TerrainBase, TerrainKey, TerrainTile } from '../land'
 import type { Sector } from '../sector'
 import { CompleteLandscape } from './completeLandscape'
 import type { LandscapeTriangle } from './landscape'
@@ -150,7 +150,7 @@ export class ContinuousTextureLandscape<
 		//*
 		const { uvA, uvB, uvC, textureIdx, positions } = await workers.run(
 			Array.from(
-				sector.tiles.entries().map(([point, tile]) => [
+				Array.from(sector.tiles.entries()).map(([point, tile]) => [
 					point,
 					{
 						position: [tile.position.x, tile.position.y, tile.position.z],

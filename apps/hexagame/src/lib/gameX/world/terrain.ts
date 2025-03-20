@@ -1,10 +1,10 @@
 import {
 	type ColorRoad,
-	PerlinTerrain,
 	type ResourcefulTerrain,
 	type RoadKey,
 	type SeamlessTextureTerrain,
 	type TerrainKey,
+	PerlinTerrain,
 } from 'hexaboard'
 import { RepeatWrapping, TextureLoader } from 'three'
 import type { GameXTile } from '../game'
@@ -90,20 +90,19 @@ export const roadTypes: Record<RoadKey, ColorRoad> = {
 const mountainsFrom = 130
 
 export function terrainFactory(seed: number) {
-	return new PerlinTerrain<GameXTile, 'height' | 'type' | 'rocky'>(
-		seed,
+	return new PerlinTerrain<GameXTile, 'height' | 'terrainType' | 'rocky'>(
 		{
 			height: {
 				variation: [0, 160],
-				scale: 1000,
+				scale: .001,
 			},
-			type: {
+			terrainType: {
 				variation: [-1, 1],
-				scale: 500,
+				scale: .002,
 			},
 			rocky: {
 				variation: [-1, 1],
-				scale: 100,
+				scale: .01,
 			},
 		},
 		(from, generation) => {
@@ -127,7 +126,7 @@ export function terrainFactory(seed: number) {
 								...from.position,
 								z,
 							},
-							terrain: generation.type > 0 ? 'forest' : 'grass',
+							terrain: generation.terrainType > 0 ? 'forest' : 'grass',
 						}
 					: {
 							...from,

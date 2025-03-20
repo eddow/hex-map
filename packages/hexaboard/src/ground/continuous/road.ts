@@ -78,8 +78,7 @@ export abstract class RoadGrid<
 
 	filterTriangles(sector: Sector<Tile>): (triangle: LandscapeTriangle) => boolean {
 		const roadPoints = new AxialSet(
-			sector.tiles
-				.entries()
+			Array.from(sector.tiles.entries())
 				.filter(([k, t]) => getTileContent(t, null) instanceof RoadContent)
 				.map(([k, t]) => k)
 		)

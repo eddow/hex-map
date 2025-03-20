@@ -28,7 +28,8 @@ import {
 } from 'three'
 import { dockview } from '../globals.svelte'
 import { type HexClashActions, inputsConfiguration } from './inputs'
-import { type HexClashTile, seaLevel, terrainFactory, terrainTypes } from './world/terrain'
+import { type HexClashTile, seaLevel, terrainTypes } from './world/terrain'
+import { terrainFactory } from '$lib/gameX/world/terrain'
 
 export function createGame(name: string, seed: number) {
 	const cursor = new TileCursor(
