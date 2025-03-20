@@ -29,9 +29,9 @@ SOFTWARE.
 
 // Simplex Noise 2D: https://www.shadertoy.com/view/Msf3WH
 
-@import hash
+@import hash, noiseCommon
 
-fn noise_simplex_2d(p: vec2f) -> f32
+fn noiseSimplex2d(p: vec2f) -> f32
 {
 	let K1 = 0.366025404; // (sqrt(3)-1)/2;
 	let K2 = 0.211324865; // (3-sqrt(3))/6;
@@ -54,12 +54,9 @@ fn simplex2d_fractal(p: vec2f, seed: f32) -> f32 {
     //let m = mat2x2f( 1.6,  1.2, -1.2,  1.6 );
 	let h = hash41(seed);
 	let m = mat2x2f( 1.5 + 0.5 * h.x, 1.0 + 0.5 * h.y, -1.0 - 0.5 * h.z, 1.5 + 0.5 * h.w );
-	var f = 0.5000*noise_simplex_2d( uv );
-	uv = m*uv; f += 0.2500*noise_simplex_2d( uv );
-	uv = m*uv; f += 0.1250*noise_simplex_2d( uv );
-	uv = m*uv; f += 0.0625*noise_simplex_2d( uv );
+	var f = 0.5000*noiseSimplex2d( uv );
+	uv = m*uv; f += 0.2500*noiseSimplex2d( uv );
+	uv = m*uv; f += 0.1250*noiseSimplex2d( uv );
+	uv = m*uv; f += 0.0625*noiseSimplex2d( uv );
 	return atan_remap_inverse(0.5 + 0.5*f, 2.5);
-}
-fn atan_remap_inverse(f: f32, k: f32) -> f32 {
-    return 0.5 + tan(3.141592 * (f - 0.5)) / k;
 }

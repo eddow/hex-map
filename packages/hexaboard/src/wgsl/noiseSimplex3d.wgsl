@@ -27,7 +27,7 @@ SOFTWARE.
 
 @import hash
 
-fn noise_simplex_3d(p: vec3f) -> f32
+fn noiseSimplex3d(p: vec3f) -> f32
 {
 	/* skew constants for 3d simplex functions */
 	let F3 = 0.3333333;
@@ -92,13 +92,12 @@ fn generate_s3df_rotation(seed: f32) -> mat3x3f {
 	);
 }
 
-// TODO: make rotations var<private> and calculate on init
 fn simplex3d_fractal(m: vec3f, seed: f32) {
 	/*let rot1 = mat3x3f(-0.37, 0.36, 0.85,-0.14,-0.93, 0.34,0.92, 0.01,0.4);
 	let rot2 = mat3x3f(-0.55,-0.39, 0.74, 0.33,-0.91,-0.24,0.77, 0.12,0.63);
 	let rot3 = mat3x3f(-0.71, 0.52,-0.47,-0.08,-0.72,-0.68,-0.7,-0.45,0.56);*/
-	return   0.5333333*noise_simplex_3d(m*generate_s3df_rotation(seed))
-			+0.2666667*noise_simplex_3d(2.0*m*generate_s3df_rotation(seed + 10.0))
-			+0.1333333*noise_simplex_3d(4.0*m*generate_s3df_rotation(seed + 20.0))
-			+0.0666667*noise_simplex_3d(8.0*m);
+	return   0.5333333*noiseSimplex3d(m*generate_s3df_rotation(seed))
+			+0.2666667*noiseSimplex3d(2.0*m*generate_s3df_rotation(seed + 10.0))
+			+0.1333333*noiseSimplex3d(4.0*m*generate_s3df_rotation(seed + 20.0))
+			+0.0666667*noiseSimplex3d(8.0*m);
 }

@@ -30,7 +30,7 @@ export class PerlinTerrain<Tile extends TileBase, Keys extends PropertyKey>
 		super()
 	}
 	calculus(wgg: LandGpGpu): LandGpGpu {
-		let rv = wgg.import('noise_simplex_2d')
+		let rv = wgg.import('noiseSimplex2d')
 		for (const key in this.configurations) {
 			const { variation, scale } = this.configurations[key]
 			let v = `simplex2d_fractal(position.xy*${scale}f, seed)`
